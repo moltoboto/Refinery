@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.8 | Viewer: v2.8
+Ingestion: v2.9 | Viewer: v2.8
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -62,7 +62,7 @@ C:\Users\exact\Refinery\
 
 ## Categories (fixed)
 Top Story, AI & LLMs, Finance, Resources, Tech & Trends, Policy & Society,
-Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email
+Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 
 ## Key Config (Ingestion)
 - `EXTRACT_NEWSLETTER_ARTICLES: false` - full issue mode (saves complete HTML to Drive, no article extraction)
@@ -101,6 +101,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.9 | 2026-04-19 | Codex | Added a TOR source-category review sheet (`rss_source_map`) with category dropdowns and first-pass suggestions based on feed/source patterns plus recent TOR article titles; source overrides now apply during ingestion and category backfill, and generic uses of the word "watch" no longer auto-map articles to Watches |
 | v2.8 | 2026-04-19 | Codex | Added ingestion-time duplicate review: exact duplicates and possible duplicates now route into a Duplicate category for manual review in the Viewer, using the earliest matching article as the original reference and preserving review context in the summary |
 | v2.7 | 2026-04-13 | Claude Code | Date format changed to yyyy-MM-dd for sortability; artifact metadata line removed from list; Archive removed from sidebar; open-in-window opens popup (1000x800); email date used for artifact date label (not file creation date); double-date stripped from display title; Drive scope upgraded from readonly to full; renameArtifactsToDateTitle() added; MAX_EMAILS_PER_RUN bumped to 100; all files consolidated to C:\Users\exact\Refinery\ |
 | v2.6 | 2026-04-12 | Codex | Removed Archive button from article right-pane; removed Artifacts from category nav; artifact list titles formatted as Date -- Title; added pop-out and delete buttons on artifact header; backend artifact deletion; stronger mime normalization for TXT/MD/JSON/CSV |

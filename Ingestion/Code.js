@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.8
+ * Version: 2.9
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -15,6 +15,7 @@
 var CONFIG = {
   SUPABASE_URL:     "https://hwropcciwxzzukfcjlsr.supabase.co",
   SUPABASE_API_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3cm9wY2Npd3h6enVrZmNqbHNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MTQwODQsImV4cCI6MjA4Nzk5MDA4NH0.ExKBBi2sL2RFrfglHghiXiUTWzOtMRTIB_wqT1q3eHg",
+  SHEET_ID:         "1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss",
 
   TOR_BASE_URL:      "https://theoldreader.com/reader/api/0",
   TOR_AUTH_TOKEN:    "RY7S6rpupU2huEbLx3hx",
@@ -69,6 +70,26 @@ var CATEGORY_SOURCE_MAP = {
   'monochrome-watches': 'Watches',
   'fratello': 'Watches'
 };
+
+var CATEGORY_OPTIONS = [
+  'Top Story',
+  'AI & LLMs',
+  'Finance',
+  'Resources',
+  'Tech & Trends',
+  'Policy & Society',
+  'Dev Tools',
+  'Research',
+  'Strategy',
+  'Watches',
+  'YouTube',
+  'Reddit',
+  'Email',
+  'Duplicate'
+];
+
+var SOURCE_CATEGORY_OVERRIDE_CACHE = null;
+var SOURCE_CATEGORY_SHEET_NAME = 'rss_source_map';
 function runDailyIngestion() {
   var report = { timestamp: new Date().toISOString(), phase1_tor: {}, phase3_gmail: {} };
   Logger.log("=== REFINERY DAILY INGESTION START === " + report.timestamp);
@@ -894,6 +915,9 @@ function categoryFromUrl_(url) {
 }
 
 function normalizeCategory(category, source, title, summary, url) {
+  var override = getSourceCategoryOverrideFor_(source, url);
+  if (override) return override;
+
   var mapped = categoryFromSource_(source, url);
   if (mapped) return mapped;
 
@@ -904,6 +928,252 @@ function normalizeCategory(category, source, title, summary, url) {
   if (isKnownCategory_(canonical)) return canonical;
 
   return detectCategory(title, summary, source, url);
+}
+
+function syncTorSourceCategorySheet() {
+  var subscriptions = getTORSubscriptions_();
+  var contextMap = getArticleContextBySource_();
+  var sheet = getOrCreateSourceCategorySheet_();
+  var existingRows = getExistingSourceCategoryRows_(sheet);
+  var nowIso = new Date().toISOString();
+
+  subscriptions.sort(function(a, b) {
+    return String(a.title || '').localeCompare(String(b.title || ''));
+  });
+
+  var values = [getSourceCategorySheetHeaders_()];
+  subscriptions.forEach(function(subscription) {
+    var key = normalizeSourceKey_(subscription.title);
+    var existing = existingRows[key] || {};
+    var context = contextMap[key] || { articleCount: 0, sampleTitles: [] };
+    var suggested = suggestCategoryForTorSource_(
+      subscription.title,
+      subscription.feedUrl,
+      subscription.siteUrl,
+      context.sampleTitles
+    );
+    var assigned = existing.assignedCategory || suggested || '';
+    values.push([
+      subscription.title || '',
+      assigned,
+      suggested || '',
+      context.articleCount || 0,
+      (context.sampleTitles || []).join(' | '),
+      subscription.feedUrl || '',
+      subscription.siteUrl || '',
+      nowIso
+    ]);
+  });
+
+  sheet.clearContents();
+  sheet.getRange(1, 1, values.length, values[0].length).setValues(values);
+  applyCategoryDropdownValidation_(sheet, values.length - 1);
+  sheet.setFrozenRows(1);
+  if (sheet.getFilter()) sheet.getFilter().remove();
+  sheet.getRange(1, 1, values.length, values[0].length).createFilter();
+  sheet.autoResizeColumns(1, values[0].length);
+  SOURCE_CATEGORY_OVERRIDE_CACHE = null;
+
+  Logger.log('TOR SOURCE CATEGORY SHEET: ' + JSON.stringify({
+    rows: Math.max(0, values.length - 1),
+    sheet: SOURCE_CATEGORY_SHEET_NAME
+  }, null, 2));
+
+  return {
+    rows: Math.max(0, values.length - 1),
+    sheetName: SOURCE_CATEGORY_SHEET_NAME
+  };
+}
+
+function previewSourceCategoryBackfill(limit, offset, sourceFilter) {
+  return backfillCategories_(true, sourceFilter || '', limit, offset);
+}
+
+function applySourceCategoryBackfill(limit, offset, sourceFilter) {
+  return backfillCategories_(false, sourceFilter || '', limit, offset);
+}
+
+function getSourceCategoryOverrideFor_(source, url) {
+  var overrides = getSourceCategoryOverrides_();
+  var sourceKey = normalizeSourceKey_(source);
+  if (sourceKey && overrides[sourceKey]) return overrides[sourceKey];
+
+  var hostKey = normalizeSourceHostKey_(url);
+  if (hostKey && overrides[hostKey]) return overrides[hostKey];
+  return '';
+}
+
+function getSourceCategoryOverrides_() {
+  if (SOURCE_CATEGORY_OVERRIDE_CACHE) return SOURCE_CATEGORY_OVERRIDE_CACHE;
+
+  var overrides = {};
+  try {
+    var sheet = getOrCreateSourceCategorySheet_();
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      SOURCE_CATEGORY_OVERRIDE_CACHE = overrides;
+      return overrides;
+    }
+
+    var rows = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+    rows.forEach(function(row) {
+      var sourceTitle = normalizeSourceKey_(row[0]);
+      var assignedCategory = canonicalCategoryName_(row[1] || '');
+      var feedUrl = normalizeSourceHostKey_(row[5]);
+      if (sourceTitle && assignedCategory) overrides[sourceTitle] = assignedCategory;
+      if (feedUrl && assignedCategory) overrides[feedUrl] = assignedCategory;
+    });
+  } catch (e) {
+    Logger.log('SOURCE CATEGORY OVERRIDE READ ERROR: ' + e);
+  }
+
+  SOURCE_CATEGORY_OVERRIDE_CACHE = overrides;
+  return overrides;
+}
+
+function getOrCreateSourceCategorySheet_() {
+  var ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  var sheet = ss.getSheetByName(SOURCE_CATEGORY_SHEET_NAME);
+  if (!sheet) sheet = ss.insertSheet(SOURCE_CATEGORY_SHEET_NAME);
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, getSourceCategorySheetHeaders_().length).setValues([getSourceCategorySheetHeaders_()]);
+  }
+  return sheet;
+}
+
+function getSourceCategorySheetHeaders_() {
+  return [
+    'source_title',
+    'assigned_category',
+    'suggested_category',
+    'article_count',
+    'sample_titles',
+    'feed_url',
+    'site_url',
+    'last_synced'
+  ];
+}
+
+function getExistingSourceCategoryRows_(sheet) {
+  var existing = {};
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return existing;
+
+  var rows = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
+  rows.forEach(function(row) {
+    var key = normalizeSourceKey_(row[0]);
+    if (!key) return;
+    existing[key] = {
+      assignedCategory: canonicalCategoryName_(row[1] || ''),
+      suggestedCategory: canonicalCategoryName_(row[2] || '')
+    };
+  });
+  return existing;
+}
+
+function applyCategoryDropdownValidation_(sheet, rowCount) {
+  if (rowCount <= 0) return;
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(CATEGORY_OPTIONS, true)
+    .setAllowInvalid(true)
+    .build();
+  sheet.getRange(2, 2, rowCount, 1).setDataValidation(rule);
+}
+
+function getTORSubscriptions_() {
+  var response = UrlFetchApp.fetch(CONFIG.TOR_BASE_URL + '/subscription/list?output=json', {
+    headers: { 'Authorization': 'GoogleLogin auth=' + CONFIG.TOR_AUTH_TOKEN },
+    muteHttpExceptions: true
+  });
+  var payload = JSON.parse(response.getContentText() || '{}');
+  var subscriptions = payload.subscriptions || [];
+
+  return subscriptions.map(function(subscription) {
+    return {
+      title: sanitizeText(subscription && subscription.title || '', 200),
+      feedUrl: parseTorFeedUrl_(subscription),
+      siteUrl: cleanUrl(subscription && subscription.htmlUrl || '')
+    };
+  }).filter(function(subscription) {
+    return !!subscription.title;
+  });
+}
+
+function parseTorFeedUrl_(subscription) {
+  var id = String(subscription && subscription.id || '');
+  if (/^feed\//i.test(id)) return cleanUrl(id.substring(5));
+  return cleanUrl(subscription && (subscription.url || subscription.feedUrl) || '');
+}
+
+function getArticleContextBySource_() {
+  var headers = {
+    'apikey': CONFIG.SUPABASE_API_KEY,
+    'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY
+  };
+  var offset = 0;
+  var limit = 1000;
+  var context = {};
+
+  while (true) {
+    var response = UrlFetchApp.fetch(
+      CONFIG.SUPABASE_URL
+        + '/rest/v1/articles?select=source,title,category&order=date_added.desc'
+        + '&limit=' + encodeURIComponent(limit)
+        + '&offset=' + encodeURIComponent(offset),
+      { headers: headers, muteHttpExceptions: true }
+    );
+    var rows = JSON.parse(response.getContentText() || '[]') || [];
+    if (!rows.length) break;
+
+    rows.forEach(function(row) {
+      var sourceKey = normalizeSourceKey_(row && row.source || '');
+      if (!sourceKey) return;
+      if (canonicalCategoryName_(row && row.category || '') === 'Email') return;
+      if (!context[sourceKey]) {
+        context[sourceKey] = { articleCount: 0, sampleTitles: [] };
+      }
+      context[sourceKey].articleCount += 1;
+      var title = sanitizeText(row && row.title || '', 160);
+      if (!title) return;
+      if (context[sourceKey].sampleTitles.indexOf(title) !== -1) return;
+      if (context[sourceKey].sampleTitles.length < 3) {
+        context[sourceKey].sampleTitles.push(title);
+      }
+    });
+
+    if (rows.length < limit) break;
+    offset += limit;
+  }
+
+  return context;
+}
+
+function suggestCategoryForTorSource_(sourceTitle, feedUrl, siteUrl, sampleTitles) {
+  var url = feedUrl || siteUrl || '';
+  var sourceText = String(sourceTitle || '');
+  var sampleText = String((sampleTitles || []).join(' '));
+  var mapped = categoryFromSource_(sourceText, url);
+  if (mapped) return mapped;
+
+  mapped = categoryFromUrl_(url);
+  if (mapped) return mapped;
+
+  return detectCategory(sampleText, '', sourceText, url);
+}
+
+function normalizeSourceKey_(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^\w]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeSourceHostKey_(url) {
+  var clean = cleanUrl(url || '');
+  if (!clean) return '';
+  var match = clean.match(/^https?:\/\/([^\/?#]+)/i);
+  return match ? normalizeSourceKey_(match[1]) : '';
 }
 
 function reviewDuplicateRecord_(record) {
@@ -1226,7 +1496,7 @@ function detectCategory(title, summary, source, url) {
   if (t.match(/\bpossible duplicate review\b|\bduplicate review\b/)) return 'Duplicate';
   if (t.match(/reddit|r\//)) return 'Reddit';
   if (t.match(/youtube|youtu\.be/)) return 'YouTube';
-  if (t.match(/watch|watchmaking|horology|patek|rolex|omega|seiko|chronograph|hodinkee|worn.?wound|ablogtowatch|fratello|monochrome/)) return 'Watches';
+  if (t.match(/watchmaking|horology|timepiece|timepieces|patek|rolex|omega|seiko|chronograph|hodinkee|worn.?wound|ablogtowatch|fratello|monochrome|audemars|breitling|cartier|jaeger|iwc|hublot/)) return 'Watches';
   if (t.match(/stock|market|earnings|valuation|ipo|funding|unicorn|venture|finance|trading|macro|fed|treasury|dealbook/)) return 'Finance';
   if (t.match(/github|repo|open.?source|framework|library|sdk|npm|pip|cursor|vscode|cli\b|copilot/)) return 'Dev Tools';
   if (t.match(/research|paper|study|arxiv|benchmark|dataset/)) return 'Research';

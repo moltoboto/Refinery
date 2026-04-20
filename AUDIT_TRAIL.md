@@ -222,3 +222,26 @@ ode --check passed for the extracted index.html script block.
 - Follow-up:
   - Push both Apps Script projects and redeploy the Viewer web app so `Duplicate` appears live.
   - Watch the first few ingestion runs and tune the duplicate scoring if the queue is too broad or too narrow.
+
+### 2026-04-19 21:xx ET - Codex
+- Request: Clean up article categorization, especially false `Watches` matches from generic uses of the word "watch", and create a reviewable list of TOR RSS sources with a category dropdown.
+- Files touched:
+  - `C:\Users\exact\Refinery\Ingestion\Code.js`
+  - `C:\Users\exact\Refinery\CONTEXT.md`
+  - `C:\Users\exact\Refinery\AUDIT_TRAIL.md`
+- Actions taken:
+  - Added spreadsheet-backed TOR source mapping in ingestion using a new `rss_source_map` sheet tab in the existing project spreadsheet.
+  - Added `syncTorSourceCategorySheet()` to pull current TOR subscriptions, gather recent article context, and write one row per source with an `assigned_category` dropdown and a `suggested_category` first pass.
+  - Wired ingestion to honor source/category overrides from that sheet before falling back to static source mappings and keyword detection.
+  - Added `previewSourceCategoryBackfill()` and `applySourceCategoryBackfill()` so existing article categories can be reviewed and then updated from the new source map.
+  - Tightened `Watches` detection so generic references to "watch" no longer auto-map articles unless stronger watch-specific terms are present.
+  - Corrected the suggestion logic so `suggested_category` is computed fresh from TOR source/title evidence rather than echoing any prior manual override.
+- Validation:
+  - `node --check` passed for a temp copy of `C:\Users\exact\Refinery\Ingestion\Code.js`.
+  - Reviewed the git diff to confirm the new sheet workflow, override path, and watch keyword change are present.
+- Deployment status:
+  - Local files updated; ingestion push/deploy still pending at the time of this entry.
+- Follow-up:
+  - Push the updated ingestion Apps Script project.
+  - Run `syncTorSourceCategorySheet()` in Apps Script to populate the source review sheet.
+  - Review the dropdown choices in `rss_source_map`, then use `previewSourceCategoryBackfill()` / `applySourceCategoryBackfill()` if historical categories should be corrected.
