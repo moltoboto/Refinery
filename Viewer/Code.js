@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.7')
+    .setTitle('Refinery V2.8')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -970,6 +970,8 @@ function normalizeCategory_(raw) {
     'video': 'YouTube',
     'reddit': 'Reddit',
     'email': 'Email',
+    'duplicate': 'Duplicate',
+    'duplicates': 'Duplicate',
     'artifacts': 'Artifacts'
   };
   return map[clean] || 'Tech & Trends';

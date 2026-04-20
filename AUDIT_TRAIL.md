@@ -202,3 +202,23 @@ ode --check passed for the extracted index.html script block.
   - No GitHub remote exists yet; next step is to create an empty GitHub repo and connect it with `git remote add origin ...`.
   - After that, commit and push the `C:\Users\exact\Refinery` root so GitHub becomes the durable source-of-truth alongside Apps Script.
   - Future round-trip workflow should be: `clasp pull` before committing Google-edited changes, and `clasp push` after local/Git changes.
+
+### 2026-04-19 17:xx ET - Codex
+- Request: Add a safer duplicate-review workflow so similar stories can be skimmed in the existing Viewer before anything is deleted.
+- Files touched:
+  - `C:\Users\exact\Refinery\Ingestion\Code.js`
+  - `C:\Users\exact\Refinery\Viewer\Code.js`
+  - `C:\Users\exact\Refinery\Viewer\index.html`
+  - `C:\Users\exact\Refinery\CONTEXT.md`
+  - `C:\Users\exact\Refinery\AUDIT_TRAIL.md`
+- Actions taken:
+  - Added a `DEDUPE_REVIEW` config block in ingestion and introduced duplicate-review matching over a recent lookback window.
+  - Preserved exact URL/title duplicate detection, but changed it from silent skip to review insertion so exact duplicates also appear for inspection.
+  - Added possible-duplicate scoring for same-event and same-topic matches among active unread articles, ignoring source as requested.
+  - Routed both exact duplicates and possible duplicates into the `Duplicate` category and prepended review context naming the original article and why it matched.
+  - Added `Duplicate` as a first-class category in the Viewer and bumped both app surfaces to v2.8.
+- Validation:
+  - `node --check` passed for `Ingestion/Code.js`, `Viewer/Code.js`, and the extracted `Viewer/index.html` script block when checked from a neutral path.
+- Follow-up:
+  - Push both Apps Script projects and redeploy the Viewer web app so `Duplicate` appears live.
+  - Watch the first few ingestion runs and tune the duplicate scoring if the queue is too broad or too narrow.

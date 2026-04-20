@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.4
+ * Version: 2.8
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -47,6 +47,13 @@ var CONFIG = {
     LIMIT: 500,
     OFFSET: 0,
     SOURCE_FILTER: ''
+  },
+
+  DEDUPE_REVIEW: {
+    WINDOW_DAYS: 2,
+    MAX_CANDIDATES: 250,
+    MIN_SCORE: 0.66,
+    MIN_SHARED_TOKENS: 3
   }
 };
 
@@ -106,7 +113,7 @@ function ingestFromTheOldReader() {
       stats.articlesProcessed++;
       try {
         var record = mapTORArticleToSchema(articles[i]);
-        var duplicateResult = isDuplicateRecord(record);
+        var duplicateResult = reviewDuplicateRecord_(record);
         if (duplicateResult.error) {
           stats.errors++;
           if (duplicateResult.error === 'temporary') {
@@ -115,16 +122,14 @@ function ingestFromTheOldReader() {
           }
           continue;
         }
-        if (duplicateResult.duplicate) {
-          stats.duplicatesSkipped++;
-          ingestedIds.push(articles[i].id);
-          continue;
+        if (duplicateResult.duplicate || duplicateResult.possibleDuplicate) {
+          record = markRecordAsDuplicateReview_(record, duplicateResult);
         }
 
         var insertResult = insertToSupabase(record);
         if (insertResult.ok) {
           stats.articlesInserted++;
-          logToAuditTrail(record.source, record.url, record.title, 'ingested', null);
+          logToAuditTrail(record.source, record.url, record.title, duplicateResult.duplicate ? 'exact_duplicate_review' : duplicateResult.possibleDuplicate ? 'possible_duplicate' : 'ingested', null);
           ingestedIds.push(articles[i].id);
         } else {
           stats.errors++;
@@ -350,20 +355,19 @@ function processNewsletterEmail(msg) {
   }
 
   articles.forEach(function(record) {
-    var duplicateResult = isDuplicateRecord(record);
+    var duplicateResult = reviewDuplicateRecord_(record);
     if (duplicateResult.error) {
       result.errors++;
       result.canMarkRead = false;
       return;
     }
-    if (duplicateResult.duplicate) {
-      result.duplicatesSkipped++;
-      return;
+    if (duplicateResult.duplicate || duplicateResult.possibleDuplicate) {
+      record = markRecordAsDuplicateReview_(record, duplicateResult);
     }
     var insertResult = insertToSupabase(record);
     if (insertResult.ok) {
       result.articlesInserted++;
-      logToAuditTrail(record.source, record.url, record.title, 'ingested', null);
+      logToAuditTrail(record.source, record.url, record.title, duplicateResult.duplicate ? 'exact_duplicate_review' : duplicateResult.possibleDuplicate ? 'possible_duplicate' : 'ingested', null);
     } else {
       result.errors++;
       result.canMarkRead = false;
@@ -681,6 +685,15 @@ function processInboxTier(label) {
         date_added: date.toISOString()
       };
 
+      var duplicateResult = reviewDuplicateRecord_(record);
+      if (duplicateResult.error) {
+        Logger.log('Inbox duplicate review failed: ' + duplicateResult.error);
+        return;
+      }
+      if (duplicateResult.duplicate || duplicateResult.possibleDuplicate) {
+        record = markRecordAsDuplicateReview_(record, duplicateResult);
+      }
+
       var insertResult = insertToSupabase(record);
       if (insertResult.ok) {
         var artifactResult = { ok:true };
@@ -691,7 +704,7 @@ function processInboxTier(label) {
           }
         }
 
-        logToAuditTrail(record.source, buildGmailUrl(msgId), record.title, 'ingested', msgId);
+        logToAuditTrail(record.source, buildGmailUrl(msgId), record.title, duplicateResult.duplicate ? 'exact_duplicate_review' : duplicateResult.possibleDuplicate ? 'possible_duplicate' : 'ingested', msgId);
         stats.emailsProcessed++;
         stats.emailCardsCreated++;
         if (artifactResult.ok) {
@@ -833,7 +846,9 @@ function canonicalCategoryName_(value) {
     'ai & llms': 'AI & LLMs',
     'tech trends': 'Tech & Trends',
     'tech & trends': 'Tech & Trends',
-    'dev tools': 'Dev Tools'
+    'dev tools': 'Dev Tools',
+    'duplicate': 'Duplicate',
+    'duplicates': 'Duplicate'
   };
 
   if (map[key]) return map[key];
@@ -854,7 +869,8 @@ function isKnownCategory_(value) {
     'Watches',
     'YouTube',
     'Reddit',
-    'Email'
+    'Email',
+    'Duplicate'
   ].indexOf(value) !== -1;
 }
 
@@ -890,8 +906,8 @@ function normalizeCategory(category, source, title, summary, url) {
   return detectCategory(title, summary, source, url);
 }
 
-function isDuplicateRecord(record) {
-  if (!record) return { duplicate:false };
+function reviewDuplicateRecord_(record) {
+  if (!record) return { duplicate:false, possibleDuplicate:false };
   try {
     var headers = {'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY};
     var url = cleanUrl(record.url || '');
@@ -899,37 +915,266 @@ function isDuplicateRecord(record) {
 
     if (url) {
       resp = UrlFetchApp.fetch(
-        CONFIG.SUPABASE_URL + '/rest/v1/articles?url=eq.' + encodeURIComponent(url) + '&select=id&limit=1',
+        CONFIG.SUPABASE_URL + '/rest/v1/articles?url=eq.' + encodeURIComponent(url)
+        + '&select=id,source,title,url,summary,category,date_added,status,kept,archived&limit=1',
         {headers: headers, muteHttpExceptions: true}
       );
-      if (JSON.parse(resp.getContentText()).length > 0) return { duplicate:true };
+      var exactUrlRows = JSON.parse(resp.getContentText()) || [];
+      if (exactUrlRows.length > 0) {
+        return {
+          duplicate: true,
+          possibleDuplicate: false,
+          primary: exactUrlRows[0],
+          reason: 'exact URL match',
+          score: 1
+        };
+      }
     }
 
     var source = sanitizeText(normalizeSourceForDedupe(record.source, url), 200);
     var rawTitle = sanitizeText(record.title, 250);
     var title = sanitizeText(normalizeTitleForDedupe(record.title), 250);
-    if (!source || !title || !rawTitle) return { duplicate:false };
+    if (!source || !title || !rawTitle) return { duplicate:false, possibleDuplicate:false };
 
     resp = UrlFetchApp.fetch(
       CONFIG.SUPABASE_URL + '/rest/v1/articles?title=eq.' + encodeURIComponent(rawTitle)
-      + '&select=id,source,title,url&limit=25',
+      + '&select=id,source,title,url,summary,category,date_added,status,kept,archived&limit=25',
       {headers: headers, muteHttpExceptions: true}
     );
-    if (hasDuplicateCandidate_(record, JSON.parse(resp.getContentText()))) return { duplicate:true };
+    var exactTitleRows = JSON.parse(resp.getContentText()) || [];
+    var exactTitleMatch = findExactDuplicateCandidate_(record, exactTitleRows);
+    if (exactTitleMatch) {
+      return {
+        duplicate: true,
+        possibleDuplicate: false,
+        primary: exactTitleMatch,
+        reason: 'exact title match',
+        score: 0.98
+      };
+    }
 
     if (source === 'reddit') {
       resp = UrlFetchApp.fetch(
-        CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id,source,title,url&order=date_added.desc&limit=250',
+        CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id,source,title,url,summary,category,date_added,status,kept,archived&order=date_added.desc&limit=250',
         {headers: headers, muteHttpExceptions: true}
       );
-      if (hasDuplicateCandidate_(record, JSON.parse(resp.getContentText()))) return { duplicate:true };
+      var redditRows = JSON.parse(resp.getContentText()) || [];
+      var redditMatch = findExactDuplicateCandidate_(record, redditRows);
+      if (redditMatch) {
+        return {
+          duplicate: true,
+          possibleDuplicate: false,
+          primary: redditMatch,
+          reason: 'exact Reddit repost match',
+          score: 0.98
+        };
+      }
     }
 
-    return { duplicate:false };
+    var possible = findPossibleDuplicateCandidate_(record, headers);
+    if (possible) {
+      return {
+        duplicate: false,
+        possibleDuplicate: true,
+        primary: possible.primary,
+        reason: possible.reason,
+        score: possible.score
+      };
+    }
+
+    return { duplicate:false, possibleDuplicate:false };
   } catch(e) {
-    Logger.log("ERROR isDuplicateRecord: " + e);
-    return { duplicate:false, error:isTransientSupabaseError_(e) ? 'temporary' : 'failed' };
+    Logger.log("ERROR reviewDuplicateRecord_: " + e);
+    return { duplicate:false, possibleDuplicate:false, error:isTransientSupabaseError_(e) ? 'temporary' : 'failed' };
   }
+}
+
+function findPossibleDuplicateCandidate_(record, headers) {
+  var windowDays = Math.max(1, parseInt(CONFIG.DEDUPE_REVIEW.WINDOW_DAYS, 10) || 2);
+  var sinceIso = new Date(Date.now() - (windowDays * 24 * 60 * 60 * 1000)).toISOString();
+  var maxCandidates = Math.max(25, parseInt(CONFIG.DEDUPE_REVIEW.MAX_CANDIDATES, 10) || 250);
+  var response = UrlFetchApp.fetch(
+    CONFIG.SUPABASE_URL
+      + '/rest/v1/articles?select=id,source,title,url,summary,category,date_added,status,kept,archived'
+      + '&kept=eq.false&archived=eq.false&status=neq.read'
+      + '&date_added=gte.' + encodeURIComponent(sinceIso)
+      + '&order=date_added.asc'
+      + '&limit=' + encodeURIComponent(maxCandidates),
+    { headers: headers, muteHttpExceptions: true }
+  );
+
+  var rows = JSON.parse(response.getContentText()) || [];
+  if (!rows.length) return null;
+
+  var matches = rows.map(function(candidate) {
+    if (!candidate || !candidate.id) return null;
+    if (canonicalCategoryName_(candidate.category || '') === 'Duplicate') return null;
+    return scorePossibleDuplicateMatch_(record, candidate);
+  }).filter(function(match) {
+    return !!match;
+  });
+
+  if (!matches.length) return null;
+
+  matches.sort(function(a, b) {
+    var dateA = new Date(a.primary.date_added || 0).getTime();
+    var dateB = new Date(b.primary.date_added || 0).getTime();
+    if (dateA !== dateB) return dateA - dateB;
+    return b.score - a.score;
+  });
+
+  return matches[0];
+}
+
+function scorePossibleDuplicateMatch_(record, candidate) {
+  var incomingUrl = cleanUrl(record && record.url || '');
+  var candidateUrl = cleanUrl(candidate && candidate.url || '');
+  if (incomingUrl && candidateUrl && incomingUrl === candidateUrl) return null;
+
+  var incomingTitle = normalizeTitleForDedupe(record && record.title || '');
+  var candidateTitle = normalizeTitleForDedupe(candidate && candidate.title || '');
+  if (!incomingTitle || !candidateTitle) return null;
+  if (incomingTitle === candidateTitle) return null;
+
+  var incomingTitleTokens = dedupeTokens_(record && record.title || '', true);
+  var candidateTitleTokens = dedupeTokens_(candidate && candidate.title || '', true);
+  var incomingTopicTokens = dedupeTokens_((record && record.title || '') + ' ' + cleanSummaryForDedupe_(record && record.summary || ''), false);
+  var candidateTopicTokens = dedupeTokens_((candidate && candidate.title || '') + ' ' + cleanSummaryForDedupe_(candidate && candidate.summary || ''), false);
+
+  var titleStats = tokenOverlapStats_(incomingTitleTokens, candidateTitleTokens);
+  var topicStats = tokenOverlapStats_(incomingTopicTokens, candidateTopicTokens);
+  var containment = Math.max(titleStats.leftCoverage, titleStats.rightCoverage);
+  var minShared = Math.max(2, parseInt(CONFIG.DEDUPE_REVIEW.MIN_SHARED_TOKENS, 10) || 3);
+
+  var score = Math.max(
+    titleStats.jaccard * 0.85 + topicStats.jaccard * 0.15,
+    containment * 0.75 + Math.min(topicStats.shared.length, 6) * 0.04
+  );
+
+  var reason = '';
+  if (titleStats.shared.length >= minShared && containment >= 0.7) {
+    reason = 'same event with overlapping titles';
+    score = Math.max(score, 0.78);
+  } else if (titleStats.shared.length >= minShared && topicStats.shared.length >= (minShared + 1)) {
+    reason = 'same topic with strong keyword overlap';
+    score = Math.max(score, 0.71);
+  } else if (topicStats.shared.length >= (minShared + 2) && containment >= 0.45) {
+    reason = 'same company/topic among active unread articles';
+    score = Math.max(score, 0.68);
+  } else {
+    return null;
+  }
+
+  if (score < (CONFIG.DEDUPE_REVIEW.MIN_SCORE || 0.66)) return null;
+
+  return {
+    score: score,
+    reason: reason,
+    primary: candidate
+  };
+}
+
+function dedupeTokens_(text, titleOnly) {
+  var stopwords = {
+    the:true, a:true, an:true, and:true, or:true, but:true, for:true, from:true, with:true,
+    into:true, onto:true, over:true, under:true, after:true, before:true, about:true, this:true,
+    that:true, these:true, those:true, your:true, their:true, his:true, her:true, our:true,
+    why:true, how:true, what:true, when:true, where:true, says:true, say:true, said:true,
+    just:true, new:true, now:true, more:true, most:true, less:true, than:true, then:true,
+    into:true, amid:true, amid:true, amids:true, report:true, reports:true, according:true,
+    review:true, video:true, podcast:true, newsletter:true, email:true, watch:true, watches:true
+  };
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[“”"']/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(/\s+/)
+    .filter(function(token) {
+      if (!token) return false;
+      if (/^\d+$/.test(token)) return false;
+      if (token.length < (titleOnly ? 4 : 3)) return false;
+      return !stopwords[token];
+    });
+}
+
+function cleanSummaryForDedupe_(summary) {
+  return String(summary || '')
+    .replace(/^\[\[image_url=https?:\/\/[^\]]+\]\]\s*/i, '')
+    .replace(/\n+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, 500);
+}
+
+function tokenOverlapStats_(left, right) {
+  var leftMap = {};
+  var rightMap = {};
+  (left || []).forEach(function(token) { leftMap[token] = true; });
+  (right || []).forEach(function(token) { rightMap[token] = true; });
+
+  var shared = [];
+  Object.keys(leftMap).forEach(function(token) {
+    if (rightMap[token]) shared.push(token);
+  });
+
+  var unionSize = Object.keys(leftMap).length;
+  Object.keys(rightMap).forEach(function(token) {
+    if (!leftMap[token]) unionSize++;
+  });
+
+  return {
+    shared: shared,
+    jaccard: unionSize ? (shared.length / unionSize) : 0,
+    leftCoverage: Object.keys(leftMap).length ? (shared.length / Object.keys(leftMap).length) : 0,
+    rightCoverage: Object.keys(rightMap).length ? (shared.length / Object.keys(rightMap).length) : 0
+  };
+}
+
+function markRecordAsDuplicateReview_(record, duplicateResult) {
+  var primary = duplicateResult && duplicateResult.primary || {};
+  var originalDate = formatDuplicateReviewDate_(primary.date_added);
+  var exact = !!(duplicateResult && duplicateResult.duplicate);
+  var reviewLines = [
+    exact ? 'Exact duplicate review.' : 'Possible duplicate review.',
+    'Original article: ' + sanitizeText(primary.title || '', 250),
+    'Original source: ' + sanitizeText(primary.source || '', 200),
+    'Original date: ' + originalDate,
+    'Original status: original = true',
+    'This article status: original = false',
+    'Match reason: ' + sanitizeText(duplicateResult.reason || (exact ? 'exact duplicate' : 'possible duplicate'), 200)
+  ];
+
+  if (primary.url) reviewLines.push('Original URL: ' + cleanUrl(primary.url));
+
+  record.category = 'Duplicate';
+  record.signal = '';
+  record.summary = reviewLines.join('\n') + '\n\n' + String(record.summary || '');
+  return record;
+}
+
+function formatDuplicateReviewDate_(value) {
+  var date = value ? new Date(value) : null;
+  if (!date || isNaN(date.getTime())) return 'Unknown';
+  return Utilities.formatDate(date, 'America/New_York', 'MMM d, yyyy');
+}
+
+function findExactDuplicateCandidate_(record, candidates) {
+  if (!candidates || !candidates.length) return null;
+
+  var incomingUrl = cleanUrl(record && record.url || '');
+  var incomingSource = normalizeSourceForDedupe(record && record.source, incomingUrl);
+  var incomingTitle = normalizeTitleForDedupe(record && record.title || '');
+  if (!incomingTitle) return null;
+
+  for (var i = 0; i < candidates.length; i++) {
+    var candidate = candidates[i];
+    var candidateUrl = cleanUrl(candidate && candidate.url || '');
+    if (incomingUrl && candidateUrl && incomingUrl === candidateUrl) return candidate;
+    if (normalizeTitleForDedupe(candidate && candidate.title || '') !== incomingTitle) continue;
+    if (normalizeSourceForDedupe(candidate && candidate.source, candidateUrl) === incomingSource) return candidate;
+  }
+
+  return null;
 }
 
 function hasDuplicateCandidate_(record, candidates) {
@@ -978,6 +1223,7 @@ function logToAuditTrail(source, url, title, status, sourceId) {
 
 function detectCategory(title, summary, source, url) {
   var t = (String(source || '') + ' ' + String(title || '') + ' ' + String(summary || '') + ' ' + String(url || '')).toLowerCase();
+  if (t.match(/\bpossible duplicate review\b|\bduplicate review\b/)) return 'Duplicate';
   if (t.match(/reddit|r\//)) return 'Reddit';
   if (t.match(/youtube|youtu\.be/)) return 'YouTube';
   if (t.match(/watch|watchmaking|horology|patek|rolex|omega|seiko|chronograph|hodinkee|worn.?wound|ablogtowatch|fratello|monochrome/)) return 'Watches';

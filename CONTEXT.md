@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.4 | Viewer: v2.7
+Ingestion: v2.8 | Viewer: v2.8
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -101,6 +101,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.8 | 2026-04-19 | Codex | Added ingestion-time duplicate review: exact duplicates and possible duplicates now route into a Duplicate category for manual review in the Viewer, using the earliest matching article as the original reference and preserving review context in the summary |
 | v2.7 | 2026-04-13 | Claude Code | Date format changed to yyyy-MM-dd for sortability; artifact metadata line removed from list; Archive removed from sidebar; open-in-window opens popup (1000x800); email date used for artifact date label (not file creation date); double-date stripped from display title; Drive scope upgraded from readonly to full; renameArtifactsToDateTitle() added; MAX_EMAILS_PER_RUN bumped to 100; all files consolidated to C:\Users\exact\Refinery\ |
 | v2.6 | 2026-04-12 | Codex | Removed Archive button from article right-pane; removed Artifacts from category nav; artifact list titles formatted as Date -- Title; added pop-out and delete buttons on artifact header; backend artifact deletion; stronger mime normalization for TXT/MD/JSON/CSV |
 | v2.5 | 2026-04-11 | Codex | Email injection improvements; artifacts changed from text to HTML; fixed artifact viewer for PNG and TXT; cleaned up artifact naming; removed Keep and Open in Drive buttons |
@@ -113,4 +114,3 @@ Bump the version number in Code.gs and add one row here before closing out.
 - After every substantive session, append an entry to `AUDIT_TRAIL.md`
 - The audit trail should capture the request, files touched, actions taken, validation, deployment status, and follow-up
 - Use `CONTEXT.md` for stable state and version history; use `AUDIT_TRAIL.md` for chronological work history
-
