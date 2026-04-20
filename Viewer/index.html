@@ -1,0 +1,1998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Refinery V2.7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #f5f4f0;
+  --surface:     #ffffff;
+  --surface2:    #faf9f6;
+  --border:      #e4e2db;
+  --border2:     #d0cec6;
+  --accent:      #cc4b00;
+  --accent-soft: #fdf1eb;
+  --accent2:     #1a6b3c;
+  --text:        #1c1b18;
+  --text2:       #4a4840;
+  --muted:       #8c8a84;
+  --muted2:      #b8b5ae;
+  --unread-dot:  #cc4b00;
+  --kept:        #1a6b3c;
+  --archived:    #6b6864;
+  --sidebar-w:   248px;
+  --list-w:      360px;
+  --header-h:    56px;
+  --kb-h:        40px;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.07);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.08);
+  --radius:      6px;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+header {
+  height: var(--header-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 20px;
+  gap: 12px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  z-index: 20;
+}
+
+.logo {
+  font-family: 'Lora', serif;
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--accent);
+  letter-spacing: -0.3px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-icon {
+  width: 28px; height: 28px;
+  background: var(--accent);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.search-box {
+  flex: 1;
+  max-width: 400px;
+  position: relative;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 8px 12px 8px 34px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.search-box input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(204,75,0,0.08);
+}
+
+.search-box input::placeholder { color: var(--muted2); }
+.search-clear { position:absolute; right:10px; top:50%; transform:translateY(-50%); width:18px; height:18px; border:none; background:none; color:var(--muted); cursor:pointer; font-size:14px; display:none; line-height:18px; }
+.search-clear:hover { color: var(--accent); }
+.more-btn { color: var(--accent); }
+
+.search-icon {
+  position: absolute;
+  left: 11px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+.status-badge {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 4px;
+}
+
+.live-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--muted2);
+  flex-shrink: 0;
+}
+.live-dot.connected { background: #22c55e; animation: blink 2.5s infinite; }
+.live-dot.error { background: #ef4444; }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.body-wrap {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+aside {
+  width: var(--sidebar-w);
+  background: var(--surface2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 16px;
+}
+
+.sidebar-section {
+  padding: 16px 16px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--text2);
+  font-weight: 400;
+  border-radius: 0;
+  transition: background 0.1s, color 0.1s;
+  border-left: 2px solid transparent;
+  user-select: none;
+}
+
+.nav-item:hover { background: var(--accent-soft); color: var(--text); }
+
+.nav-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  border-left-color: var(--accent);
+}
+
+.nav-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+
+.nav-label { flex: 1; }
+
+.nav-count {
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--accent);
+  color: white;
+  padding: 1px 6px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.nav-count.zero { background: var(--border); color: var(--muted); font-weight: 400; }
+
+.sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+.list-pane {
+  width: var(--list-w);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.list-header {
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 5;
+}
+
+.list-title {
+  font-family: 'Lora', serif;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.list-meta {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mark-all-btn {
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  padding: 2px 0;
+  transition: color 0.15s;
+}
+.mark-all-btn:hover { color: var(--accent); }
+
+.summarize-btn {
+  font-size: 11px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  padding: 2px 0;
+  transition: color 0.15s;
+}
+.summarize-btn:hover { color: var(--text); }
+
+.summary-copy-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  background: var(--accent-soft);
+  border: 1px solid #f0d9c0;
+  border-radius: var(--radius);
+}
+
+.summary-copy-bar .copy-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.summary-copy-bar .copy-btn:hover { opacity: 0.85; }
+
+.summary-copy-bar .copy-label {
+  font-size: 12px;
+  color: var(--text2);
+  flex: 1;
+}
+
+.summary-prompt {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  font-family: 'DM Sans', monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: none;
+  overflow: visible;
+}
+
+.card {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+  position: relative;
+}
+
+.card:hover { background: #fafaf8; }
+.card.selected { background: var(--accent-soft); }
+.card.read { opacity: 0.6; }
+.card.archived-card { opacity: 0.5; }
+
+.card-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.card-source-label { color: var(--accent); }
+
+.card-title {
+  font-family: 'Lora', serif;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+  margin-bottom: 5px;
+}
+
+.card.read .card-title { font-weight: 400; }
+
+.card-snippet {
+  font-size: 12.5px;
+  color: var(--text2);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-thumb {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin: 10px 0 12px;
+  border: 1px solid var(--border);
+}
+
+.unread-indicator {
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--unread-dot);
+}
+
+.kept-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--kept);
+  font-weight: 600;
+  background: #edf7f1;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-top: 5px;
+}
+
+.no-articles {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.no-articles-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.5; }
+.no-articles p { font-size: 13px; line-height: 1.7; }
+.reading-pane {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.reading-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.reading-empty-icon { font-size: 40px; opacity: 0.25; margin-bottom: 4px; }
+.reading-empty p { font-size: 13px; line-height: 1.8; max-width: 260px; }
+
+.reading-content {
+  padding: 36px 48px 80px;
+  max-width: 760px;
+}
+
+.reading-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reading-title {
+  font-family: 'Lora', serif;
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 1.25;
+  color: var(--text);
+  margin-bottom: 16px;
+  letter-spacing: -0.3px;
+}
+
+.reading-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  background: var(--bg);
+  font-weight: 500;
+}
+
+.tag.kept-tag { border-color: var(--kept); color: var(--kept); background: #edf7f1; }
+
+.reading-divider { border: none; border-top: 1px solid var(--border); margin: 0 0 24px; }
+
+.reading-body {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--text2);
+}
+
+.reading-photo {
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin: 0 0 18px;
+}
+
+.reading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn:hover { border-color: var(--border2); background: var(--bg); }
+
+.action-btn.primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.action-btn.primary:hover { opacity: 0.88; }
+
+.action-btn.keep-btn { color: var(--kept); border-color: #b8dfc8; }
+.action-btn.keep-btn:hover { background: #edf7f1; }
+.action-btn.keep-btn.active { background: var(--kept); color: white; border-color: var(--kept); }
+
+.artifacts-view {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.artifact-list {
+  width: var(--list-w);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+
+.artifact-list-header {
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 5;
+}
+
+.artifact-list-title {
+  font-family: 'Lora', serif;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.artifact-list-sub { font-size: 11px; color: var(--muted); }
+
+.artifact-card {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.artifact-card:hover { background: #fafaf8; }
+.artifact-card.selected { background: var(--accent-soft); }
+
+.artifact-type-icon {
+  width: 36px; height: 36px;
+  border-radius: var(--radius);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+.artifact-info { flex: 1; min-width: 0; }
+
+.artifact-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 3px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.artifact-meta {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.artifact-viewer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.artifact-viewer-header {
+  padding: 10px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.artifact-viewer-head {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.artifact-viewer-title {
+  font-family: 'Lora', serif;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.artifact-viewer-meta {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.artifact-viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.artifact-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.artifact-icon-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.artifact-icon-btn.danger:hover {
+  border-color: #c2410c;
+  color: #c2410c;
+  background: #fff2eb;
+}
+
+.artifact-viewer-frame {
+  flex: 1;
+  border: none;
+  width: 100%;
+  background: white;
+}
+
+.artifact-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--muted);
+}
+.kb-bar {
+  height: var(--kb-h);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.kb-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+kbd {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  color: var(--text2);
+}
+.loader {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 100;
+}
+
+.loader-logo {
+  font-family: 'Lora', serif;
+  font-weight: 600;
+  font-size: 28px;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.loader-logo-icon {
+  width: 36px; height: 36px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 18px;
+}
+
+.loader-track {
+  width: 200px;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.loader-bar {
+  height: 100%;
+  background: var(--accent);
+  animation: sweep 1.5s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0% { width:0%; margin-left:0 }
+  50% { width:55%; margin-left:25% }
+  100% { width:0%; margin-left:100% }
+}
+
+.loader-msg { font-size: 13px; color: var(--muted); }
+.toast {
+  position: fixed;
+  bottom: 52px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--text);
+  color: white;
+  padding: 9px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  transition: all 0.25s;
+  z-index: 200;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted2); }
+</style>
+</head>
+<body>
+
+<!-- Loader -->
+<div class="loader" id="loader">
+  <div class="loader-logo">
+    <div class="loader-logo-icon"></div>
+    Refinery V2.7
+  </div>
+  <div class="loader-track"><div class="loader-bar"></div></div>
+  <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- App -->
+<div class="app" id="app" style="display:none">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon"></div>
+      Refinery V2.7
+    </div>
+    <div class="search-box">
+      <span class="search-icon"></span>
+      <input type="text" id="searchInput" placeholder="Search articles and artifacts" oninput="handleSearchInput()"><button class="search-clear" id="searchClear" onclick="clearSearch()" aria-label="Clear search">x</button>
+    </div>
+    <div class="header-right">
+      <div class="status-badge">
+        <div class="live-dot" id="liveDot"></div>
+        <span id="statusText"></span>
+      </div>
+      <button class="chip active" id="searchScopeView" onclick="setSearchScope('view')">Current view</button>
+      <button class="chip" id="searchScopeAll" onclick="setSearchScope('all')">All loaded</button>
+      <button class="chip" id="unreadChip" onclick="toggleUnread()">Unread only</button>
+      <button class="chip" onclick="refreshAll()"> Refresh</button>
+    </div>
+  </header>
+
+  <!-- Body -->
+  <div class="body-wrap">
+
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div class="sidebar-section">Inbox</div>
+      <div class="nav-item active" id="nav-all" onclick="setView('all')">
+        <span class="nav-icon"></span>
+        <span class="nav-label">All Unread</span>
+        <span class="nav-count" id="count-all">0</span>
+      </div>
+      <div class="nav-item" id="nav-kept" onclick="setView('kept')">
+        <span class="nav-icon"></span>
+        <span class="nav-label">Kept</span>
+        <span class="nav-count zero" id="count-kept">0</span>
+      </div>
+
+      <hr class="sidebar-divider">
+      <div class="sidebar-section">Categories</div>
+      <div id="catNav"></div>
+
+      <hr class="sidebar-divider">
+      <div class="sidebar-section">Sources</div>
+      <div id="sourceNav"></div>
+
+      <hr class="sidebar-divider">
+      <div class="nav-item" id="nav-artifacts" onclick="setView('artifacts')">
+        <span class="nav-icon"></span>
+        <span class="nav-label">Artifacts</span>
+        <span class="nav-count zero" id="count-artifacts">0</span>
+      </div>
+    </aside>
+
+    <!-- Main content area -->
+    <div id="mainArea" style="display:flex; flex:1; overflow:hidden;">
+
+      <!-- Article List -->
+      <div class="list-pane" id="listPane">
+        <div class="list-header">
+          <div class="list-title" id="listTitle">All Unread</div>
+          <div class="list-meta">
+            <span id="listCount"></span>
+            <button class="summarize-btn" onclick="summarizeVisible()">Summarize</button>
+            <span style="color:var(--border2)"></span>
+            <button class="mark-all-btn" onclick="markAllVisible()">Mark all read</button>
+          </div>
+        </div>
+        <div id="articleList"></div>
+      </div>
+
+      <!-- Reading Pane -->
+      <div class="reading-pane" id="readingPane">
+        <div class="reading-empty" id="readingEmpty">
+          <div class="reading-empty-icon"></div>
+          <p>Select an article to read.<br>Use <kbd>N</kbd> and <kbd>P</kbd> to navigate.</p>
+        </div>
+        <div class="reading-content" id="readingContent" style="display:none"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Keyboard shortcut bar -->
+  <div class="kb-bar">
+    <div class="kb-item"><kbd>N</kbd> Next / mark read</div>
+    <div class="kb-item"><kbd>P</kbd> Previous</div>
+    <div class="kb-item"><kbd>K</kbd> Keep</div>    <div class="kb-item"><kbd>Enter</kbd> Open URL</div>
+    <div class="kb-item"><kbd>M</kbd> Toggle read</div>
+  </div>
+
+</div>
+
+<script>
+const WORKING_SET_SIZE = 1250;
+const MORE_PAGE_SIZE = 250;
+const ARTIFACT_LIMIT = 50;
+
+let ARTICLES = [];
+let ARTIFACTS = [];
+let filtered = [];
+let selectedId = null;
+let selectedArtifact = null;
+let view = 'all';
+let unreadOnly = true;
+let artView = false;
+let searchScope = 'view';
+let loadingMore = false;
+let moreAvailable = 0;
+let artifactTotal = 0;
+let PRESERVED_READ_IDS = {};
+let VIEWER_STATS = {
+  totalArticles: 0,
+  unreadArticles: 0,
+  keptArticles: 0,
+  archivedArticles: 0,
+  artifactCount: 0,
+  categoryCounts: {},
+  sourceCounts: {}
+};
+
+const CATEGORY_KEYS = [
+  'Top Story',
+  'AI & LLMs',
+  'Finance',
+  'Resources',
+  'Tech & Trends',
+  'Policy & Society',
+  'Dev Tools',
+  'Research',
+  'Strategy',
+  'Watches',
+  'YouTube',
+  'Reddit',
+  'Email'
+];
+
+const CATEGORY_MAP = {
+  'top story': 'Top Story',
+  'top stories': 'Top Story',
+  'ai & llms': 'AI & LLMs',
+  'ai': 'AI & LLMs',
+  'finance': 'Finance',
+  'resources': 'Resources',
+  'framework': 'Resources',
+  'insight': 'Resources',
+  'learning': 'Resources',
+  'tech & trends': 'Tech & Trends',
+  'technology': 'Tech & Trends',
+  'tech': 'Tech & Trends',
+  'quick hit': 'Tech & Trends',
+  'general': 'Tech & Trends',
+  'news': 'Tech & Trends',
+  'policy & society': 'Policy & Society',
+  'policy': 'Policy & Society',
+  'dev tools': 'Dev Tools',
+  'research': 'Research',
+  'strategy': 'Strategy',
+  'watches': 'Watches',
+  'watch': 'Watches',
+  'youtube': 'YouTube',
+  'video': 'YouTube',
+  'reddit': 'Reddit',
+  'email': 'Email',
+  'artifacts': 'Artifacts'
+};
+
+const CATEGORIES = [
+  { key: 'Top Story', emoji: '' },
+  { key: 'AI & LLMs', emoji: '' },
+  { key: 'Finance', emoji: '' },
+  { key: 'Resources', emoji: '' },
+  { key: 'Tech & Trends', emoji: '' },
+  { key: 'Policy & Society', emoji: '' },
+  { key: 'Dev Tools', emoji: '' },
+  { key: 'Research', emoji: '' },
+  { key: 'Strategy', emoji: '' },
+  { key: 'Watches', emoji: '' },
+  { key: 'YouTube', emoji: '' },
+  { key: 'Reddit', emoji: '' },
+  { key: 'Email', emoji: '' }
+];
+
+window.addEventListener('load', function() {
+  updateUnreadChip();
+  updateSearchScopeChips();
+  updateSearchClear();
+  loadBootstrap(false);
+});
+
+function loadBootstrap(showToast) {
+  setStatus('loading', 'Refreshing');
+  setLoaderMessage('Loading your knowledge base');
+  return new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          reject(result.error);
+          return;
+        }
+
+        ARTICLES = Array.isArray(result.articles) ? result.articles : [];
+        ARTIFACTS = Array.isArray(result.artifacts) ? result.artifacts : [];
+        artifactTotal = result.artifactTotal || ARTIFACTS.length;
+        moreAvailable = result.moreAvailable || 0;
+        VIEWER_STATS = normalizeStats(result.stats, artifactTotal);
+        PRESERVED_READ_IDS = {};
+
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+
+        buildSidebar();
+        if (view === 'artifacts') {
+          showArtifactsView();
+        } else {
+          showArticlesView();
+          applyFilters();
+        }
+        setStatus('connected', formatNumber(VIEWER_STATS.totalArticles) + ' total');
+        if (showToast) toast('Refreshed');
+        resolve();
+      })
+      .withFailureHandler(function(err) {
+        reject(err && err.message ? err.message : String(err));
+      })
+      .getViewerBootstrap(WORKING_SET_SIZE, ARTIFACT_LIMIT);
+  }).catch(function(err) {
+    document.getElementById('loader').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loaderMsg').textContent = 'Startup error: ' + err;
+    setStatus('error', 'Load failed');
+  });
+}
+
+function normalizeStats(stats, artifactCount) {
+  stats = stats || {};
+  return {
+    totalArticles: stats.totalArticles || 0,
+    unreadArticles: stats.unreadArticles || 0,
+    keptArticles: stats.keptArticles || 0,
+    archivedArticles: stats.archivedArticles || 0,
+    browseableArticles: stats.browseableArticles || 0,
+    artifactCount: artifactCount || 0,
+    categoryCounts: stats.categoryCounts || {},
+    sourceCounts: stats.sourceCounts || {}
+  };
+}
+
+function setLoaderMessage(text) {
+  var el = document.getElementById('loaderMsg');
+  if (el) el.textContent = text;
+}
+
+function refreshAll() {
+  loadBootstrap(true);
+}
+
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString('en-US');
+}
+
+function setStatus(type, text) {
+  var dot = document.getElementById('liveDot');
+  if (dot) {
+    dot.className = 'live-dot' + (type === 'connected' ? ' connected' : type === 'error' ? ' error' : '');
+  }
+  var label = document.getElementById('statusText');
+  if (label) label.textContent = text;
+}
+
+function buildSidebar() {
+  setCount('count-all', VIEWER_STATS.unreadArticles);
+  setCount('count-kept', VIEWER_STATS.keptArticles);
+  setCount('count-archive', VIEWER_STATS.archivedArticles);
+  setCount('count-artifacts', VIEWER_STATS.artifactCount);
+
+  document.getElementById('catNav').innerHTML = CATEGORIES.map(function(cat) {
+    var cnt = VIEWER_STATS.categoryCounts[cat.key] || 0;
+    return `
+      <div class="nav-item ${view === 'cat:' + cat.key ? 'active' : ''}" onclick="setView('cat:${cat.key}')">
+        <span class="nav-icon">${cat.emoji}</span>
+        <span class="nav-label">${cat.key}</span>
+        ${cnt > 0 ? `<span class="nav-count">${cnt}</span>` : `<span class="nav-count zero">0</span>`}
+      </div>`;
+  }).join('');
+
+  var sources = Object.keys(VIEWER_STATS.sourceCounts).sort(function(a, b) {
+    return (VIEWER_STATS.sourceCounts[b] || 0) - (VIEWER_STATS.sourceCounts[a] || 0);
+  });
+
+  document.getElementById('sourceNav').innerHTML = sources.map(function(src) {
+    var cnt = VIEWER_STATS.sourceCounts[src] || 0;
+    return `
+      <div class="nav-item ${view === 'src:' + src ? 'active' : ''}" onclick="setView('src:${esc(src)}')">
+        <span class="nav-icon"></span>
+        <span class="nav-label">${src}</span>
+        ${cnt > 0 ? `<span class="nav-count">${cnt}</span>` : `<span class="nav-count zero">0</span>`}
+      </div>`;
+  }).join('');
+
+  updateUnreadChip();
+}
+
+function setCount(id, n) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = n;
+  el.className = 'nav-count' + (n === 0 ? ' zero' : '');
+}
+
+function setView(v) {
+  view = v;
+  artView = v === 'artifacts';
+  searchScope = 'view';
+  updateSearchScopeChips();
+  PRESERVED_READ_IDS = {};
+
+  document.querySelectorAll('.nav-item').forEach(function(el) {
+    el.classList.remove('active');
+  });
+
+  var navMap = {
+    all: 'nav-all',
+    kept: 'nav-kept',
+    archive: 'nav-archive',
+    artifacts: 'nav-artifacts'
+  };
+  if (navMap[v]) {
+    var nav = document.getElementById(navMap[v]);
+    if (nav) nav.classList.add('active');
+  }
+
+  if (artView) {
+    showArtifactsView();
+  } else {
+    showArticlesView();
+    applyFilters();
+  }
+}
+
+function showArticlesView() {
+  var main = document.getElementById('mainArea');
+  main.innerHTML = `
+    <div class="list-pane" id="listPane">
+      <div class="list-header">
+        <div class="list-title" id="listTitle"></div>
+        <div class="list-meta">
+          <span id="listCount"></span>
+          <button class="mark-all-btn more-btn" id="moreBtn" onclick="loadMoreArticles()">More</button>
+          <button class="summarize-btn" onclick="summarizeVisible()">Summarize</button>
+          <span style="color:var(--border2)"></span>
+          <button class="mark-all-btn" onclick="markAllVisible()">Mark all read</button>
+        </div>
+      </div>
+      <div id="articleList"></div>
+    </div>
+    <div class="reading-pane" id="readingPane">
+      <div class="reading-empty" id="readingEmpty">
+        <div class="reading-empty-icon"></div>
+        <p>Select an article to read.<br>Use <kbd>N</kbd> and <kbd>P</kbd> to navigate.</p>
+      </div>
+      <div class="reading-content" id="readingContent" style="display:none"></div>
+    </div>`;
+  updateMoreButton();
+}
+
+function showArtifactsView() {
+  var main = document.getElementById('mainArea');
+  main.innerHTML = `
+    <div class="artifacts-view" style="flex:1;overflow:hidden;display:flex;">
+      <div class="artifact-list" id="artifactList">
+        <div class="artifact-list-header">
+          <div class="artifact-list-title">Artifacts</div>
+          <div class="artifact-list-sub">${ARTIFACTS.length} of ${formatNumber(VIEWER_STATS.artifactCount)} files</div>
+        </div>
+        ${ARTIFACTS.length === 0
+          ? '<div class="no-articles" style="padding:40px 20px"><div class="no-articles-icon"></div><p>No files found in your Drive folder.</p></div>'
+          : ARTIFACTS.map(function(a) {
+              return `
+            <div class="artifact-card ${selectedArtifact && selectedArtifact.id === a.id ? 'selected' : ''}"
+                 id="acard-${a.id}" onclick="selectArtifact('${a.id}')">
+              <div class="artifact-type-icon">${a.typeIcon}</div>
+              <div class="artifact-info">
+                <div class="artifact-name" title="${escapeHtml(formatArtifactListTitle(a))}">${escapeHtml(formatArtifactListTitle(a))}</div>
+              </div>
+            </div>`;
+            }).join('')}
+      </div>
+      <div class="artifact-viewer" id="artifactViewer">
+        <div class="artifact-empty">
+          <div style="font-size:36px;opacity:0.25;margin-bottom:8px"></div>
+          <p style="font-size:13px;color:var(--muted)">Select a file to preview</p>
+        </div>
+      </div>
+    </div>`;
+
+  if (!ARTIFACTS.length) {
+    selectedArtifact = null;
+    return;
+  }
+
+  var nextId = selectedArtifact && ARTIFACTS.some(function(a) { return a.id === selectedArtifact.id; })
+    ? selectedArtifact.id
+    : ARTIFACTS[0].id;
+  selectArtifact(nextId);
+}
+
+function getArtifactDisplayTitle(artifact) {
+  return (artifact && (artifact.displayTitle || artifact.name)) || 'Artifact';
+}
+
+function formatArtifactListTitle(artifact) {
+  var title = getArtifactDisplayTitle(artifact);
+  return artifact && artifact.dateLabel ? artifact.dateLabel + ' -- ' + title : title;
+}
+
+function selectArtifact(id) {
+  selectedArtifact = ARTIFACTS.find(function(a) { return a.id === id; });
+  if (!selectedArtifact) return;
+
+  document.querySelectorAll('.artifact-card').forEach(function(el) {
+    el.classList.remove('selected');
+  });
+  var card = document.getElementById('acard-' + id);
+  if (card) card.classList.add('selected');
+
+  renderArtifactLoading(selectedArtifact);
+  if (selectedArtifact.viewerMode === 'html' || selectedArtifact.viewerMode === 'image') {
+    renderArtifactLocal(selectedArtifact);
+    return;
+  }
+  renderArtifactDrivePreview(selectedArtifact);
+}
+
+function renderArtifactShell(artifact, bodyHtml) {
+  return `
+    <div class="artifact-viewer-header">
+      <div class="artifact-viewer-head">
+        <div>
+          <div class="artifact-viewer-title">${escapeHtml(getArtifactDisplayTitle(artifact))}</div>
+          <div class="artifact-viewer-meta">
+            ${artifact.dateLabel ? `<span>${escapeHtml(artifact.dateLabel)}</span>` : ''}
+            <span>${escapeHtml(artifact.typeLabel || 'File')}</span>
+            ${artifact.size ? `<span>${escapeHtml(artifact.size)}</span>` : ''}
+          </div>
+        </div>
+        <div class="artifact-viewer-actions">
+          <button class="artifact-icon-btn" onclick="openArtifactInNewWindow('${artifact.id}')" title="Open in new window" aria-label="Open in new window">&#8599;</button>
+          <button class="artifact-icon-btn danger" onclick="deleteArtifact('${artifact.id}')" title="Delete artifact" aria-label="Delete artifact">&#128465;</button>
+        </div>
+      </div>
+    </div>
+    ${bodyHtml}`;
+}
+
+function renderArtifactLoading(artifact) {
+  var viewer = document.getElementById('artifactViewer');
+  if (!viewer) return;
+  viewer.innerHTML = renderArtifactShell(artifact, `
+    <div class="artifact-empty">
+      <div style="font-size:24px;opacity:0.25;margin-bottom:8px">${artifact.typeIcon}</div>
+      <p style="font-size:13px;color:var(--muted)">Loading artifact</p>
+    </div>`);
+}
+
+function renderArtifactDrivePreview(artifact) {
+  var viewer = document.getElementById('artifactViewer');
+  if (!viewer) return;
+  viewer.innerHTML = renderArtifactShell(artifact, `<iframe class="artifact-viewer-frame" src="${artifact.previewUrl}" allowfullscreen></iframe>`);
+}
+
+function renderArtifactLocal(artifact) {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      var viewer = document.getElementById('artifactViewer');
+      if (!viewer) return;
+      if (!result || result.error) {
+        viewer.innerHTML = renderArtifactShell(artifact, `
+          <div class="artifact-empty">
+            <div style="font-size:24px;opacity:0.25;margin-bottom:8px">${artifact.typeIcon}</div>
+            <p style="font-size:13px;color:var(--muted)">Preview failed to load</p>
+          </div>`);
+        return;
+      }
+
+      if (result.mode === 'image') {
+        viewer.innerHTML = renderArtifactShell(artifact, `<div style="flex:1;overflow:auto;background:#f6f2ea;display:flex;align-items:flex-start;justify-content:center;padding:14px;"><img src="${result.dataUrl}" alt="${escapeHtml(artifact.name)}" style="max-width:100%;height:auto;border:1px solid var(--border);background:white;box-shadow:var(--shadow-sm);"></div>`);
+        return;
+      }
+
+      viewer.innerHTML = renderArtifactShell(artifact, '<iframe id="artifactHtmlFrame" class="artifact-viewer-frame" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin" allowfullscreen></iframe>');
+      var frame = document.getElementById('artifactHtmlFrame');
+      if (frame) frame.srcdoc = result.html || '';
+    })
+    .withFailureHandler(function() {
+      var viewer = document.getElementById('artifactViewer');
+      if (!viewer) return;
+      viewer.innerHTML = renderArtifactShell(artifact, `
+        <div class="artifact-empty">
+          <div style="font-size:24px;opacity:0.25;margin-bottom:8px">${artifact.typeIcon}</div>
+          <p style="font-size:13px;color:var(--muted)">Preview failed to load</p>
+        </div>`);
+    })
+    .getArtifactContent(artifact.id);
+}
+
+function openArtifactInNewWindow(id) {
+  var artifact = ARTIFACTS.find(function(a) { return a.id === id; });
+  if (!artifact) return;
+
+  if (artifact.viewerMode === 'drive') {
+    window.open(artifact.previewUrl || artifact.url, '_blank', 'width=1000,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no');
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || result.error) {
+        toast('Artifact open failed');
+        return;
+      }
+
+      var popup = window.open('', '_blank', 'width=1000,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no');
+      if (!popup) {
+        toast('Popup blocked');
+        return;
+      }
+      popup.opener = null;
+
+      if (result.mode === 'image') {
+        popup.document.open();
+        popup.document.write(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${escapeHtml(getArtifactDisplayTitle(artifact))}</title><style>html,body{margin:0;padding:0;background:#f6f2ea;}body{display:flex;align-items:flex-start;justify-content:center;padding:16px;}img{max-width:100%;height:auto;border:1px solid #d0cec6;background:white;box-shadow:0 1px 3px rgba(0,0,0,0.07);}</style></head><body><img src="${result.dataUrl}" alt="${escapeHtml(artifact.name)}"></body></html>`);
+        popup.document.close();
+        return;
+      }
+
+      popup.document.open();
+      popup.document.write(result.html || '');
+      popup.document.close();
+    })
+    .withFailureHandler(function() {
+      toast('Artifact open failed');
+    })
+    .getArtifactContent(artifact.id);
+}
+
+function deleteArtifact(id) {
+  var artifact = ARTIFACTS.find(function(a) { return a.id === id; });
+  if (!artifact) return;
+  if (!confirm(`Delete artifact: ${getArtifactDisplayTitle(artifact)}?`)) return;
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) {
+        toast('Artifact delete failed');
+        return;
+      }
+      removeArtifactLocally(id);
+      buildSidebar();
+      showArtifactsView();
+      toast('Artifact deleted');
+    })
+    .withFailureHandler(function() {
+      toast('Artifact delete failed');
+    })
+    .deleteArtifactFile(id);
+}
+
+function removeArtifactLocally(id) {
+  ARTIFACTS = ARTIFACTS.filter(function(a) { return a.id !== id; });
+  artifactTotal = Math.max(0, artifactTotal - 1);
+  VIEWER_STATS.artifactCount = Math.max(0, (VIEWER_STATS.artifactCount || 0) - 1);
+  if (selectedArtifact && selectedArtifact.id === id) selectedArtifact = null;
+}
+
+function toggleUnread() {
+  unreadOnly = !unreadOnly;
+  PRESERVED_READ_IDS = {};
+  updateUnreadChip();
+  applyFilters();
+}
+
+function updateUnreadChip() {
+  var chip = document.getElementById('unreadChip');
+  if (chip) chip.classList.toggle('active', unreadOnly);
+}
+
+function setSearchScope(scope) {
+  searchScope = scope === 'all' ? 'all' : 'view';
+  updateSearchScopeChips();
+  applyFilters();
+}
+
+function updateSearchScopeChips() {
+  var viewChip = document.getElementById('searchScopeView');
+  var allChip = document.getElementById('searchScopeAll');
+  if (viewChip) viewChip.classList.toggle('active', searchScope === 'view');
+  if (allChip) allChip.classList.toggle('active', searchScope === 'all');
+}
+
+function matchesViewFilter(article) {
+  if (view === 'kept') {
+    if (!article.kept || article.archived) return false;
+  } else if (view === 'archive') {
+    if (!article.archived) return false;
+  } else {
+    if (article.kept || article.archived) return false;
+    if (view.indexOf('cat:') === 0 && normalizeCategory(article.category) !== view.slice(4)) return false;
+    if (view.indexOf('src:') === 0 && article.source !== view.slice(4)) return false;
+    if (unreadOnly && article.status === 'read' && !PRESERVED_READ_IDS[article.id]) return false;
+  }
+
+  return true;
+}
+
+function matchesSearchQuery(article, query) {
+  var haystack = `${article.title || ''} ${cleanSummaryText(article.summary)}  ${article.source || ''} ${article.category || ''}`.toLowerCase();
+  return haystack.indexOf(query) !== -1;
+}
+
+function handleSearchInput() {
+  updateSearchClear();
+  applyFilters();
+}
+
+function updateSearchClear() {
+  var input = document.getElementById('searchInput');
+  var btn = document.getElementById('searchClear');
+  if (!input || !btn) return;
+  btn.style.display = input.value ? 'block' : 'none';
+}
+
+function clearSearch() {
+  var input = document.getElementById('searchInput');
+  if (!input) return;
+  input.value = '';
+  updateSearchClear();
+  applyFilters();
+  input.focus();
+}
+
+function applyFilters() {
+  if (artView) return;
+  var input = document.getElementById('searchInput');
+  var q = ((input && input.value) || '').toLowerCase().trim();
+  var searchAll = !!q && searchScope === 'all';
+
+  filtered = ARTICLES.filter(function(a) {
+    if (!searchAll && !matchesViewFilter(a)) return false;
+    if (q && !matchesSearchQuery(a, q)) return false;
+    return true;
+  });
+
+  var titles = {
+    all: unreadOnly ? 'All Unread' : 'All Articles',
+    kept: 'Kept',
+    archive: 'Archive'
+  };
+  var title = searchAll
+    ? 'Search Results'
+    : (titles[view] || (view.indexOf('cat:') === 0 ? view.slice(4) : view.indexOf('src:') === 0 ? view.slice(4) : view));
+  var listTitleEl = document.getElementById('listTitle');
+  var listCountEl = document.getElementById('listCount');
+  if (listTitleEl) listTitleEl.textContent = title;
+  if (listCountEl) listCountEl.textContent = searchAll ? `${filtered.length} in all loaded` : `${filtered.length} shown`;
+
+  if (filtered.length === 0) {
+    selectedId = null;
+  } else if (!filtered.some(function(a) { return a.id === selectedId; })) {
+    selectedId = filtered[0].id;
+  }
+
+  renderList();
+  updateMoreButton();
+
+  if (selectedId) {
+    var selected = ARTICLES.find(function(a) { return a.id === selectedId; });
+    if (selected) renderArticle(selected);
+  } else {
+    showEmptyReading();
+  }
+}
+
+function updateMoreButton() {
+  var btn = document.getElementById('moreBtn');
+  if (!btn) return;
+  var canShow = !artView && view === 'all' && !unreadOnly && moreAvailable > 0;
+  btn.style.display = canShow ? 'inline-block' : 'none';
+  btn.textContent = loadingMore ? 'Loading' : 'More';
+}
+
+function loadMoreArticles() {
+  if (loadingMore || view !== 'all') return;
+  loadingMore = true;
+  updateMoreButton();
+  var excludeIds = ARTICLES.filter(function(a) {
+    return !a.kept && !a.archived;
+  }).map(function(a) {
+    return a.id;
+  });
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      loadingMore = false;
+      if (result && result.error) {
+        toast(result.error);
+        updateMoreButton();
+        return;
+      }
+      var newArticles = Array.isArray(result.articles) ? result.articles : [];
+      if (!newArticles.length) {
+        moreAvailable = 0;
+        updateMoreButton();
+        toast('No older articles');
+        return;
+      }
+      newArticles.forEach(function(article) {
+        if (!ARTICLES.some(function(existing) { return existing.id === article.id; })) {
+          ARTICLES.push(article);
+        }
+      });
+      moreAvailable = Math.max(0, moreAvailable - newArticles.length);
+      applyFilters();
+      toast('Loaded ' + newArticles.length + ' older articles');
+    })
+    .withFailureHandler(function(err) {
+      loadingMore = false;
+      updateMoreButton();
+      toast(err && err.message ? err.message : 'Load more failed');
+    })
+    .getMoreArticles(excludeIds, MORE_PAGE_SIZE);
+}
+
+function renderList() {
+  var list = document.getElementById('articleList');
+  if (!list) return;
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="no-articles">
+      <div class="no-articles-icon"></div>
+      <p>All caught up!<br>Nothing here matching your filters.</p>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(function(a) {
+    var normCat = normalizeCategory(a.category);
+    var imageUrl = extractImageUrl(a.summary);
+    var summaryText = cleanSummaryText(a.summary);
+    var summarySnippet = escapeHtml(summaryText.replace(/\s+/g, ' ').trim());
+    return `
+      <div class="card ${a.status === 'read' ? 'read' : ''} ${a.archived ? 'archived-card' : ''} ${selectedId === a.id ? 'selected' : ''}"
+           id="card-${a.id}" onclick="selectArticle(${a.id})">
+        ${a.status !== 'read' ? '<div class="unread-indicator"></div>' : ''}
+        <div class="card-eyebrow">
+          <span class="card-source-label">${a.source || ''}</span>
+          <span></span><span>${normCat}</span>
+        </div>
+        <div class="card-title">${a.title || ''}</div>
+        ${imageUrl ? `<img class="card-thumb" src="${imageUrl}" alt="">` : ''}
+        <div class="card-snippet">${summarySnippet}</div>
+        ${a.kept ? '<div class="kept-badge">Kept</div>' : ''}
+      </div>`;
+  }).join('');
+}
+
+function selectArticle(id, autoMarkRead) {
+  if (typeof autoMarkRead === 'undefined') autoMarkRead = true;
+  selectedId = id;
+  var article = ARTICLES.find(function(a) { return a.id === id; });
+  if (!article) return;
+
+  if (autoMarkRead && !article.archived && !article.kept && article.status !== 'read') {
+    markArticleReadLocal(article, true);
+    serverMarkRead(id);
+    buildSidebar();
+    applyFilters();
+    return;
+  }
+
+  renderList();
+  renderArticle(article);
+}
+
+function renderArticle(a) {
+  var empty = document.getElementById('readingEmpty');
+  var content = document.getElementById('readingContent');
+  if (!empty || !content) return;
+
+  empty.style.display = 'none';
+  content.style.display = 'block';
+
+  var imageUrl = extractImageUrl(a.summary);
+  var summaryText = cleanSummaryText(a.summary);
+  var normCat = normalizeCategory(a.category);
+
+  content.innerHTML = `
+    <div class="reading-eyebrow">
+      ${a.source || ''} &nbsp;&nbsp; ${a.issue || ''}
+    </div>
+    <h1 class="reading-title">${a.title || ''}</h1>
+    <div class="reading-meta">
+      <span class="tag">${normCat}</span>
+      ${a.kept ? '<span class="tag kept-tag">Kept</span>' : ''}
+      ${a.archived ? '<span class="tag" style="color:var(--archived)">Archived</span>' : ''}
+    </div>
+
+    <hr class="reading-divider">
+    ${imageUrl ? `<img class="reading-photo" src="${imageUrl}" alt="">` : ''}
+    <div class="reading-body">${formatSummaryHtml(a.summary)}</div>
+    <div class="reading-actions">
+      ${a.url ? `<a href="${a.url}" target="_blank" class="action-btn primary" style="text-decoration:none">Read full article</a>` : ''}
+      <button class="action-btn keep-btn ${a.kept ? 'active' : ''}" onclick="toggleKeep(${a.id})">${a.kept ? 'Kept' : 'Keep'}</button>
+    </div>`;
+
+  var pane = document.getElementById('readingPane');
+  if (pane) pane.scrollTo(0, 0);
+}
+
+function showEmptyReading() {
+  var empty = document.getElementById('readingEmpty');
+  var content = document.getElementById('readingContent');
+  if (empty) empty.style.display = 'flex';
+  if (content) content.style.display = 'none';
+}
+
+function toggleKeep(id) {
+  var article = ARTICLES.find(function(a) { return a.id === id; });
+  if (!article) return;
+  var previous = !!article.kept;
+
+  applyKeepLocal(article, !previous);
+  buildSidebar();
+  applyFilters();
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) {
+        applyKeepLocal(article, previous);
+        buildSidebar();
+        applyFilters();
+        toast('Keep update failed');
+        return;
+      }
+      toast(article.kept ? 'Kept' : 'Keep removed');
+    })
+    .withFailureHandler(function() {
+      applyKeepLocal(article, previous);
+      buildSidebar();
+      applyFilters();
+      toast('Keep update failed');
+    })
+    .keepArticle(id, article.kept);
+}
+
+function doArchive(id) {
+  var article = ARTICLES.find(function(a) { return a.id === id; });
+  if (!article) return;
+
+  applyArchiveLocal(article);
+  delete PRESERVED_READ_IDS[id];
+  buildSidebar();
+  applyFilters();
+  google.script.run.withSuccessHandler(function() {}).archiveArticle(id);
+  toast('Archived');
+}
+
+function toggleReadStatus(id) {
+  var article = ARTICLES.find(function(a) { return a.id === id; });
+  if (!article || article.archived) return;
+
+  if (article.status === 'read') {
+    markArticleUnreadLocal(article, true);
+    google.script.run.withSuccessHandler(function() {}).markUnread(id);
+    toast('Marked unread');
+  } else {
+    markArticleReadLocal(article, true);
+    google.script.run.withSuccessHandler(function() {}).markRead(id);
+    toast('Marked read');
+  }
+
+  buildSidebar();
+  applyFilters();
+}
+
+function markAllVisible() {
+  filtered.forEach(function(article) {
+    if (!article.kept && !article.archived && article.status !== 'read') {
+      markArticleReadLocal(article, true);
+      serverMarkRead(article.id);
+    }
+  });
+  buildSidebar();
+  applyFilters();
+  toast('All marked read');
+}
+
+function serverMarkRead(id) {
+  google.script.run.withSuccessHandler(function() {}).markRead(id);
+}
+
+function summarizeVisible() {
+  if (filtered.length === 0) {
+    toast('No articles to summarize');
+    return;
+  }
+
+  var count = filtered.length;
+  var label = view === 'all' ? 'All Unread' : view.indexOf('cat:') === 0 ? view.slice(4) : view.indexOf('src:') === 0 ? view.slice(4) : view;
+  if (!confirm(`Prepare summary for ${count} article${count !== 1 ? 's' : ''} in "${label}" and mark all as read?`)) return;
+
+  var articleDump = filtered.map(function(a, i) {
+    return `--- Article ${i + 1} ---
+Title: ${a.title}
+Source: ${a.source}
+Category: ${a.category || 'General'}
+Issue: ${a.issue || 'N/A'}
+Summary: ${cleanSummaryText(a.summary)}
+
+URL: ${a.url || 'N/A'}`;
+  }).join('\n\n');
+
+  var prompt = `Summarize the following ${count} articles from "${label}". Group by theme, write a narrative summary (2-3 paragraphs), and call out standout articles worth revisiting with their title and why they matter.\n\n${articleDump}`;
+
+  var empty = document.getElementById('readingEmpty');
+  var content = document.getElementById('readingContent');
+  if (!empty || !content) return;
+  empty.style.display = 'none';
+  content.style.display = 'block';
+  content.innerHTML = `
+    <div class="reading-eyebrow">SUMMARY PROMPT</div>
+    <h1 class="reading-title">${label} - ${count} article${count !== 1 ? 's' : ''}</h1>
+    <div class="summary-copy-bar">
+      <button class="copy-btn" onclick="copySummaryPrompt()">Copy Prompt</button>
+      <span class="copy-label">Copy and paste into any LLM</span>
+    </div>
+    <div class="summary-prompt" id="summaryPromptMain">${escapeHtml(prompt)}</div>`;
+
+  filtered.forEach(function(article) {
+    if (!article.kept && !article.archived && article.status !== 'read') {
+      markArticleReadLocal(article, true);
+      serverMarkRead(article.id);
+    }
+  });
+  buildSidebar();
+  applyFilters();
+  toast(count + ' articles marked read');
+}
+
+function copySummaryPrompt() {
+  var el = document.getElementById('summaryPromptMain');
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(function() {
+    toast('Copied to clipboard');
+  }).catch(function() {
+    toast('Copy failed');
+  });
+}
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+let navBusy = false;
+document.addEventListener('keydown', function(e) {
+  var tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  switch (e.key) {
+    case 'n':
+    case 'N':
+      navigate(1);
+      break;
+    case 'p':
+    case 'P':
+      navigate(-1);
+      break;
+    case 'k':
+    case 'K':
+      if (selectedId) toggleKeep(selectedId);
+      break;
+    case 'm':
+    case 'M':
+      if (selectedId) toggleReadStatus(selectedId);
+      break;
+    case 'Enter':
+      if (selectedId) {
+        var article = ARTICLES.find(function(a) { return a.id === selectedId; });
+        if (article && article.url) window.open(article.url, '_blank');
+      }
+      break;
+  }
+});
+
+function navigate(dir) {
+  if (navBusy || artView || filtered.length === 0) return;
+  navBusy = true;
+  try {
+    var idx = filtered.findIndex(function(a) { return a.id === selectedId; });
+    if (idx === -1) {
+      idx = dir > 0 ? 0 : filtered.length - 1;
+      selectArticle(filtered[idx].id, false);
+      scrollCardIntoView(filtered[idx].id);
+      return;
+    }
+
+    if (dir > 0) {
+      var current = ARTICLES.find(function(a) { return a.id === selectedId; });
+      if (current && !current.kept && !current.archived && current.status !== 'read') {
+        markArticleReadLocal(current, true);
+        serverMarkRead(current.id);
+        buildSidebar();
+        applyFilters();
+        idx = filtered.findIndex(function(a) { return a.id === current.id; });
+      }
+    }
+
+    var nextIdx = idx + dir;
+    if (nextIdx < 0) nextIdx = 0;
+    if (nextIdx >= filtered.length) nextIdx = filtered.length - 1;
+    if (nextIdx === idx) return;
+
+    selectArticle(filtered[nextIdx].id, false);
+    scrollCardIntoView(filtered[nextIdx].id);
+  } finally {
+    setTimeout(function() { navBusy = false; }, 0);
+  }
+}
+
+function scrollCardIntoView(id) {
+  requestAnimationFrame(function() {
+    var card = document.getElementById('card-' + id);
+    if (card) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+}
+
+function markArticleReadLocal(article, preserveVisible) {
+  if (!article || article.status === 'read') return;
+  if (!article.kept && !article.archived) adjustUnreadCounters(article, -1);
+  article.status = 'read';
+  if (preserveVisible) PRESERVED_READ_IDS[article.id] = true;
+}
+
+function markArticleUnreadLocal(article, preserveVisible) {
+  if (!article || article.status !== 'read') return;
+  article.status = 'unread';
+  if (!article.kept && !article.archived) adjustUnreadCounters(article, 1);
+  if (preserveVisible) PRESERVED_READ_IDS[article.id] = true;
+}
+
+function applyKeepLocal(article, nextKept) {
+  if (!article || article.kept === nextKept) return;
+  if (nextKept) {
+    VIEWER_STATS.keptArticles += 1;
+    if (!article.archived && article.status !== 'read') adjustUnreadCounters(article, -1);
+  } else {
+    VIEWER_STATS.keptArticles = Math.max(0, VIEWER_STATS.keptArticles - 1);
+    if (!article.archived && article.status !== 'read') adjustUnreadCounters(article, 1);
+  }
+  article.kept = nextKept;
+  delete PRESERVED_READ_IDS[article.id];
+}
+
+function applyArchiveLocal(article) {
+  if (!article || article.archived) return;
+  if (article.kept) {
+    VIEWER_STATS.keptArticles = Math.max(0, VIEWER_STATS.keptArticles - 1);
+  } else if (article.status !== 'read') {
+    adjustUnreadCounters(article, -1);
+  }
+  VIEWER_STATS.archivedArticles += 1;
+  article.archived = true;
+  article.status = 'read';
+}
+
+function adjustUnreadCounters(article, delta) {
+  VIEWER_STATS.unreadArticles = Math.max(0, VIEWER_STATS.unreadArticles + delta);
+  var cat = normalizeCategory(article.category);
+  VIEWER_STATS.categoryCounts[cat] = Math.max(0, (VIEWER_STATS.categoryCounts[cat] || 0) + delta);
+  if (VIEWER_STATS.categoryCounts[cat] === 0) delete VIEWER_STATS.categoryCounts[cat];
+  if (article.source) {
+    VIEWER_STATS.sourceCounts[article.source] = Math.max(0, (VIEWER_STATS.sourceCounts[article.source] || 0) + delta);
+    if (VIEWER_STATS.sourceCounts[article.source] === 0) delete VIEWER_STATS.sourceCounts[article.source];
+  }
+}
+
+function normalizeCategory(raw) {
+  if (!raw) return 'Tech & Trends';
+  var clean = String(raw).replace(/^[^\w]+/, '').trim();
+  var key = clean.toLowerCase();
+  if (CATEGORY_MAP[key]) return CATEGORY_MAP[key];
+  if (CATEGORY_KEYS.indexOf(clean) !== -1) return clean;
+  return 'Tech & Trends';
+}
+
+function extractImageUrl(summary) {
+  var match = String(summary || '').match(/^\[\[image_url=(https?:\/\/[^\]]+)\]\]\s*/i);
+  return match ? match[1] : '';
+}
+
+function cleanSummaryText(summary) {
+  return String(summary || '').replace(/^\[\[image_url=https?:\/\/[^\]]+\]\]\s*/i, '').trim();
+}
+
+function formatSummaryHtml(summary) {
+  var text = cleanSummaryText(summary);
+  if (!text) return '';
+
+  var html = escapeHtml(text);
+  html = html.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+  html = html.replace(/\n{2,}/g, '<br><br>').replace(/\n/g, '<br>');
+  return html;
+}
+
+function esc(s) {
+  return String(s || '').replace(/'/g, "\\'");
+}
+
+let toastTimer;
+function toast(msg) {
+  var el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() {
+    el.classList.remove('show');
+  }, 2200);
+}
+
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
