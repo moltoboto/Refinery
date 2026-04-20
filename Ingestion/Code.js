@@ -1788,31 +1788,24 @@ function purgeArticlesBeforeDate_(dryRun, cutoffInput, batchSize) {
     return summary;
   }
 
-  while (true) {
-    var rows = fetchArticlesOlderThanDate_(cutoffIso, pageSize, 0);
-    if (!rows.length) break;
-    summary.matched += rows.length;
-    rows.forEach(function(row) {
-      if (summary.sample.length >= 25) return;
-      summary.sample.push({
-        id: row.id,
-        date_added: row.date_added,
-        source: row.source,
-        category: row.category,
-        title: String(row.title || '').substring(0, 120)
-      });
+  var rows = fetchArticlesOlderThanDate_(cutoffIso, pageSize, 0);
+  summary.matched = rows.length;
+  rows.forEach(function(row) {
+    if (summary.sample.length >= 25) return;
+    summary.sample.push({
+      id: row.id,
+      date_added: row.date_added,
+      source: row.source,
+      category: row.category,
+      title: String(row.title || '').substring(0, 120)
     });
+  });
 
-    var ids = rows.map(function(row) { return row.id; }).filter(function(id) { return id !== null && id !== undefined && id !== ''; });
-    if (!ids.length) break;
-
-    var deletedCount = deleteArticlesByIds_(ids);
-    summary.deleted += deletedCount;
-    if (deletedCount !== ids.length) {
-      summary.errors += Math.max(0, ids.length - deletedCount);
-      Logger.log('ARTICLE PURGE WARNING: requested delete for ' + ids.length + ' rows, deleted ' + deletedCount);
-      break;
-    }
+  if (rows.length) {
+    var deleteResult = deleteArticlesOlderThanDate_(cutoffIso);
+    summary.deleted = deleteResult.deleted;
+    summary.errors = deleteResult.errors;
+    if (deleteResult.error) summary.error = deleteResult.error;
   }
 
   Logger.log('ARTICLE PURGE COMPLETE: ' + JSON.stringify(summary, null, 2));
@@ -1853,33 +1846,28 @@ function fetchArticlesOlderThanDate_(cutoffIso, limit, offset) {
   return JSON.parse(resp.getContentText()) || [];
 }
 
-function deleteArticlesByIds_(ids) {
-  if (!ids || !ids.length) return 0;
+function deleteArticlesOlderThanDate_(cutoffIso) {
   var headers = {
     'apikey': CONFIG.SUPABASE_API_KEY,
     'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY,
     'Prefer': 'return=representation'
   };
-  var chunks = [];
-  for (var i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100));
-
-  var deleted = 0;
-  chunks.forEach(function(chunk) {
-    var serialized = chunk.map(function(id) { return String(id); }).join(',');
-    var url = CONFIG.SUPABASE_URL + '/rest/v1/articles?id=in.(' + serialized + ')';
-    var resp = UrlFetchApp.fetch(url, {
-      method: 'delete',
-      headers: headers,
-      muteHttpExceptions: true
-    });
-    if (resp.getResponseCode() !== 200) {
-      throw new Error('Supabase delete failed: ' + resp.getResponseCode() + ' ' + resp.getContentText().substring(0, 200));
-    }
-    var rows = JSON.parse(resp.getContentText() || '[]') || [];
-    deleted += rows.length;
+  var url = CONFIG.SUPABASE_URL + '/rest/v1/articles?date_added=lt.' + encodeURIComponent(cutoffIso);
+  var resp = UrlFetchApp.fetch(url, {
+    method: 'delete',
+    headers: headers,
+    muteHttpExceptions: true
   });
-
-  return deleted;
+  var code = resp.getResponseCode();
+  if (code !== 200) {
+    return {
+      deleted: 0,
+      errors: 1,
+      error: 'Supabase delete failed: ' + code + ' ' + resp.getContentText().substring(0, 200)
+    };
+  }
+  var rows = JSON.parse(resp.getContentText() || '[]') || [];
+  return { deleted: rows.length, errors: 0 };
 }
 function getMetaContent(html, attr, value) {
   if (!html) return '';
