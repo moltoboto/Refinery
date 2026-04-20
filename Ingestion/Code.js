@@ -1823,11 +1823,12 @@ var ARTICLE_PURGE_ = {
 
   deleteOlderThanDate: function(cutoffIso) {
     var serviceRoleKey = ARTICLE_PURGE_.getServiceRoleKey();
-    if (!serviceRoleKey) {
+    var validationError = ARTICLE_PURGE_.validateElevatedKey(serviceRoleKey);
+    if (validationError) {
       return {
         deleted: 0,
         errors: 1,
-        error: 'Missing script property SUPABASE_SERVICE_ROLE_KEY'
+        error: validationError
       };
     }
 
@@ -1855,17 +1856,31 @@ var ARTICLE_PURGE_ = {
     return PropertiesService.getScriptProperties().getProperty('SUPABASE_SERVICE_ROLE_KEY');
   },
 
+  validateElevatedKey: function(key) {
+    key = String(key || '').trim();
+    if (!key) return 'Missing script property SUPABASE_SERVICE_ROLE_KEY';
+    if (key.indexOf('sb_publishable_') === 0) {
+      return 'SUPABASE_SERVICE_ROLE_KEY is using a publishable key. Use the legacy service_role key or a server-side sb_secret key.';
+    }
+    return '';
+  },
+
   authHeaders: function(extra) {
     var serviceRoleKey = ARTICLE_PURGE_.getServiceRoleKey();
-    if (serviceRoleKey) return ARTICLE_PURGE_.writeHeaders(serviceRoleKey, extra);
+    if (serviceRoleKey && !ARTICLE_PURGE_.validateElevatedKey(serviceRoleKey)) {
+      return ARTICLE_PURGE_.writeHeaders(serviceRoleKey, extra);
+    }
     return ARTICLE_PURGE_.readHeaders(extra);
   },
 
   writeHeaders: function(key, extra) {
+    key = String(key || '').trim();
     var headers = {
-      'apikey': key,
-      'Authorization': 'Bearer ' + key
+      'apikey': key
     };
+    if (key.indexOf('sb_secret_') !== 0) {
+      headers['Authorization'] = 'Bearer ' + key;
+    }
     return ARTICLE_PURGE_.mergeHeaders(headers, extra);
   },
 
