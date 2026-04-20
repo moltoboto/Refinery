@@ -1783,7 +1783,7 @@ var ARTICLE_PURGE_ = {
 
   countOlderThanDate: function(cutoffIso) {
     var resp = UrlFetchApp.fetch(
-      CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id&date_added=lt.' + encodeURIComponent(cutoffIso) + '&limit=1',
+      CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id&kept=eq.false&date_added=lt.' + encodeURIComponent(cutoffIso) + '&limit=1',
       {
         method: 'get',
         headers: ARTICLE_PURGE_.authHeaders({ 'Prefer': 'count=exact' }),
@@ -1802,7 +1802,8 @@ var ARTICLE_PURGE_ = {
 
   fetchOlderThanDate: function(cutoffIso, limit, offset) {
     var url = CONFIG.SUPABASE_URL + '/rest/v1/articles'
-      + '?select=id,source,title,category,date_added'
+      + '?select=id,source,title,category,date_added,kept'
+      + '&kept=eq.false'
       + '&date_added=lt.' + encodeURIComponent(cutoffIso)
       + '&order=date_added.asc'
       + '&limit=' + encodeURIComponent(limit)
@@ -1833,7 +1834,7 @@ var ARTICLE_PURGE_ = {
     }
 
     var resp = UrlFetchApp.fetch(
-      CONFIG.SUPABASE_URL + '/rest/v1/articles?date_added=lt.' + encodeURIComponent(cutoffIso),
+      CONFIG.SUPABASE_URL + '/rest/v1/articles?kept=eq.false&date_added=lt.' + encodeURIComponent(cutoffIso),
       {
         method: 'delete',
         headers: ARTICLE_PURGE_.writeHeaders(serviceRoleKey, { 'Prefer': 'return=representation' }),
