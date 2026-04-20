@@ -21,7 +21,7 @@ Ingestion: v2.12 | Viewer: v2.8
 
 ## Local File Structure
 ```
-C:\Users\exact\Refinery\
+C:\Users\exact\Refinery\          ← git repo, tracked on origin/main
   ├── Viewer\          (Code.js, index.html, appsscript.json, .clasp.json)
   ├── Ingestion\       (Code.js, appsscript.json, .clasp.json)
   ├── CONTEXT.md
@@ -31,6 +31,13 @@ C:\Users\exact\Refinery\
   ├── RefineryV2 Viewer.json
   └── RefineryV2 Ingestion.json
 ```
+
+## GitHub
+- **Repo:** https://github.com/moltoboto/Refinery
+- **Default branch:** `main`
+- **Auth:** gh CLI authenticated as moltoboto (keyring, HTTPS)
+- **Rule:** After every version bump, commit and push to main. Commit message = version + one-line summary.
+- `master` branch is legacy — do not use.
 
 ## File Map
 | File | App | Purpose |

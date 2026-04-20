@@ -19,6 +19,13 @@ C:\Users\exact\Refinery\
   └── RefineryV2 Ingestion.json → Snapshot of Ingestion for Codex uploads
 ```
 
+### GitHub (moltoboto)
+- Repo: https://github.com/moltoboto/Refinery
+- Default branch: `main` (use this — `master` is legacy)
+- Auth: gh CLI authenticated as moltoboto (HTTPS, keyring) on P16
+- Push after every version bump: `git add -A && git commit -m "vX.Y - summary" && git push`
+- Pull before starting if another tool was used last: `git pull`
+
 ### Google Drive (moltoboto@gmail.com)
 - Refinery folder: `1Ue36DjRLySHJ4jQvsSYQuRmtoor9BkJL`
 - Artifacts folder: `1eO6n6MQKF7_cCwulGxhDkzrxT772M-Iz`
@@ -62,7 +69,7 @@ Read CONTEXT.md and the 2 most recent AUDIT_TRAIL.md entries before doing anythi
 Do not touch anything in the "Do Not Touch" section of CONTEXT.md.
 Push changes via: cd C:\Users\exact\Refinery\Viewer && clasp push --force
 
-Current versions: Ingestion v2.4 | Viewer v2.7
+Current versions: Ingestion v2.12 | Viewer v2.8
 
 Today's task: [DESCRIBE TASK HERE]
 ```
@@ -73,22 +80,28 @@ Today's task: [DESCRIBE TASK HERE]
 
 ### Every session:
 - [ ] Append entry to AUDIT_TRAIL.md (request, files touched, actions, validation, follow-up)
+- [ ] Commit and push to GitHub: `git add -A && git commit -m "vX.Y - summary" && git push`
 - [ ] Regenerate JSONs if code changed: `node` script combining local files into JSON format
 - [ ] Manually upload changed docs + JSONs to Google Drive Refinery folder
 
 ### On version bump:
-- [ ] Bump version in Code.js `doGet()` title string
+- [ ] Bump version in Code.js header comment
 - [ ] Add row to CONTEXT.md Change Log
 - [ ] Deploy → Manage deployments → update existing (keeps same URL)
+
+### Switching tools:
+- **Codex → Claude Code:** make sure Codex pushed to GitHub, then `git pull` in `C:\Users\exact\Refinery\`
+- **Claude Code → Codex:** Claude Code pushes to GitHub; download latest files from GitHub in Codex
 
 ---
 
 ## TOOL-SPECIFIC NOTES
 
 **Claude Code (claude.ai/claude-code):**
-- Can read/edit local files directly and run clasp push
+- Can read/edit local files directly, run clasp push, and push to GitHub via gh CLI (moltoboto)
 - Cannot edit Google Drive files directly — upload manually after session
 - Has browser automation (MCP) but click/screenshot tools are unreliable on P16
+- Always run `git pull` at session start if Codex was used last
 
 **Codex (chatgpt.com):**
 - Upload CONTEXT.md + AUDIT_TRAIL.md + the relevant JSON file

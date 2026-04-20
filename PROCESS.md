@@ -28,6 +28,37 @@
 
 ---
 
+### Claude Code (CLI) - Full local editing + git push
+**Best for:** Multi-file changes, git operations, reading/writing local files directly
+
+1. Open Claude Code in `C:\Users\exact\Refinery\`
+2. Claude reads CONTEXT.md and AUDIT_TRAIL.md automatically from the working directory
+3. State the task — Claude reads the relevant files before changing anything
+4. Review changes in the terminal diff before committing
+5. Claude commits and pushes to `origin/main` via `gh`-authenticated git
+6. On version bump: Claude updates CONTEXT.md and AUDIT_TRAIL.md before the commit
+
+**Git quick reference (run from `C:\Users\exact\Refinery\`):**
+```bash
+git status                    # what changed
+git diff                      # see changes
+git pull                      # sync from GitHub before starting
+git add -p                    # stage selectively
+git commit -m "v2.X - summary"
+git push                      # push to origin/main
+```
+
+**Switching from Codex to Claude Code:**
+- Make sure Codex pushed to GitHub first
+- Run `git pull` in `C:\Users\exact\Refinery\` to get latest
+- Then start your Claude Code session
+
+**Switching from Claude Code to Codex:**
+- Claude Code will commit and push before closing
+- In Codex, download the latest files from GitHub before starting
+
+---
+
 ### Claude (claude.ai) - Planning, Architecture, Debugging Logic
 **Best for:** Designing changes, debugging tricky logic, updating CONTEXT.md
 

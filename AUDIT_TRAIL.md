@@ -17,6 +17,27 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-04-20 - Claude Code
+- Request: Set up GitHub connector so user can switch between Claude Code and Codex at will. Document the workflow in all three working docs.
+- Files touched:
+  - `C:\Users\exact\Refinery\CONTEXT.md` — added GitHub section with repo URL, branch, auth, and usage rule
+  - `C:\Users\exact\Refinery\PROCESS.md` — added Claude Code section with git quick reference and tool-switching instructions
+  - `C:\Users\exact\Refinery\HANDOFF_PROMPT.md` — added GitHub to WHERE EVERYTHING LIVES, updated version string to v2.12/v2.8, added git to end-of-session checklist, added tool-switching instructions
+  - `C:\Users\exact\Refinery\AUDIT_TRAIL.md` — added this entry
+- Actions taken:
+  - Installed gh CLI (v2.90.0) via winget
+  - Authenticated gh CLI as moltoboto (HTTPS, keyring)
+  - Confirmed `C:\Users\exact\Refinery\` is already a git repo on `main`, tracking `origin/main`, clean and up to date with GitHub
+  - Confirmed local files (v2.12 Ingestion, v2.8 Viewer) match GitHub main (last commit: "Switch article cleanup to soft delete", 2026-04-20T23:20 UTC)
+  - Updated all three working docs with GitHub info and tool-switching workflow
+- Validation:
+  - `gh auth status` confirmed moltoboto logged in with repo scope
+  - `git status` confirmed clean working tree, branch main, up to date with origin/main
+- Follow-up:
+  - Mirror updated docs to Google Drive Refinery folder manually
+  - From now on: commit + push to GitHub at the end of every substantive session
+  - Codex sessions should pull latest from GitHub before starting
+
 ### 2026-04-20 - Codex
 - Request: Replace hard-delete-first behavior with a safer delete state, so article cleanup can be reversible and true purges only remove rows already marked deleted.
 - Files touched:
