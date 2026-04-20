@@ -18,6 +18,24 @@ This file is the running session-level audit trail for Refinery work.
 ## Entries
 
 ### 2026-04-20 - Codex
+- Request: Replace hard-delete-first behavior with a safer delete state, so article cleanup can be reversible and true purges only remove rows already marked deleted.
+- Files touched:
+  - `C:\Users\exact\Refinery\Ingestion\Code.js` - bumped to v2.12, changed the pre-April cleanup flow from hard delete to soft delete, and kept `kept=true` rows protected
+  - `C:\Users\exact\Refinery\Viewer\Code.js` - changed stale purge to physically remove only rows already marked `status='deleted'` and excluded deleted rows from archive counts
+  - `C:\Users\exact\Refinery\CONTEXT.md` - updated current version and changelog
+  - `C:\Users\exact\Refinery\AUDIT_TRAIL.md` - added this entry
+- Actions taken:
+  - Stopped using hard delete as the default cleanup action for old articles.
+  - Updated the ingestion purge module so `purgeArticlesBeforeApril2026()` now sets `archived=true` and `status='deleted'` for non-kept rows before the cutoff instead of removing them from the table.
+  - Kept `kept=true` rows out of preview, sample, and cleanup queries.
+  - Repurposed the viewer stale purge path so it only hard-purges rows already marked deleted.
+- Validation:
+  - `node --check` passed for both `Ingestion/Code.js` and `Viewer/Code.js`.
+- Follow-up:
+  - Push both Apps Script projects and GitHub.
+  - From now on, use the date-based purge as a soft delete only; use the stale purge path only when you intentionally want permanent removal of already-deleted rows.
+
+### 2026-04-20 - Codex
 - Request: Make the pre-April article purge actually delete safely, and clean up the ingestion code so the redundant purge helpers stop cluttering the Apps Script function list.
 - Files touched:
   - `C:\Users\exact\Refinery\Ingestion\Code.js` - refactored purge helpers into `ARTICLE_PURGE_`, removed redundant public purge/date helper functions, removed `listTorSubscriptions()`, bumped to v2.11

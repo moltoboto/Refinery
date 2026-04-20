@@ -265,7 +265,7 @@ function purgeStaleArticles() {
     cutoff.setDate(cutoff.getDate() - CONFIG.PURGE_DAYS);
     var iso = cutoff.toISOString();
     var response = supabaseRequest_(
-      '/rest/v1/articles?kept=eq.false&status=eq.read&date_added=lt.' + encodeURIComponent(iso),
+      '/rest/v1/articles?kept=eq.false&archived=eq.true&status=eq.deleted&date_added=lt.' + encodeURIComponent(iso),
       {
         method: 'delete',
         headers: { 'Prefer': 'return=representation' }
@@ -274,7 +274,7 @@ function purgeStaleArticles() {
 
     if (response.error) return { error: response.error };
     if (response.code === 200) {
-      return { purged: Array.isArray(response.json) ? response.json.length : 0 };
+      return { purgedDeleted: Array.isArray(response.json) ? response.json.length : 0 };
     }
     return { error: 'Supabase error ' + response.code + ': ' + response.text };
   } catch (e) {
@@ -743,7 +743,7 @@ function buildViewerStats_() {
     totalArticles: fetchCount_(''),
     unreadArticles: unreadRows.length,
     keptArticles: fetchCount_('kept=eq.true&archived=eq.false'),
-    archivedArticles: fetchCount_('archived=eq.true'),
+    archivedArticles: fetchCount_('archived=eq.true&status=neq.deleted'),
     browseableArticles: unreadRows.length + fetchCount_('kept=eq.false&archived=eq.false&status=eq.read'),
     categoryCounts: categoryCounts,
     sourceCounts: sourceCounts
