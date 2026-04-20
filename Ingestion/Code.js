@@ -1786,7 +1786,7 @@ var ARTICLE_PURGE_ = {
       CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id&date_added=lt.' + encodeURIComponent(cutoffIso) + '&limit=1',
       {
         method: 'get',
-        headers: ARTICLE_PURGE_.readHeaders({ 'Prefer': 'count=exact' }),
+        headers: ARTICLE_PURGE_.authHeaders({ 'Prefer': 'count=exact' }),
         muteHttpExceptions: true
       }
     );
@@ -1810,7 +1810,7 @@ var ARTICLE_PURGE_ = {
 
     var resp = UrlFetchApp.fetch(url, {
       method: 'get',
-      headers: ARTICLE_PURGE_.readHeaders(),
+      headers: ARTICLE_PURGE_.authHeaders(),
       muteHttpExceptions: true
     });
 
@@ -1822,7 +1822,7 @@ var ARTICLE_PURGE_ = {
   },
 
   deleteOlderThanDate: function(cutoffIso) {
-    var serviceRoleKey = PropertiesService.getScriptProperties().getProperty('SUPABASE_SERVICE_ROLE_KEY');
+    var serviceRoleKey = ARTICLE_PURGE_.getServiceRoleKey();
     if (!serviceRoleKey) {
       return {
         deleted: 0,
@@ -1851,12 +1851,14 @@ var ARTICLE_PURGE_ = {
     return { deleted: rows.length, errors: 0 };
   },
 
-  readHeaders: function(extra) {
-    var headers = {
-      'apikey': CONFIG.SUPABASE_API_KEY,
-      'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY
-    };
-    return ARTICLE_PURGE_.mergeHeaders(headers, extra);
+  getServiceRoleKey: function() {
+    return PropertiesService.getScriptProperties().getProperty('SUPABASE_SERVICE_ROLE_KEY');
+  },
+
+  authHeaders: function(extra) {
+    var serviceRoleKey = ARTICLE_PURGE_.getServiceRoleKey();
+    if (serviceRoleKey) return ARTICLE_PURGE_.writeHeaders(serviceRoleKey, extra);
+    return ARTICLE_PURGE_.readHeaders(extra);
   },
 
   writeHeaders: function(key, extra) {
