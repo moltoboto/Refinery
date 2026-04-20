@@ -17,6 +17,24 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-04-20 - Codex
+- Request: Make the pre-April article purge actually delete safely, and clean up the ingestion code so the redundant purge helpers stop cluttering the Apps Script function list.
+- Files touched:
+  - `C:\Users\exact\Refinery\Ingestion\Code.js` - refactored purge helpers into `ARTICLE_PURGE_`, removed redundant public purge/date helper functions, removed `listTorSubscriptions()`, bumped to v2.11
+  - `C:\Users\exact\Refinery\CONTEXT.md` - updated current version and changelog entry for v2.11
+  - `C:\Users\exact\Refinery\AUDIT_TRAIL.md` - added this entry
+- Actions taken:
+  - Confirmed the cutoff logic was correct and the real blocker was delete authorization, not date filtering.
+  - Replaced the scattered purge helper family with one internal `ARTICLE_PURGE_` module and left only `previewPurgeArticlesBeforeApril2026()` and `purgeArticlesBeforeApril2026()` as public entrypoints.
+  - Moved the destructive delete path to use a Script Property named `SUPABASE_SERVICE_ROLE_KEY`, while keeping read-only preview/count calls on the existing Supabase API key.
+  - Removed `listTorSubscriptions()` to reduce top-level Apps Script menu clutter; kept `listKagiTorSubscriptions()` for Kagi feed replacement work.
+- Validation:
+  - `node --check` passed on the updated ingestion file after copying it to a neutral temp path.
+- Follow-up:
+  - In Apps Script, add Script Property `SUPABASE_SERVICE_ROLE_KEY` before running the live purge.
+  - Push ingestion to Apps Script and GitHub.
+  - Mirror docs to `C:\Users\exact\OneDrive\Refinery\`.
+
 ### 2026-04-13 - Claude Code (session 4, continued)
 - Request: Fix artifact title double-date, fix wrong dates (all showing today), update docs.
 - Files touched:

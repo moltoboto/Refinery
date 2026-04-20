@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.10 | Viewer: v2.8
+Ingestion: v2.11 | Viewer: v2.8
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -101,6 +101,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.11 | 2026-04-20 | Codex | Refactored article purge into a single internal `ARTICLE_PURGE_` module with only two public April cleanup entrypoints, removed redundant TOR listing helpers, and switched destructive purge deletes to a Supabase service-role Script Property (`SUPABASE_SERVICE_ROLE_KEY`) so old articles can be deleted without touching Drive artifacts |
 | v2.10 | 2026-04-20 | Codex | Added safe article-only purge helpers for rows before a cutoff date while preserving Drive artifacts, plus TOR subscription listing helpers including a Kagi-specific filter to support feed replacement cleanup |
 | v2.9 | 2026-04-19 | Codex | Added a TOR source-category review sheet (`rss_source_map`) with category dropdowns and first-pass suggestions based on feed/source patterns plus recent TOR article titles; source overrides now apply during ingestion and category backfill, and generic uses of the word "watch" no longer auto-map articles to Watches |
 | v2.8 | 2026-04-19 | Codex | Added ingestion-time duplicate review: exact duplicates and possible duplicates now route into a Duplicate category for manual review in the Viewer, using the earliest matching article as the original reference and preserving review context in the summary |

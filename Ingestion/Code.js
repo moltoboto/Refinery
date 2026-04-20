@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.10
+ * Version: 2.11
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1099,16 +1099,6 @@ function getTORSubscriptions_() {
   });
 }
 
-function listTorSubscriptions() {
-  var subscriptions = getTORSubscriptions_()
-    .sort(function(a, b) { return String(a.title || '').localeCompare(String(b.title || '')); });
-  Logger.log('TOR SUBSCRIPTIONS: ' + JSON.stringify({
-    count: subscriptions.length,
-    sample: subscriptions.slice(0, 50)
-  }, null, 2));
-  return subscriptions;
-}
-
 function listKagiTorSubscriptions() {
   var subscriptions = getTORSubscriptions_().filter(function(subscription) {
     var haystack = [
@@ -1737,138 +1727,159 @@ function purgeGenericRedditShellArticles_(dryRun, limit) {
 }
 
 function previewPurgeArticlesBeforeApril2026(batchSize) {
-  return purgeArticlesBeforeDate_(true, '2026-04-01', batchSize);
+  return ARTICLE_PURGE_.run(true, '2026-04-01', batchSize);
 }
 
 function purgeArticlesBeforeApril2026(batchSize) {
-  return purgeArticlesBeforeDate_(false, '2026-04-01', batchSize);
+  return ARTICLE_PURGE_.run(false, '2026-04-01', batchSize);
 }
 
-function previewPurgeArticlesBeforeDate(cutoffInput, batchSize) {
-  return purgeArticlesBeforeDate_(true, cutoffInput, batchSize);
-}
-
-function purgeArticlesBeforeDate(cutoffInput, batchSize) {
-  return purgeArticlesBeforeDate_(false, cutoffInput, batchSize);
-}
-
-function purgeArticlesBeforeDate_(dryRun, cutoffInput, batchSize) {
-  var cutoffIso = normalizePurgeCutoffIso_(cutoffInput || '2026-04-01');
-  var pageSize = Math.max(1, Math.min(Number(batchSize) || 250, 500));
-  var summary = {
-    dryRun: !!dryRun,
-    cutoffIso: cutoffIso,
-    artifactsTouched: false,
-    matched: 0,
-    deleted: 0,
-    errors: 0,
-    sample: []
-  };
-
-  if (dryRun) {
-    var offset = 0;
-    while (true) {
-      var previewRows = fetchArticlesOlderThanDate_(cutoffIso, pageSize, offset);
-      if (!previewRows.length) break;
-      summary.matched += previewRows.length;
-      previewRows.forEach(function(row) {
-        if (summary.sample.length >= 25) return;
-        summary.sample.push({
+var ARTICLE_PURGE_ = {
+  run: function(dryRun, cutoffInput, batchSize) {
+    var cutoffIso = ARTICLE_PURGE_.normalizeCutoffIso(cutoffInput || '2026-04-01');
+    var pageSize = Math.max(1, Math.min(Number(batchSize) || 250, 500));
+    var summary = {
+      dryRun: !!dryRun,
+      cutoffIso: cutoffIso,
+      artifactsTouched: false,
+      matched: ARTICLE_PURGE_.countOlderThanDate(cutoffIso),
+      deleted: 0,
+      errors: 0,
+      sample: ARTICLE_PURGE_.fetchOlderThanDate(cutoffIso, pageSize, 0).slice(0, 25).map(function(row) {
+        return {
           id: row.id,
           date_added: row.date_added,
           source: row.source,
           category: row.category,
           title: String(row.title || '').substring(0, 120)
-        });
-      });
-      if (previewRows.length < pageSize) break;
-      offset += pageSize;
-    }
-    Logger.log('ARTICLE PURGE PREVIEW: ' + JSON.stringify(summary, null, 2));
-    return summary;
-  }
-
-  var rows = fetchArticlesOlderThanDate_(cutoffIso, pageSize, 0);
-  summary.matched = rows.length;
-  rows.forEach(function(row) {
-    if (summary.sample.length >= 25) return;
-    summary.sample.push({
-      id: row.id,
-      date_added: row.date_added,
-      source: row.source,
-      category: row.category,
-      title: String(row.title || '').substring(0, 120)
-    });
-  });
-
-  if (rows.length) {
-    var deleteResult = deleteArticlesOlderThanDate_(cutoffIso);
-    summary.deleted = deleteResult.deleted;
-    summary.errors = deleteResult.errors;
-    if (deleteResult.error) summary.error = deleteResult.error;
-  }
-
-  Logger.log('ARTICLE PURGE COMPLETE: ' + JSON.stringify(summary, null, 2));
-  return summary;
-}
-
-function normalizePurgeCutoffIso_(cutoffInput) {
-  var raw = String(cutoffInput || '').trim();
-  if (!raw) throw new Error('Missing cutoff date');
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) raw += 'T00:00:00.000Z';
-  var cutoff = new Date(raw);
-  if (isNaN(cutoff.getTime())) throw new Error('Invalid cutoff date: ' + cutoffInput);
-  return cutoff.toISOString();
-}
-
-function fetchArticlesOlderThanDate_(cutoffIso, limit, offset) {
-  var headers = {
-    'apikey': CONFIG.SUPABASE_API_KEY,
-    'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY
-  };
-  var url = CONFIG.SUPABASE_URL + '/rest/v1/articles'
-    + '?select=id,source,title,category,date_added'
-    + '&date_added=lt.' + encodeURIComponent(cutoffIso)
-    + '&order=date_added.asc'
-    + '&limit=' + encodeURIComponent(limit)
-    + '&offset=' + encodeURIComponent(offset || 0);
-
-  var resp = UrlFetchApp.fetch(url, {
-    method: 'get',
-    headers: headers,
-    muteHttpExceptions: true
-  });
-
-  if (resp.getResponseCode() !== 200) {
-    throw new Error('Supabase old-article fetch failed: ' + resp.getResponseCode() + ' ' + resp.getContentText().substring(0, 200));
-  }
-
-  return JSON.parse(resp.getContentText()) || [];
-}
-
-function deleteArticlesOlderThanDate_(cutoffIso) {
-  var headers = {
-    'apikey': CONFIG.SUPABASE_API_KEY,
-    'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY,
-    'Prefer': 'return=representation'
-  };
-  var url = CONFIG.SUPABASE_URL + '/rest/v1/articles?date_added=lt.' + encodeURIComponent(cutoffIso);
-  var resp = UrlFetchApp.fetch(url, {
-    method: 'delete',
-    headers: headers,
-    muteHttpExceptions: true
-  });
-  var code = resp.getResponseCode();
-  if (code !== 200) {
-    return {
-      deleted: 0,
-      errors: 1,
-      error: 'Supabase delete failed: ' + code + ' ' + resp.getContentText().substring(0, 200)
+        };
+      })
     };
+
+    if (dryRun) {
+      Logger.log('ARTICLE PURGE PREVIEW: ' + JSON.stringify(summary, null, 2));
+      return summary;
+    }
+
+    if (summary.matched > 0) {
+      var deleteResult = ARTICLE_PURGE_.deleteOlderThanDate(cutoffIso);
+      summary.deleted = deleteResult.deleted || 0;
+      summary.errors = deleteResult.errors || 0;
+      if (deleteResult.error) summary.error = deleteResult.error;
+    }
+
+    Logger.log('ARTICLE PURGE COMPLETE: ' + JSON.stringify(summary, null, 2));
+    return summary;
+  },
+
+  normalizeCutoffIso: function(cutoffInput) {
+    var raw = String(cutoffInput || '').trim();
+    if (!raw) throw new Error('Missing cutoff date');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) raw += 'T00:00:00.000Z';
+    var cutoff = new Date(raw);
+    if (isNaN(cutoff.getTime())) throw new Error('Invalid cutoff date: ' + cutoffInput);
+    return cutoff.toISOString();
+  },
+
+  countOlderThanDate: function(cutoffIso) {
+    var resp = UrlFetchApp.fetch(
+      CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id&date_added=lt.' + encodeURIComponent(cutoffIso) + '&limit=1',
+      {
+        method: 'get',
+        headers: ARTICLE_PURGE_.readHeaders({ 'Prefer': 'count=exact' }),
+        muteHttpExceptions: true
+      }
+    );
+    var code = resp.getResponseCode();
+    if (code !== 200 && code !== 206) {
+      throw new Error('Supabase old-article count failed: ' + code + ' ' + resp.getContentText().substring(0, 200));
+    }
+    var headers = resp.getAllHeaders();
+    var contentRange = headers['Content-Range'] || headers['content-range'] || '';
+    var match = String(contentRange).match(/\/(\d+)$/);
+    return match ? parseInt(match[1], 10) : 0;
+  },
+
+  fetchOlderThanDate: function(cutoffIso, limit, offset) {
+    var url = CONFIG.SUPABASE_URL + '/rest/v1/articles'
+      + '?select=id,source,title,category,date_added'
+      + '&date_added=lt.' + encodeURIComponent(cutoffIso)
+      + '&order=date_added.asc'
+      + '&limit=' + encodeURIComponent(limit)
+      + '&offset=' + encodeURIComponent(offset || 0);
+
+    var resp = UrlFetchApp.fetch(url, {
+      method: 'get',
+      headers: ARTICLE_PURGE_.readHeaders(),
+      muteHttpExceptions: true
+    });
+
+    if (resp.getResponseCode() !== 200) {
+      throw new Error('Supabase old-article fetch failed: ' + resp.getResponseCode() + ' ' + resp.getContentText().substring(0, 200));
+    }
+
+    return JSON.parse(resp.getContentText()) || [];
+  },
+
+  deleteOlderThanDate: function(cutoffIso) {
+    var serviceRoleKey = PropertiesService.getScriptProperties().getProperty('SUPABASE_SERVICE_ROLE_KEY');
+    if (!serviceRoleKey) {
+      return {
+        deleted: 0,
+        errors: 1,
+        error: 'Missing script property SUPABASE_SERVICE_ROLE_KEY'
+      };
+    }
+
+    var resp = UrlFetchApp.fetch(
+      CONFIG.SUPABASE_URL + '/rest/v1/articles?date_added=lt.' + encodeURIComponent(cutoffIso),
+      {
+        method: 'delete',
+        headers: ARTICLE_PURGE_.writeHeaders(serviceRoleKey, { 'Prefer': 'return=representation' }),
+        muteHttpExceptions: true
+      }
+    );
+    var code = resp.getResponseCode();
+    if (code !== 200) {
+      return {
+        deleted: 0,
+        errors: 1,
+        error: 'Supabase delete failed: ' + code + ' ' + resp.getContentText().substring(0, 200)
+      };
+    }
+    var rows = JSON.parse(resp.getContentText() || '[]') || [];
+    return { deleted: rows.length, errors: 0 };
+  },
+
+  readHeaders: function(extra) {
+    var headers = {
+      'apikey': CONFIG.SUPABASE_API_KEY,
+      'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY
+    };
+    return ARTICLE_PURGE_.mergeHeaders(headers, extra);
+  },
+
+  writeHeaders: function(key, extra) {
+    var headers = {
+      'apikey': key,
+      'Authorization': 'Bearer ' + key
+    };
+    return ARTICLE_PURGE_.mergeHeaders(headers, extra);
+  },
+
+  mergeHeaders: function(base, extra) {
+    var headers = {};
+    var key;
+    for (key in base) {
+      if (Object.prototype.hasOwnProperty.call(base, key)) headers[key] = base[key];
+    }
+    extra = extra || {};
+    for (key in extra) {
+      if (Object.prototype.hasOwnProperty.call(extra, key)) headers[key] = extra[key];
+    }
+    return headers;
   }
-  var rows = JSON.parse(resp.getContentText() || '[]') || [];
-  return { deleted: rows.length, errors: 0 };
-}
+};
 function getMetaContent(html, attr, value) {
   if (!html) return '';
   var pattern1 = new RegExp('<meta[^>]*' + attr + '=["\\\']' + escapeRegex(value) + '["\\\'][^>]*content=["\\\']([^"\\\']+)["\\\']', 'i');
