@@ -245,3 +245,24 @@ ode --check passed for the extracted index.html script block.
   - Push the updated ingestion Apps Script project.
   - Run `syncTorSourceCategorySheet()` in Apps Script to populate the source review sheet.
   - Review the dropdown choices in `rss_source_map`, then use `previewSourceCategoryBackfill()` / `applySourceCategoryBackfill()` if historical categories should be corrected.
+
+### 2026-04-20 18:xx ET - Codex
+- Request: Remove article rows dated before April 1 while keeping Drive artifacts, and help identify/replace non-English Kagi feeds.
+- Files touched:
+  - `C:\Users\exact\Refinery\Ingestion\Code.js`
+  - `C:\Users\exact\Refinery\CONTEXT.md`
+  - `C:\Users\exact\Refinery\AUDIT_TRAIL.md`
+- Actions taken:
+  - Added article-only purge helpers that operate on Supabase rows by `date_added` cutoff and do not touch Drive artifacts.
+  - Added `previewPurgeArticlesBeforeApril2026()` / `purgeArticlesBeforeApril2026()` plus generic cutoff variants for safer dry-run-first cleanup.
+  - Added `listTorSubscriptions()` and `listKagiTorSubscriptions()` to inspect current TOR feeds and isolate Kagi-based subscriptions for replacement.
+  - Kept the cleanup path conservative by batching deletes by article IDs rather than issuing a blind broad delete.
+- Validation:
+  - `node --check` passed for a temp copy of `C:\Users\exact\Refinery\Ingestion\Code.js`.
+  - Reviewed the git diff to confirm the purge helpers, Kagi listing helpers, and version bump are present.
+- Deployment status:
+  - Local files updated; ingestion push/deploy pending at the time of this entry.
+- Follow-up:
+  - Push the updated ingestion Apps Script project.
+  - Run `previewPurgeArticlesBeforeApril2026()` before any deletion.
+  - Run `listKagiTorSubscriptions()` to see exactly which Kagi feeds are currently in TOR before replacing them.

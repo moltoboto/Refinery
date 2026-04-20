@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.9
+ * Version: 2.10
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1099,6 +1099,35 @@ function getTORSubscriptions_() {
   });
 }
 
+function listTorSubscriptions() {
+  var subscriptions = getTORSubscriptions_()
+    .sort(function(a, b) { return String(a.title || '').localeCompare(String(b.title || '')); });
+  Logger.log('TOR SUBSCRIPTIONS: ' + JSON.stringify({
+    count: subscriptions.length,
+    sample: subscriptions.slice(0, 50)
+  }, null, 2));
+  return subscriptions;
+}
+
+function listKagiTorSubscriptions() {
+  var subscriptions = getTORSubscriptions_().filter(function(subscription) {
+    var haystack = [
+      subscription && subscription.title,
+      subscription && subscription.feedUrl,
+      subscription && subscription.siteUrl
+    ].join(' ').toLowerCase();
+    return /(^|\b)kagi\b|kite\.kagi\.com|kagi\.com\/api\/v1\/smallweb/.test(haystack);
+  }).sort(function(a, b) {
+    return String(a.title || '').localeCompare(String(b.title || ''));
+  });
+
+  Logger.log('KAGI TOR SUBSCRIPTIONS: ' + JSON.stringify({
+    count: subscriptions.length,
+    subscriptions: subscriptions
+  }, null, 2));
+  return subscriptions;
+}
+
 function parseTorFeedUrl_(subscription) {
   var id = String(subscription && subscription.id || '');
   if (/^feed\//i.test(id)) return cleanUrl(id.substring(5));
@@ -1705,6 +1734,152 @@ function purgeGenericRedditShellArticles_(dryRun, limit) {
   summary.deleted = deleted.length;
   Logger.log('GENERIC REDDIT PURGE: ' + JSON.stringify(summary, null, 2));
   return summary;
+}
+
+function previewPurgeArticlesBeforeApril2026(batchSize) {
+  return purgeArticlesBeforeDate_(true, '2026-04-01', batchSize);
+}
+
+function purgeArticlesBeforeApril2026(batchSize) {
+  return purgeArticlesBeforeDate_(false, '2026-04-01', batchSize);
+}
+
+function previewPurgeArticlesBeforeDate(cutoffInput, batchSize) {
+  return purgeArticlesBeforeDate_(true, cutoffInput, batchSize);
+}
+
+function purgeArticlesBeforeDate(cutoffInput, batchSize) {
+  return purgeArticlesBeforeDate_(false, cutoffInput, batchSize);
+}
+
+function purgeArticlesBeforeDate_(dryRun, cutoffInput, batchSize) {
+  var cutoffIso = normalizePurgeCutoffIso_(cutoffInput || '2026-04-01');
+  var pageSize = Math.max(1, Math.min(Number(batchSize) || 250, 500));
+  var summary = {
+    dryRun: !!dryRun,
+    cutoffIso: cutoffIso,
+    artifactsTouched: false,
+    matched: 0,
+    deleted: 0,
+    errors: 0,
+    sample: []
+  };
+
+  if (dryRun) {
+    var offset = 0;
+    while (true) {
+      var previewRows = fetchArticlesOlderThanDate_(cutoffIso, pageSize, offset);
+      if (!previewRows.length) break;
+      summary.matched += previewRows.length;
+      previewRows.forEach(function(row) {
+        if (summary.sample.length >= 25) return;
+        summary.sample.push({
+          id: row.id,
+          date_added: row.date_added,
+          source: row.source,
+          category: row.category,
+          title: String(row.title || '').substring(0, 120)
+        });
+      });
+      if (previewRows.length < pageSize) break;
+      offset += pageSize;
+    }
+    Logger.log('ARTICLE PURGE PREVIEW: ' + JSON.stringify(summary, null, 2));
+    return summary;
+  }
+
+  while (true) {
+    var rows = fetchArticlesOlderThanDate_(cutoffIso, pageSize, 0);
+    if (!rows.length) break;
+    summary.matched += rows.length;
+    rows.forEach(function(row) {
+      if (summary.sample.length >= 25) return;
+      summary.sample.push({
+        id: row.id,
+        date_added: row.date_added,
+        source: row.source,
+        category: row.category,
+        title: String(row.title || '').substring(0, 120)
+      });
+    });
+
+    var ids = rows.map(function(row) { return row.id; }).filter(function(id) { return id !== null && id !== undefined && id !== ''; });
+    if (!ids.length) break;
+
+    var deletedCount = deleteArticlesByIds_(ids);
+    summary.deleted += deletedCount;
+    if (deletedCount !== ids.length) {
+      summary.errors += Math.max(0, ids.length - deletedCount);
+      Logger.log('ARTICLE PURGE WARNING: requested delete for ' + ids.length + ' rows, deleted ' + deletedCount);
+      break;
+    }
+  }
+
+  Logger.log('ARTICLE PURGE COMPLETE: ' + JSON.stringify(summary, null, 2));
+  return summary;
+}
+
+function normalizePurgeCutoffIso_(cutoffInput) {
+  var raw = String(cutoffInput || '').trim();
+  if (!raw) throw new Error('Missing cutoff date');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) raw += 'T00:00:00.000Z';
+  var cutoff = new Date(raw);
+  if (isNaN(cutoff.getTime())) throw new Error('Invalid cutoff date: ' + cutoffInput);
+  return cutoff.toISOString();
+}
+
+function fetchArticlesOlderThanDate_(cutoffIso, limit, offset) {
+  var headers = {
+    'apikey': CONFIG.SUPABASE_API_KEY,
+    'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY
+  };
+  var url = CONFIG.SUPABASE_URL + '/rest/v1/articles'
+    + '?select=id,source,title,category,date_added'
+    + '&date_added=lt.' + encodeURIComponent(cutoffIso)
+    + '&order=date_added.asc'
+    + '&limit=' + encodeURIComponent(limit)
+    + '&offset=' + encodeURIComponent(offset || 0);
+
+  var resp = UrlFetchApp.fetch(url, {
+    method: 'get',
+    headers: headers,
+    muteHttpExceptions: true
+  });
+
+  if (resp.getResponseCode() !== 200) {
+    throw new Error('Supabase old-article fetch failed: ' + resp.getResponseCode() + ' ' + resp.getContentText().substring(0, 200));
+  }
+
+  return JSON.parse(resp.getContentText()) || [];
+}
+
+function deleteArticlesByIds_(ids) {
+  if (!ids || !ids.length) return 0;
+  var headers = {
+    'apikey': CONFIG.SUPABASE_API_KEY,
+    'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY,
+    'Prefer': 'return=representation'
+  };
+  var chunks = [];
+  for (var i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100));
+
+  var deleted = 0;
+  chunks.forEach(function(chunk) {
+    var serialized = chunk.map(function(id) { return String(id); }).join(',');
+    var url = CONFIG.SUPABASE_URL + '/rest/v1/articles?id=in.(' + serialized + ')';
+    var resp = UrlFetchApp.fetch(url, {
+      method: 'delete',
+      headers: headers,
+      muteHttpExceptions: true
+    });
+    if (resp.getResponseCode() !== 200) {
+      throw new Error('Supabase delete failed: ' + resp.getResponseCode() + ' ' + resp.getContentText().substring(0, 200));
+    }
+    var rows = JSON.parse(resp.getContentText() || '[]') || [];
+    deleted += rows.length;
+  });
+
+  return deleted;
 }
 function getMetaContent(html, attr, value) {
   if (!html) return '';
