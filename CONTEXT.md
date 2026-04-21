@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.12 | Viewer: v2.8
+Ingestion: v2.13 | Viewer: v2.9
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -87,7 +87,9 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 - Supabase REST silently caps at 1000 rows - use offset pagination
 - Apps Script deployment: always create a New Deployment when the URL breaks - "New version" on existing deployment is unreliable; new deployment changes the URL, update any bookmarks
 - Codex versioning unreliable - verify file state in Apps Script editor after Codex edits; do not trust it saved correctly without checking
-- `kept` field: use strict `=== true` comparison (nulls present alongside booleans)
+- `kept` field: use strict `=== true` comparison (nulls present alongside booleans). `kept=true` IS the user's permanent archive — never touch these in any purge
+- `archived` field: dormant. Was repurposed as a soft-delete flag in v2.12 but dropped in v2.13. Soft delete now uses `status='deleted'` only. The `archived` column remains in the DB but is no longer written by any purge path
+- Soft delete = `status='deleted'`. Hard delete runs only from Ingestion via `hardPurgeDeletedArticles()`
 - URL dedup is canonical (tracking params stripped before comparison)
 - Gmail MCP in Claude.ai uses Anthropic OAuth - separate from Apps Script auth
 - `deriveSignal()` currently returns empty string - stubbed for OpenClaw Phase 2
@@ -108,6 +110,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.13 | 2026-04-20 | Claude Code | Soft delete now uses status='deleted' only (dropped archived=true); all Viewer fetch queries use status=neq.deleted instead of archived=eq.false; hardPurgeDeletedArticles() moved to Ingestion; purgeStaleArticles/purgeOldArchived removed from Viewer; archivedArticles stat renamed deletedArticles |
 | v2.12 | 2026-04-20 | Codex | Converted article cleanup to soft delete by default: pre-cutoff cleanup now moves rows out of the main reader with `archived=true` and `status='deleted'`, protects kept rows, and repurposes the stale purge path to physically remove only rows already marked deleted |
 | v2.11 | 2026-04-20 | Codex | Refactored article purge into a single internal `ARTICLE_PURGE_` module with only two public April cleanup entrypoints, removed redundant TOR listing helpers, and switched destructive purge deletes to a Supabase service-role Script Property (`SUPABASE_SERVICE_ROLE_KEY`) so old articles can be deleted without touching Drive artifacts |
 | v2.10 | 2026-04-20 | Codex | Added safe article-only purge helpers for rows before a cutoff date while preserving Drive artifacts, plus TOR subscription listing helpers including a Kagi-specific filter to support feed replacement cleanup |

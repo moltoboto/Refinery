@@ -960,7 +960,7 @@ let VIEWER_STATS = {
   totalArticles: 0,
   unreadArticles: 0,
   keptArticles: 0,
-  archivedArticles: 0,
+  deletedArticles: 0,
   artifactCount: 0,
   categoryCounts: {},
   sourceCounts: {}
@@ -1089,7 +1089,7 @@ function normalizeStats(stats, artifactCount) {
     totalArticles: stats.totalArticles || 0,
     unreadArticles: stats.unreadArticles || 0,
     keptArticles: stats.keptArticles || 0,
-    archivedArticles: stats.archivedArticles || 0,
+    deletedArticles: stats.deletedArticles || 0,
     browseableArticles: stats.browseableArticles || 0,
     artifactCount: artifactCount || 0,
     categoryCounts: stats.categoryCounts || {},
@@ -1122,7 +1122,7 @@ function setStatus(type, text) {
 function buildSidebar() {
   setCount('count-all', VIEWER_STATS.unreadArticles);
   setCount('count-kept', VIEWER_STATS.keptArticles);
-  setCount('count-archive', VIEWER_STATS.archivedArticles);
+  setCount('count-archive', VIEWER_STATS.deletedArticles);
   setCount('count-artifacts', VIEWER_STATS.artifactCount);
 
   document.getElementById('catNav').innerHTML = CATEGORIES.map(function(cat) {

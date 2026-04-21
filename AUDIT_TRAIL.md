@@ -18,6 +18,26 @@ This file is the running session-level audit trail for Refinery work.
 ## Entries
 
 ### 2026-04-20 - Claude Code
+- Request: (1) Viewer should not write to the database — purge belongs in Ingestion. (2) Simplify soft delete to use status='deleted' only, drop the archived=true flag which was confusing and redundant.
+- Files touched:
+  - `Ingestion/Code.js` — bumped to v2.13; soft delete now sets only status='deleted' (dropped archived:true from patch payload); all three purge queries updated to filter status=neq.deleted instead of archived=eq.false; added hardPurgeDeletedArticles() public function
+  - `Viewer/Code.js` — bumped to v2.9; removed purgeStaleArticles() and purgeOldArchived(); all article fetch queries updated to use status=neq.deleted / status=not.in.(read,deleted) instead of archived=eq.false; archivedArticles stat renamed to deletedArticles; keptArticles count simplified to kept=eq.true
+  - `Viewer/index.html` — renamed archivedArticles → deletedArticles in VIEWER_STATS state and stats mapping
+  - `CONTEXT.md` — updated current version to v2.13/v2.9, added changelog row, updated gotchas to document kept vs archived clearly
+  - `AUDIT_TRAIL.md` — this entry
+- Actions taken:
+  - Established rule: Viewer is read-only. All purge/delete operations live in Ingestion only.
+  - Soft delete is now status='deleted' only. The archived column is dormant — no code writes to it anymore.
+  - Hard delete (hardPurgeDeletedArticles) moved to Ingestion, filters kept=eq.false&status=eq.deleted — kept articles are double-gated out.
+  - Renamed archivedArticles stat to deletedArticles throughout — now accurately reflects rows queued for hard deletion.
+- Validation:
+  - node --check on both Code.js files before commit
+- Deployment: Both apps need clasp push + redeploy after this session
+- Follow-up:
+  - clasp push Ingestion, clasp push Viewer, redeploy both in Apps Script
+  - Existing rows with archived=true&status=deleted (from v2.12 soft deletes) will still be caught by hardPurgeDeletedArticles since it filters status=eq.deleted regardless of archived flag
+
+### 2026-04-20 - Claude Code
 - Request: Set up GitHub connector so user can switch between Claude Code and Codex at will. Document the workflow in all three working docs.
 - Files touched:
   - `C:\Users\exact\Refinery\CONTEXT.md` — added GitHub section with repo URL, branch, auth, and usage rule

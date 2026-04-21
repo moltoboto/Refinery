@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend
+// REFINERY - Google Apps Script Backend - Viewer v2.9
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -117,11 +117,11 @@ function getViewerBootstrap(limit, artifactLimit) {
     var artifactResult = { artifacts: [], total: 0 };
 
     keptArticles = fetchAllArticlesByQuery_(
-      'kept=eq.true&archived=eq.false&order=date_added.desc',
+      'kept=eq.true&order=date_added.desc',
       '*'
     );
     unreadMain = fetchAllArticlesByQuery_(
-      'kept=eq.false&archived=eq.false&status=neq.read&order=date_added.desc',
+      'kept=eq.false&status=not.in.(read,deleted)&order=date_added.desc',
       '*'
     );
 
@@ -129,7 +129,7 @@ function getViewerBootstrap(limit, artifactLimit) {
     if (fillCount > 0) {
       try {
         readMain = fetchLimitedArticlesByQuery_(
-          'kept=eq.false&archived=eq.false&status=eq.read&order=date_added.desc',
+          'kept=eq.false&status=eq.read&order=date_added.desc',
           '*',
           fillCount
         );
@@ -185,7 +185,7 @@ function getMoreArticles(excludeIds, limit) {
 
     while (keepGoing && results.length < limit) {
       var batch = fetchBatch_(
-        'kept=eq.false&archived=eq.false&status=eq.read&order=date_added.desc',
+        'kept=eq.false&status=eq.read&order=date_added.desc',
         '*',
         offset,
         SUPABASE_PAGE_SIZE
@@ -259,32 +259,6 @@ function markUnread(id) {
   return updateArticle(id, { status: 'unread' });
 }
 
-function purgeStaleArticles() {
-  try {
-    var cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - CONFIG.PURGE_DAYS);
-    var iso = cutoff.toISOString();
-    var response = supabaseRequest_(
-      '/rest/v1/articles?kept=eq.false&archived=eq.true&status=eq.deleted&date_added=lt.' + encodeURIComponent(iso),
-      {
-        method: 'delete',
-        headers: { 'Prefer': 'return=representation' }
-      }
-    );
-
-    if (response.error) return { error: response.error };
-    if (response.code === 200) {
-      return { purgedDeleted: Array.isArray(response.json) ? response.json.length : 0 };
-    }
-    return { error: 'Supabase error ' + response.code + ': ' + response.text };
-  } catch (e) {
-    return { error: e.toString() };
-  }
-}
-
-function purgeOldArchived() {
-  return purgeStaleArticles();
-}
 
 function getArtifacts(limit) {
   try {
@@ -725,7 +699,7 @@ function getAllArticles_() {
 
 function buildViewerStats_() {
   var unreadRows = fetchAllArticlesByQuery_(
-    'kept=eq.false&archived=eq.false&status=neq.read&order=date_added.desc',
+    'kept=eq.false&status=not.in.(read,deleted)&order=date_added.desc',
     'id,category,source'
   );
   var categoryCounts = {};
@@ -742,9 +716,9 @@ function buildViewerStats_() {
   return {
     totalArticles: fetchCount_(''),
     unreadArticles: unreadRows.length,
-    keptArticles: fetchCount_('kept=eq.true&archived=eq.false'),
-    archivedArticles: fetchCount_('archived=eq.true&status=neq.deleted'),
-    browseableArticles: unreadRows.length + fetchCount_('kept=eq.false&archived=eq.false&status=eq.read'),
+    keptArticles: fetchCount_('kept=eq.true'),
+    deletedArticles: fetchCount_('kept=eq.false&status=eq.deleted'),
+    browseableArticles: unreadRows.length + fetchCount_('kept=eq.false&status=eq.read'),
     categoryCounts: categoryCounts,
     sourceCounts: sourceCounts
   };
@@ -755,15 +729,15 @@ function buildFallbackStats_(articles) {
     totalArticles: articles.length,
     unreadArticles: 0,
     keptArticles: 0,
-    archivedArticles: 0,
+    deletedArticles: 0,
     browseableArticles: 0,
     categoryCounts: {},
     sourceCounts: {}
   };
 
   (articles || []).forEach(function(article) {
-    if (article.archived) {
-      stats.archivedArticles += 1;
+    if (article.status === 'deleted') {
+      stats.deletedArticles += 1;
       return;
     }
     if (article.kept) {

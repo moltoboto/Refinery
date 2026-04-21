@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.12
+ * Version: 2.13
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1734,6 +1734,41 @@ function purgeArticlesBeforeApril2026(batchSize) {
   return ARTICLE_PURGE_.run(false, '2026-04-01', batchSize);
 }
 
+// Hard-delete rows already soft-deleted (status='deleted'), older than PURGE_DAYS days.
+// kept=true rows are never touched. Run this only after confirming the soft-delete list is correct.
+function hardPurgeDeletedArticles() {
+  var cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - CONFIG.PURGE_DAYS);
+  var iso = cutoff.toISOString();
+
+  var serviceRoleKey = PropertiesService.getScriptProperties().getProperty('SUPABASE_SERVICE_ROLE_KEY');
+  if (!serviceRoleKey) {
+    Logger.log('hardPurgeDeletedArticles: missing SUPABASE_SERVICE_ROLE_KEY script property');
+    return { error: 'Missing SUPABASE_SERVICE_ROLE_KEY' };
+  }
+
+  var resp = UrlFetchApp.fetch(
+    CONFIG.SUPABASE_URL + '/rest/v1/articles?kept=eq.false&status=eq.deleted&date_added=lt.' + encodeURIComponent(iso),
+    {
+      method: 'delete',
+      headers: {
+        'apikey': serviceRoleKey,
+        'Authorization': 'Bearer ' + serviceRoleKey,
+        'Prefer': 'return=representation'
+      },
+      muteHttpExceptions: true
+    }
+  );
+  var code = resp.getResponseCode();
+  if (code !== 200) {
+    Logger.log('hardPurgeDeletedArticles error: ' + code + ' ' + resp.getContentText().substring(0, 200));
+    return { error: 'Supabase error ' + code };
+  }
+  var rows = JSON.parse(resp.getContentText() || '[]') || [];
+  Logger.log('hardPurgeDeletedArticles: permanently removed ' + rows.length + ' rows');
+  return { purged: rows.length };
+}
+
 var ARTICLE_PURGE_ = {
   run: function(dryRun, cutoffInput, batchSize) {
     var cutoffIso = ARTICLE_PURGE_.normalizeCutoffIso(cutoffInput || '2026-04-01');
@@ -1785,7 +1820,7 @@ var ARTICLE_PURGE_ = {
 
   countOlderThanDate: function(cutoffIso) {
     var resp = UrlFetchApp.fetch(
-      CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id&kept=eq.false&archived=eq.false&date_added=lt.' + encodeURIComponent(cutoffIso) + '&limit=1',
+      CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id&kept=eq.false&status=neq.deleted&date_added=lt.' + encodeURIComponent(cutoffIso) + '&limit=1',
       {
         method: 'get',
         headers: ARTICLE_PURGE_.authHeaders({ 'Prefer': 'count=exact' }),
@@ -1806,7 +1841,7 @@ var ARTICLE_PURGE_ = {
     var url = CONFIG.SUPABASE_URL + '/rest/v1/articles'
       + '?select=id,source,title,category,date_added,kept'
       + '&kept=eq.false'
-      + '&archived=eq.false'
+      + '&status=neq.deleted'
       + '&date_added=lt.' + encodeURIComponent(cutoffIso)
       + '&order=date_added.asc'
       + '&limit=' + encodeURIComponent(limit)
@@ -1837,12 +1872,12 @@ var ARTICLE_PURGE_ = {
     }
 
     var resp = UrlFetchApp.fetch(
-      CONFIG.SUPABASE_URL + '/rest/v1/articles?kept=eq.false&archived=eq.false&date_added=lt.' + encodeURIComponent(cutoffIso),
+      CONFIG.SUPABASE_URL + '/rest/v1/articles?kept=eq.false&status=neq.deleted&date_added=lt.' + encodeURIComponent(cutoffIso),
       {
         method: 'patch',
         contentType: 'application/json',
         headers: ARTICLE_PURGE_.writeHeaders(serviceRoleKey, { 'Prefer': 'return=representation' }),
-        payload: JSON.stringify({ archived: true, status: 'deleted' }),
+        payload: JSON.stringify({ status: 'deleted' }),
         muteHttpExceptions: true
       }
     );
