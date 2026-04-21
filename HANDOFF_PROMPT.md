@@ -84,10 +84,12 @@ Today's task: [DESCRIBE TASK HERE]
 - [ ] Regenerate JSONs if code changed: `node` script combining local files into JSON format
 - [ ] Manually upload changed docs + JSONs to Google Drive Refinery folder
 
-### On version bump:
-- [ ] Bump version in Code.js header comment
+### On version bump — update ALL THREE locations or the viewer shows the wrong version:
+- [ ] `Ingestion/Code.js` — header comment: `Version: 2.X`
+- [ ] `Viewer/Code.js` — header comment AND `setTitle('Refinery V2.X')` (~line 26)
+- [ ] `Viewer/index.html` — `<title>` tag + 2 occurrences of `Refinery V2.X` in sidebar/header
 - [ ] Add row to CONTEXT.md Change Log
-- [ ] Deploy → Manage deployments → update existing (keeps same URL)
+- [ ] Deploy → Manage Deployments → pencil icon → **New version** → Deploy (keeps same URL, no bookmark change)
 
 ### Switching tools:
 - **Codex → Claude Code:** make sure Codex pushed to GitHub, then `git pull` in `C:\Users\exact\Refinery\`

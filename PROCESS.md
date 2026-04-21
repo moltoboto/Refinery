@@ -126,8 +126,10 @@ git push                      # push to origin/main
 - No CONTEXT.md version update needed
 
 ### If it is a real change (version bump):
-1. Bump version number in the comment header of Code.gs
-   - Example: `Version: 2.5` -> `Version: 2.6`
+1. Bump version number in **three places** — all must match:
+   - `Ingestion/Code.js` header comment: `Version: 2.X`
+   - `Viewer/Code.js` header comment and `setTitle('Refinery V2.X')` on line 26
+   - `Viewer/index.html`: `<title>`, and two instances of `Refinery V2.X` in the sidebar/header
 2. Export via clasp: `clasp push` -> verify in Apps Script editor
 3. Deploy:
    - **If existing deployment works:** Deploy -> Manage -> pencil -> New version -> Deploy
