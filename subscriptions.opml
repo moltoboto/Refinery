@@ -3,7 +3,7 @@
   <head>
     <title>The Old Reader</title>
     <dateCreated>Mon, 27 Apr 2026 01:53:30 GMT</dateCreated>
-    <dateModified>Mon, 27 Apr 2026 01:53:30 GMT</dateModified>
+    <dateModified>Sun, 27 Apr 2026 22:15:00 GMT</dateModified>
     <ownerName>OpenClaw Agent</ownerName>
     <ownerEmail>moltoboto@gmail.com</ownerEmail>
   </head>
@@ -16,16 +16,25 @@
     <outline type="rss" xmlUrl="https://api.allorigins.win/raw?url=https://news.kagi.com/world.xml"/>
     <outline type="rss" xmlUrl="http://api.allorigins.win/raw?url=https://news.kagi.com/technology.xml"/>
     <outline type="rss" xmlUrl="https://natesnewsletter.substack.com/feed"/>
+
     <outline title="AI" text="AI">
+      <!-- Core lab / research blogs -->
       <outline type="rss" xmlUrl="https://aws.amazon.com/blogs/machine-learning/feed/"/>
       <outline type="rss" xmlUrl="https://blog.google/innovation-and-ai/technology/ai/rss/"/>
       <outline type="rss" xmlUrl="https://news.mit.edu/rss/topic/artificial-intelligence2"/>
       <outline type="rss" xmlUrl="https://www.microsoft.com/en-us/research/feed/"/>
       <outline type="rss" xmlUrl="http://feeds.feedburner.com/nvidiablog"/>
+      <!-- AI newsletters / high-signal blogs — added 2026-04-27 -->
+      <outline type="rss" xmlUrl="https://www.deeplearning.ai/the-batch/feed/"/>
+      <outline type="rss" xmlUrl="https://huggingface.co/blog/feed.xml"/>
+      <outline type="rss" xmlUrl="https://simonwillison.net/atom/everything/"/>
+      <outline type="rss" xmlUrl="https://venturebeat.com/category/ai/feed/"/>
       <!-- TechCrunch AI and Verge AI feeds removed 2026-04-27: duplicated by main feeds in Tech folder.
            TC/Verge AI articles still ingested; category assigned by Refinery normalizeCategory() logic. -->
     </outline>
+
     <outline title="Essential Watches" text="Essential Watches">
+      <outline type="rss" xmlUrl="https://www.hodinkee.com/feed"/>
       <outline type="rss" xmlUrl="https://www.acollectedman.com/blogs/journal.atom"/>
       <outline type="rss" xmlUrl="https://www.bobswatches.com/rolex-blog/feed"/>
       <outline type="rss" xmlUrl="https://deployant.com/feed/"/>
@@ -37,36 +46,46 @@
       <outline type="rss" xmlUrl="http://feed.podbean.com/watchboxstudios/feed.xml"/>
       <outline type="rss" xmlUrl="https://timeandtidewatches.com/feed/"/>
       <outline type="rss" xmlUrl="http://www.watchtime.com/feed/rss"/>
-      <outline type="rss" xmlUrl="http://watchtime.net/feed/news"/>
+      <!-- watchtime.net removed 2026-04-27: duplicate of watchtime.com above (same publication) -->
       <outline type="rss" xmlUrl="http://wornandwound.com/feed/"/>
       <outline type="rss" xmlUrl="http://feeds.feedburner.com/Ablogtowatch"/>
     </outline>
+
     <outline title="Learning &amp; Skills" text="Learning &amp; Skills">
-      <outline type="rss" xmlUrl="http://blog.coursera.org/feed"/>
+      <!-- blog.coursera.org removed 2026-04-27: mostly marketing content, very low signal -->
       <outline type="rss" xmlUrl="https://dailystoic.com/feed/"/>
       <outline type="rss" xmlUrl="https://openai.com/news/rss.xml"/>
-      <!-- OpenClaw feeds moved from YouTube folder 2026-04-27 -->
+      <outline type="rss" xmlUrl="https://stratechery.com/feed/"/>
+      <!-- OpenClaw feeds moved here from YouTube folder 2026-04-27 -->
       <outline type="rss" xmlUrl="https://openclaw.substack.com/feed"/>
       <outline type="rss" xmlUrl="http://openclaw.ai/rss.xml"/>
     </outline>
+
     <outline title="News" text="News">
       <outline type="rss" xmlUrl="http://feeds.bbci.co.uk/news/world/rss.xml"/>
       <outline type="rss" xmlUrl="https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"/>
     </outline>
+
     <outline title="Reddit" text="Reddit">
-      <outline type="rss" xmlUrl="https://www.reddit.com/r/AItradingOpportunity/.rss"/>
+      <!-- r/AItradingOpportunity removed 2026-04-27: low-quality, likely spam-heavy subreddit -->
       <outline type="rss" xmlUrl="https://www.reddit.com/r/artificial/.rss"/>
       <outline type="rss" xmlUrl="https://www.reddit.com/r/ChatGPT/.rss"/>
       <outline type="rss" xmlUrl="https://www.reddit.com/r/PromptEngineering/.rss"/>
       <outline type="rss" xmlUrl="https://www.reddit.com/r/notebooklm/.rss"/>
+      <!-- Added 2026-04-27: high-value AI communities -->
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/LocalLLaMA/.rss"/>
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/MachineLearning/.rss"/>
     </outline>
+
     <outline title="Tech" text="Tech">
+      <outline type="rss" xmlUrl="https://news.ycombinator.com/rss"/>
       <outline type="rss" xmlUrl="http://feeds.arstechnica.com/arstechnica/index"/>
       <outline type="rss" xmlUrl="https://www.engadget.com/rss-full.xml"/>
       <outline type="rss" xmlUrl="http://feeds.macrumors.com/MacRumors-Front"/>
       <outline type="rss" xmlUrl="https://techcrunch.com/feed/"/>
       <outline type="rss" xmlUrl="https://www.theverge.com/rss/index.xml"/>
     </outline>
+
     <outline title="YouTube" text="YouTube">
       <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC0yHbz4OxdQFwmVX2BBQqLg"/>
       <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC0C-17n9iuUQPylguM1d-lQ"/>
