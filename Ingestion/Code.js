@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.21
+ * Version: 2.22
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -2106,9 +2106,10 @@ function purgeArticlesBeforeApril2026(batchSize) {
 // Hard-delete rows already soft-deleted (status='deleted'), older than PURGE_DAYS days.
 // kept=true rows are never touched. Run this only after confirming the soft-delete list is correct.
 function hardPurgeDeletedArticles() {
-  var cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - CONFIG.PURGE_DAYS);
-  var iso = cutoff.toISOString();
+  // Purge all soft-deleted rows (status='deleted', kept=false).
+  // No age cutoff — if it's been soft-deleted and confirmed, it goes.
+  // Using a far-future date as the upper bound to match all rows.
+  var iso = new Date(Date.now() + 86400000).toISOString(); // tomorrow = catch everything
 
   var serviceRoleKey = PropertiesService.getScriptProperties().getProperty('SUPABASE_SERVICE_ROLE_KEY');
   if (!serviceRoleKey) {
