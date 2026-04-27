@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.14
+ * Version: 2.15
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1725,6 +1725,130 @@ function purgeGenericRedditShellArticles_(dryRun, limit) {
   Logger.log('GENERIC REDDIT PURGE: ' + JSON.stringify(summary, null, 2));
   return summary;
 }
+
+// ============================================================
+// DUPLICATE CLEANUP
+// Safe to run at any time. kept=true articles are never touched.
+// Always run previewDuplicateArticles first to see what will be affected.
+// ============================================================
+
+function previewDuplicateArticles() {
+  var result = DUPE_CLEANUP_.run(true);
+  Logger.log('DUPLICATE PREVIEW:\n' + JSON.stringify(result, null, 2));
+  return result;
+}
+
+function softDeleteDuplicateArticles() {
+  var result = DUPE_CLEANUP_.run(false);
+  Logger.log('DUPLICATE CLEANUP:\n' + JSON.stringify(result, null, 2));
+  return result;
+}
+
+var DUPE_CLEANUP_ = {
+
+  run: function(dryRun) {
+    var headers = { 'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY };
+    var allArticles = DUPE_CLEANUP_.fetchAll(headers);
+
+    // Group by cleaned URL — skip kept articles and already-deleted ones
+    var byUrl = {};
+    var noUrl = [];
+    allArticles.forEach(function(a) {
+      if (a.kept === true) return;           // never touch kept
+      if (a.status === 'deleted') return;    // already soft-deleted
+      var url = String(a.url || '').trim();
+      if (!url) { noUrl.push(a); return; }
+      url = cleanUrl(url);
+      if (!byUrl[url]) byUrl[url] = [];
+      byUrl[url].push(a);
+    });
+
+    // Find groups with more than one entry
+    var dupeGroups = [];
+    var toDelete = [];
+    Object.keys(byUrl).forEach(function(url) {
+      var group = byUrl[url];
+      if (group.length < 2) return;
+      // Sort oldest first — keep the first (lowest id), mark the rest
+      group.sort(function(a, b) { return a.id - b.id; });
+      var keep = group[0];
+      var dupes = group.slice(1);
+      dupes.forEach(function(d) { toDelete.push(d.id); });
+      dupeGroups.push({
+        url: url,
+        keepId: keep.id,
+        keepTitle: String(keep.title || '').substring(0, 80),
+        keepDate: keep.date_added,
+        dupeCount: dupes.length,
+        dupeIds: dupes.map(function(d) { return d.id; })
+      });
+    });
+
+    var summary = {
+      dryRun: dryRun,
+      totalFetched: allArticles.length,
+      uniqueUrlGroups: Object.keys(byUrl).length,
+      dupeGroups: dupeGroups.length,
+      dupeRowsToDelete: toDelete.length,
+      noUrlArticles: noUrl.length,
+      sample: dupeGroups.slice(0, 10)
+    };
+
+    if (dryRun || toDelete.length === 0) return summary;
+
+    // Soft-delete in batches of 100
+    var deleted = 0;
+    var errors = 0;
+    for (var i = 0; i < toDelete.length; i += 100) {
+      var batch = toDelete.slice(i, i + 100);
+      var idList = batch.join(',');
+      try {
+        var resp = UrlFetchApp.fetch(
+          CONFIG.SUPABASE_URL + '/rest/v1/articles?id=in.(' + idList + ')&kept=eq.false',
+          {
+            method: 'patch',
+            contentType: 'application/json',
+            headers: { 'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY, 'Prefer': 'return=representation' },
+            payload: JSON.stringify({ status: 'deleted' }),
+            muteHttpExceptions: true
+          }
+        );
+        var code = resp.getResponseCode();
+        if (code === 200) {
+          deleted += JSON.parse(resp.getContentText() || '[]').length;
+        } else {
+          Logger.log('Batch error ' + code + ': ' + resp.getContentText().substring(0, 200));
+          errors++;
+        }
+      } catch(e) {
+        Logger.log('Batch exception: ' + e);
+        errors++;
+      }
+    }
+
+    summary.deleted = deleted;
+    summary.errors = errors;
+    return summary;
+  },
+
+  fetchAll: function(headers) {
+    var all = [];
+    var offset = 0;
+    var pageSize = 1000;
+    while (true) {
+      var resp = UrlFetchApp.fetch(
+        CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id,url,title,date_added,status,kept&order=id.asc&limit=' + pageSize + '&offset=' + offset,
+        { method: 'get', headers: headers, muteHttpExceptions: true }
+      );
+      if (resp.getResponseCode() !== 200) throw new Error('Fetch failed: ' + resp.getContentText().substring(0, 200));
+      var page = JSON.parse(resp.getContentText()) || [];
+      all = all.concat(page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+    return all;
+  }
+};
 
 function previewPurgeArticlesBeforeApril2026(batchSize) {
   return ARTICLE_PURGE_.run(true, '2026-04-01', batchSize);
