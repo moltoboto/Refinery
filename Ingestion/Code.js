@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.15
+ * Version: 2.16
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1746,19 +1746,41 @@ function softDeleteDuplicateArticles() {
 
 var DUPE_CLEANUP_ = {
 
+  // URLs that are known-bad (Gmail UI, generic redirects, etc.)
+  // Articles sharing these URLs are NOT duplicates — they have different content
+  // with a broken/generic URL. Do not dedupe on these.
+  BAD_URL_PREFIXES: [
+    'https://mail.google.com',
+    'https://www.google.com/url',
+    'https://l.facebook.com',
+    'https://t.co/',
+    'about:',
+    'javascript:'
+  ],
+
+  isBadUrl: function(url) {
+    var prefixes = DUPE_CLEANUP_.BAD_URL_PREFIXES;
+    for (var i = 0; i < prefixes.length; i++) {
+      if (url.indexOf(prefixes[i]) === 0) return true;
+    }
+    return false;
+  },
+
   run: function(dryRun) {
     var headers = { 'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY };
     var allArticles = DUPE_CLEANUP_.fetchAll(headers);
 
-    // Group by cleaned URL — skip kept articles and already-deleted ones
+    // Group by cleaned URL — skip kept, already-deleted, and bad URLs
     var byUrl = {};
     var noUrl = [];
+    var skippedBadUrl = [];
     allArticles.forEach(function(a) {
       if (a.kept === true) return;           // never touch kept
       if (a.status === 'deleted') return;    // already soft-deleted
       var url = String(a.url || '').trim();
       if (!url) { noUrl.push(a); return; }
       url = cleanUrl(url);
+      if (DUPE_CLEANUP_.isBadUrl(url)) { skippedBadUrl.push(a); return; }
       if (!byUrl[url]) byUrl[url] = [];
       byUrl[url].push(a);
     });
@@ -1791,6 +1813,7 @@ var DUPE_CLEANUP_ = {
       dupeGroups: dupeGroups.length,
       dupeRowsToDelete: toDelete.length,
       noUrlArticles: noUrl.length,
+      skippedBadUrls: skippedBadUrl.length,
       sample: dupeGroups.slice(0, 10)
     };
 
