@@ -52,13 +52,9 @@
     </outline>
 
     <outline title="Learning &amp; Skills" text="Learning &amp; Skills">
-      <!-- blog.coursera.org removed 2026-04-27: mostly marketing content, very low signal -->
+      <!-- removed 2026-04-27: blog.coursera.org (marketing), openai.com, openclaw.substack.com, openclaw.ai -->
       <outline type="rss" xmlUrl="https://dailystoic.com/feed/"/>
-      <outline type="rss" xmlUrl="https://openai.com/news/rss.xml"/>
       <outline type="rss" xmlUrl="https://stratechery.com/feed/"/>
-      <!-- OpenClaw feeds moved here from YouTube folder 2026-04-27 -->
-      <outline type="rss" xmlUrl="https://openclaw.substack.com/feed"/>
-      <outline type="rss" xmlUrl="http://openclaw.ai/rss.xml"/>
     </outline>
 
     <outline title="News" text="News">
