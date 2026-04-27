@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.23 | Viewer: v2.11
+Ingestion: v2.24 | Viewer: v2.11
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -113,6 +113,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.24 | 2026-04-27 | Claude Code | Exact title dedup now uses ilike (case-insensitive) instead of eq — catches "I've Built" vs "I VE BUILT" vs "i've built" mismatches caused by apostrophe stripping and capitalization differences across RSS feeds; % and _ escaped to prevent wildcard interpretation |
 | v2.23 | 2026-04-27 | Claude Code | Fixed normalizeCategory() overwriting Duplicate category: possible duplicates were being re-categorized at insert time by sanitizeRecord() calling normalizeCategory(), stripping the Duplicate flag and causing them to appear in All Unread with wrong categories; now Duplicate is checked first and returned immediately |
 | v2.22 | 2026-04-27 | Claude Code | Fixed hardPurgeDeletedArticles: CONFIG.PURGE_DAYS was undefined causing RangeError on toISOString(); replaced with tomorrow-date upper bound to purge all soft-deleted rows unconditionally |
 | v2.21 | 2026-04-27 | Claude Code | Ingestion: exact duplicates now skipped entirely (no insert, TOR marked read) instead of being inserted as Duplicate category; Viewer v2.11: Duplicate category excluded from All Unread, read-fill, and stats queries via category=neq.Duplicate |

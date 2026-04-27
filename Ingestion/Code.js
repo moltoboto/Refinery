@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.23
+ * Version: 2.24
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1327,8 +1327,12 @@ function reviewDuplicateRecord_(record) {
     var title = sanitizeText(normalizeTitleForDedupe(record.title), 250);
     if (!source || !title || !rawTitle) return { duplicate:false, possibleDuplicate:false };
 
+    // Use ilike (case-insensitive) so "I've Built..." matches "I'VE BUILT..." or
+    // "i ve built..." (apostrophes stripped by some RSS feeds). Escape % and _ first
+    // so they don't act as wildcards.
+    var ilikeTitle = rawTitle.replace(/%/g, '\\%').replace(/_/g, '\\_');
     resp = UrlFetchApp.fetch(
-      CONFIG.SUPABASE_URL + '/rest/v1/articles?title=eq.' + encodeURIComponent(rawTitle)
+      CONFIG.SUPABASE_URL + '/rest/v1/articles?title=ilike.' + encodeURIComponent(ilikeTitle)
       + '&select=id,source,title,url,summary,category,date_added,status,kept,archived&limit=25',
       {headers: headers, muteHttpExceptions: true}
     );
@@ -1339,7 +1343,7 @@ function reviewDuplicateRecord_(record) {
         duplicate: true,
         possibleDuplicate: false,
         primary: exactTitleMatch,
-        reason: 'exact title match',
+        reason: 'exact title match (case-insensitive)',
         score: 0.98
       };
     }
