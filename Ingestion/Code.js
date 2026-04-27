@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.19
+ * Version: 2.20
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -36,7 +36,7 @@ var CONFIG = {
       'unsubscribe', 'manage', 'preferences', 'privacy'
     ],
     PROCESS_ALL_INBOX: true,
-    MAX_EMAILS_PER_RUN: 100,
+    MAX_EMAILS_PER_RUN: 40,
     PROCESSED_LABEL: 'Refinery/Processed',
     SAVE_COMPLETE_NEWSLETTERS: true,
     SAVE_COMPLETE_EMAIL_ARTIFACTS: true,
@@ -116,7 +116,19 @@ var CATEGORY_OPTIONS = [
 
 var SOURCE_CATEGORY_OVERRIDE_CACHE = null;
 var SOURCE_CATEGORY_SHEET_NAME = 'rss_source_map';
+
+// ─── INGESTION PERFORMANCE CACHES ─────────────────────────────────────────────
+// Populated once at the start of each ingestion phase, cleared after.
+// Eliminates per-article Supabase HTTP calls for dedup candidate fetching
+// and audit trail writing — reduces ~1000 HTTP calls/run to ~200.
+var INGESTION_DEDUP_CACHE_ = null;   // candidate rows for fuzzy dedup
+var AUDIT_TRAIL_BATCH_     = [];     // queued audit trail records, flushed at phase end
+// ─────────────────────────────────────────────────────────────────────────────
+
 function runDailyIngestion() {
+  // Runs both phases sequentially. If timing out, switch to separate triggers:
+  //   runTORIngestionOnly()   — schedule every N hours
+  //   runGmailIngestionOnly() — schedule offset by a few minutes
   var report = { timestamp: new Date().toISOString(), phase1_tor: {}, phase3_gmail: {} };
   Logger.log("=== REFINERY DAILY INGESTION START === " + report.timestamp);
   try {
@@ -125,6 +137,36 @@ function runDailyIngestion() {
     Logger.log("\n--- PHASE 3: Gmail ---");
     report.phase3_gmail = ingestGmailTwoTier();
   } catch (e) {
+    Logger.log("FATAL ERROR: " + e);
+    report.error = e.toString();
+  }
+  Logger.log("\n=== COMPLETE ===\n" + JSON.stringify(report, null, 2));
+  return report;
+}
+
+// Run TOR ingestion only — use as a standalone time trigger to give TOR its own
+// 6-minute Apps Script window, independent of Gmail.
+function runTORIngestionOnly() {
+  var report = { timestamp: new Date().toISOString(), phase1_tor: {} };
+  Logger.log("=== TOR INGESTION ONLY === " + report.timestamp);
+  try {
+    report.phase1_tor = ingestFromTheOldReader();
+  } catch(e) {
+    Logger.log("FATAL ERROR: " + e);
+    report.error = e.toString();
+  }
+  Logger.log("\n=== COMPLETE ===\n" + JSON.stringify(report, null, 2));
+  return report;
+}
+
+// Run Gmail ingestion only — use as a standalone time trigger, offset a few minutes
+// after runTORIngestionOnly so they don't overlap.
+function runGmailIngestionOnly() {
+  var report = { timestamp: new Date().toISOString(), phase3_gmail: {} };
+  Logger.log("=== GMAIL INGESTION ONLY === " + report.timestamp);
+  try {
+    report.phase3_gmail = ingestGmailTwoTier();
+  } catch(e) {
     Logger.log("FATAL ERROR: " + e);
     report.error = e.toString();
   }
@@ -141,6 +183,7 @@ function runEmail(limit, offset) {
 function ingestFromTheOldReader() {
   var stats = { unreadCount:0, articlesProcessed:0, articlesInserted:0, duplicatesSkipped:0, errors:0 };
   var startedAt = Date.now();
+  var headers = {'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY};
   try {
     stats.unreadCount = getTORUnreadCount();
     if (stats.unreadCount === 0) { Logger.log("TOR: no unread"); return stats; }
@@ -149,6 +192,10 @@ function ingestFromTheOldReader() {
     var articles = getTORUnreadArticles();
     if (!articles.length) { Logger.log("TOR: contents returned nothing"); return stats; }
     Logger.log("TOR: processing " + articles.length + " articles");
+
+    // Warm the dedup candidate cache ONCE before the loop.
+    // Without this, every article makes its own 500-row Supabase fetch (~100 extra calls).
+    warmDedupCache_(headers);
 
     var ingestedIds = [];
     for (var i = 0; i < articles.length; i++) {
@@ -191,6 +238,10 @@ function ingestFromTheOldReader() {
   } catch(e) {
     Logger.log("ERROR ingestFromTheOldReader: " + e);
     stats.errors++;
+  } finally {
+    // Clear cache and flush audit trail regardless of success/failure
+    INGESTION_DEDUP_CACHE_ = null;
+    flushAuditTrailBatch_();
   }
   return stats;
 }
@@ -324,11 +375,18 @@ function ingestGmailTwoTier() {
     tier1_newsletters: {emailsProcessed:0, articlesExtracted:0, articlesInserted:0, duplicatesSkipped:0, completeIssuesSaved:0},
     tier2_inbox:       {emailsProcessed:0, emailCardsCreated:0, duplicatesSkipped:0}
   };
+  var headers = {'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY};
   try {
+    // Warm dedup cache once for the entire Gmail phase
+    warmDedupCache_(headers);
     var label = getOrCreateLabel(CONFIG.GMAIL.PROCESSED_LABEL);
     stats.tier1_newsletters = processNewsletterTier(label);
     if (CONFIG.GMAIL.PROCESS_ALL_INBOX) stats.tier2_inbox = processInboxTier(label);
   } catch(e) { Logger.log("ERROR ingestGmailTwoTier: "+e); stats.error = e.toString(); }
+  finally {
+    INGESTION_DEDUP_CACHE_ = null;
+    flushAuditTrailBatch_();
+  }
   return stats;
 }
 
@@ -1305,20 +1363,26 @@ function reviewDuplicateRecord_(record) {
 }
 
 function findPossibleDuplicateCandidate_(record, headers) {
-  var windowDays = Math.max(1, parseInt(CONFIG.DEDUPE_REVIEW.WINDOW_DAYS, 10) || 2);
-  var sinceIso = new Date(Date.now() - (windowDays * 24 * 60 * 60 * 1000)).toISOString();
-  var maxCandidates = Math.max(25, parseInt(CONFIG.DEDUPE_REVIEW.MAX_CANDIDATES, 10) || 250);
-  var response = UrlFetchApp.fetch(
-    CONFIG.SUPABASE_URL
-      + '/rest/v1/articles?select=id,source,title,url,summary,category,date_added,status,kept,archived'
-      + '&kept=eq.false&status=neq.deleted'
-      + '&date_added=gte.' + encodeURIComponent(sinceIso)
-      + '&order=date_added.asc'
-      + '&limit=' + encodeURIComponent(maxCandidates),
-    { headers: headers, muteHttpExceptions: true }
-  );
-
-  var rows = JSON.parse(response.getContentText()) || [];
+  var rows;
+  if (INGESTION_DEDUP_CACHE_ !== null) {
+    // Use pre-fetched cache — no HTTP call needed
+    rows = INGESTION_DEDUP_CACHE_;
+  } else {
+    // Fallback: fetch on demand (used when called outside an ingestion run)
+    var windowDays = Math.max(1, parseInt(CONFIG.DEDUPE_REVIEW.WINDOW_DAYS, 10) || 7);
+    var sinceIso = new Date(Date.now() - (windowDays * 24 * 60 * 60 * 1000)).toISOString();
+    var maxCandidates = Math.max(25, parseInt(CONFIG.DEDUPE_REVIEW.MAX_CANDIDATES, 10) || 500);
+    var response = UrlFetchApp.fetch(
+      CONFIG.SUPABASE_URL
+        + '/rest/v1/articles?select=id,source,title,url,summary,category,date_added,status,kept,archived'
+        + '&kept=eq.false&status=neq.deleted'
+        + '&date_added=gte.' + encodeURIComponent(sinceIso)
+        + '&order=date_added.asc'
+        + '&limit=' + encodeURIComponent(maxCandidates),
+      { headers: headers, muteHttpExceptions: true }
+    );
+    rows = JSON.parse(response.getContentText()) || [];
+  }
   if (!rows.length) return null;
 
   var matches = rows.map(function(candidate) {
@@ -1603,16 +1667,52 @@ function isTransientSupabaseError_(errorLike) {
   return /Address unavailable|timed out|Exception:\s*Service invoked too many times|Exception:\s*Request failed/i.test(text);
 }
 
+// Warm the dedup candidate cache once per ingestion phase.
+// Without this, every article makes its own Supabase fetch for 500 candidates.
+function warmDedupCache_(headers) {
+  var windowDays = Math.max(1, parseInt(CONFIG.DEDUPE_REVIEW.WINDOW_DAYS, 10) || 7);
+  var sinceIso = new Date(Date.now() - (windowDays * 24 * 60 * 60 * 1000)).toISOString();
+  var maxCandidates = Math.max(25, parseInt(CONFIG.DEDUPE_REVIEW.MAX_CANDIDATES, 10) || 500);
+  try {
+    var response = UrlFetchApp.fetch(
+      CONFIG.SUPABASE_URL
+        + '/rest/v1/articles?select=id,source,title,url,summary,category,date_added,status,kept,archived'
+        + '&kept=eq.false&status=neq.deleted'
+        + '&date_added=gte.' + encodeURIComponent(sinceIso)
+        + '&order=date_added.asc'
+        + '&limit=' + encodeURIComponent(maxCandidates),
+      { headers: headers, muteHttpExceptions: true }
+    );
+    INGESTION_DEDUP_CACHE_ = JSON.parse(response.getContentText()) || [];
+    Logger.log('DEDUP CACHE: warmed with ' + INGESTION_DEDUP_CACHE_.length + ' candidates');
+  } catch(e) {
+    Logger.log('DEDUP CACHE: warm failed, will query per-article — ' + e);
+    INGESTION_DEDUP_CACHE_ = null;
+  }
+}
+
+// Queue an audit trail record. Flushed in batch at end of each ingestion phase.
+// Replaces one HTTP call per article with one batch call per phase.
 function logToAuditTrail(source, url, title, status, sourceId) {
   var record = {source:canonicalSourceName_(source, url), url:url, title:title, status:status, date_published:new Date().toISOString()};
   if (sourceId) record.source_id = sourceId;
+  AUDIT_TRAIL_BATCH_.push(record);
+  // Safety flush if batch grows large (shouldn't happen in normal runs)
+  if (AUDIT_TRAIL_BATCH_.length >= 75) flushAuditTrailBatch_();
+}
+
+function flushAuditTrailBatch_() {
+  if (!AUDIT_TRAIL_BATCH_.length) return;
+  var batch = AUDIT_TRAIL_BATCH_.slice();
+  AUDIT_TRAIL_BATCH_ = [];
   try {
     UrlFetchApp.fetch(CONFIG.SUPABASE_URL + '/rest/v1/audit_trail', {
       method: 'post', contentType: 'application/json',
       headers: {'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY, 'Prefer': 'return=minimal'},
-      payload: JSON.stringify(record), muteHttpExceptions: true
+      payload: JSON.stringify(batch), muteHttpExceptions: true
     });
-  } catch(e) { Logger.log("ERROR logToAuditTrail: "+e); }
+    Logger.log('AUDIT TRAIL: flushed ' + batch.length + ' records');
+  } catch(e) { Logger.log("ERROR flushAuditTrailBatch_: " + e); }
 }
 
 function detectCategory(title, summary, source, url) {
