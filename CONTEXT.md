@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.15 | Viewer: v2.10
+Ingestion: v2.16 | Viewer: v2.10
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style

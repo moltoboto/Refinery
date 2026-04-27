@@ -18,6 +18,19 @@ This file is the running session-level audit trail for Refinery work.
 ## Entries
 
 ### 2026-04-20 - Claude Code
+- Request: Clean up duplicate articles in Supabase (half the DB was dupes).
+- Actions taken:
+  - Added previewDuplicateArticles() and softDeleteDuplicateArticles() to Ingestion v2.15
+  - First preview showed mail.google.com with 71 "dupes" — actually 71 different articles with a bad URL. Added BAD_URL_PREFIXES exclusion list (v2.16) to skip these
+  - Second preview: 8046 total, 454 real dupe groups, 486 rows to soft-delete, 72 bad-URL articles safely skipped
+  - User ran softDeleteDuplicateArticles() → 486 dupes soft-deleted
+  - User ran hardPurgeDeletedArticles() → permanently removed
+  - Result: 239 articles remaining — correct
+- Kept: previewDuplicateArticles() and softDeleteDuplicateArticles() in codebase for future use
+- Follow-up:
+  - Redeploy Viewer v2.10 in Apps Script (pencil → New version → Deploy) — not yet confirmed done
+
+### 2026-04-20 - Claude Code
 - Request: Viewer not working at all after v2.13 deploy. Also hundreds of duplicate articles in DB.
 - Files touched:
   - `Viewer/Code.js` — v2.10: replaced status=not.in.(read,deleted) with status=neq.read&status=neq.deleted (safer PostgREST syntax); archiveArticle() no longer sets archived:true
