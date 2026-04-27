@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.20 | Viewer: v2.10
+Ingestion: v2.21 | Viewer: v2.11
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -113,6 +113,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.21 | 2026-04-27 | Claude Code | Ingestion: exact duplicates now skipped entirely (no insert, TOR marked read) instead of being inserted as Duplicate category; Viewer v2.11: Duplicate category excluded from All Unread, read-fill, and stats queries via category=neq.Duplicate |
 | v2.20 | 2026-04-27 | Claude Code | Performance: dedup candidate pool now pre-fetched once per phase (INGESTION_DEDUP_CACHE_) instead of per-article — eliminates ~100-200 Supabase HTTP calls per run; audit trail writes batched (AUDIT_TRAIL_BATCH_ + flushAuditTrailBatch_()) into one call per phase; added runTORIngestionOnly() and runGmailIngestionOnly() for separate time triggers; MAX_EMAILS_PER_RUN 100→40 |
 | v2.19 | 2026-04-27 | Claude Code | Fixed category assignment: (1) AI & LLMs now checked before Finance/Research/Policy in detectCategory() so "AI funding" and "AI regulation" land correctly; (2) expanded CATEGORY_SOURCE_MAP with all watch sites, AI-only feed domains (AWS ML, Google AI, MIT AI, NVIDIA, OpenAI, Anthropic, HuggingFace, deeplearning.ai), and BBC/NYT→Top Story |
 | v2.18 | 2026-04-27 | Claude Code | Added simhash 64-bit fingerprinting to fuzzy dedup (computeSimhash_, hammingDistance_, SIMHASH_THRESHOLD=8); simhash now scores alongside Jaccard/token-overlap in scorePossibleDuplicateMatch_ — hdist<=4 raises score to 0.90, hdist<=8 raises to 0.80; fixed OPML: removed duplicate TechCrunch+Verge AI feeds from AI folder (covered by main feeds in Tech), moved OpenClaw feeds from YouTube to Learning & Skills, added Kagi allorigins.win proxy warning comment |

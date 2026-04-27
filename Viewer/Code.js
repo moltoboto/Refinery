@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend - Viewer v2.10
+// REFINERY - Google Apps Script Backend - Viewer v2.11
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.10')
+    .setTitle('Refinery V2.11')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -121,7 +121,7 @@ function getViewerBootstrap(limit, artifactLimit) {
       '*'
     );
     unreadMain = fetchAllArticlesByQuery_(
-      'kept=eq.false&status=neq.read&status=neq.deleted&order=date_added.desc',
+      'kept=eq.false&status=neq.read&status=neq.deleted&category=neq.Duplicate&order=date_added.desc',
       '*'
     );
 
@@ -129,7 +129,7 @@ function getViewerBootstrap(limit, artifactLimit) {
     if (fillCount > 0) {
       try {
         readMain = fetchLimitedArticlesByQuery_(
-          'kept=eq.false&status=eq.read&order=date_added.desc',
+          'kept=eq.false&status=eq.read&category=neq.Duplicate&order=date_added.desc',
           '*',
           fillCount
         );
@@ -699,7 +699,7 @@ function getAllArticles_() {
 
 function buildViewerStats_() {
   var unreadRows = fetchAllArticlesByQuery_(
-    'kept=eq.false&status=neq.read&status=neq.deleted&order=date_added.desc',
+    'kept=eq.false&status=neq.read&status=neq.deleted&category=neq.Duplicate&order=date_added.desc',
     'id,category,source'
   );
   var categoryCounts = {};

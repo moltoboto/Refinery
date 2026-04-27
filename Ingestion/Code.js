@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.20
+ * Version: 2.21
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -216,14 +216,21 @@ function ingestFromTheOldReader() {
           }
           continue;
         }
-        if (duplicateResult.duplicate || duplicateResult.possibleDuplicate) {
+        if (duplicateResult.duplicate) {
+          // Exact duplicate — skip insert entirely, just mark as read in TOR
+          stats.duplicatesSkipped++;
+          ingestedIds.push(articles[i].id);
+          Logger.log("TOR: exact duplicate skipped — " + (record.title || record.url));
+          continue;
+        }
+        if (duplicateResult.possibleDuplicate) {
           record = markRecordAsDuplicateReview_(record, duplicateResult);
         }
 
         var insertResult = insertToSupabase(record);
         if (insertResult.ok) {
           stats.articlesInserted++;
-          logToAuditTrail(record.source, record.url, record.title, duplicateResult.duplicate ? 'exact_duplicate_review' : duplicateResult.possibleDuplicate ? 'possible_duplicate' : 'ingested', null);
+          logToAuditTrail(record.source, record.url, record.title, duplicateResult.possibleDuplicate ? 'possible_duplicate' : 'ingested', null);
           ingestedIds.push(articles[i].id);
         } else {
           stats.errors++;
@@ -795,7 +802,14 @@ function processInboxTier(label) {
         Logger.log('Inbox duplicate review failed: ' + duplicateResult.error);
         return;
       }
-      if (duplicateResult.duplicate || duplicateResult.possibleDuplicate) {
+      if (duplicateResult.duplicate) {
+        // Exact duplicate — skip insert, mark as read
+        msg.markRead(); thread.addLabel(label);
+        stats.duplicatesSkipped++;
+        Logger.log('Inbox: exact duplicate skipped — ' + subject);
+        return;
+      }
+      if (duplicateResult.possibleDuplicate) {
         record = markRecordAsDuplicateReview_(record, duplicateResult);
       }
 
@@ -809,7 +823,7 @@ function processInboxTier(label) {
           }
         }
 
-        logToAuditTrail(record.source, buildGmailUrl(msgId), record.title, duplicateResult.duplicate ? 'exact_duplicate_review' : duplicateResult.possibleDuplicate ? 'possible_duplicate' : 'ingested', msgId);
+        logToAuditTrail(record.source, buildGmailUrl(msgId), record.title, duplicateResult.possibleDuplicate ? 'possible_duplicate' : 'ingested', msgId);
         stats.emailsProcessed++;
         stats.emailCardsCreated++;
         if (artifactResult.ok) {
