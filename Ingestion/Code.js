@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.24
+ * Version: 2.25
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -94,7 +94,9 @@ var CATEGORY_SOURCE_MAP = {
 
   // News
   'bbci.co.uk/news': 'Top Story',
-  'nytimes.com': 'Top Story'
+  'nytimes.com': 'Top Story',
+  'reuters.com': 'Top Story',
+  'cnbc.com': 'Finance'
 };
 
 var CATEGORY_OPTIONS = [
@@ -113,6 +115,35 @@ var CATEGORY_OPTIONS = [
   'Email',
   'Duplicate'
 ];
+
+// ─── CONTENT NOISE FILTER ─────────────────────────────────────────────────────
+// Articles whose titles match any of these patterns are skipped at ingestion.
+// Keep patterns specific — err on the side of letting articles through.
+// Add new patterns here as noise sources are identified.
+var NOISE_TITLE_PATTERNS = [
+  // Celebrity / entertainment gossip
+  /\bweight loss\b|\bweight gain\b|\bshocking weight\b/i,
+  /\bshocker\b|\bshocking secret\b|\bshocking reveal\b/i,
+  /\bcelebrity gossip\b|\bceleb gossip\b/i,
+  /\bplastic surgery\b|\bbefore and after\b/i,
+  // AI image art spam (typically low-signal posts from art subreddits)
+  /\bai.?generated art\b|\bai.?art showcase\b|\bai.?image gen\b/i,
+  /\bmidjourney showcase\b|\bstable diffusion art\b/i,
+  // Promotional / listicle noise
+  /\byou won't believe\b|\bdoctors hate\b|\bone weird trick\b/i
+];
+
+function isNoisyArticle_(record) {
+  var title = String(record && record.title || '');
+  for (var i = 0; i < NOISE_TITLE_PATTERNS.length; i++) {
+    if (NOISE_TITLE_PATTERNS[i].test(title)) {
+      Logger.log('NOISE FILTER: skipping — ' + title);
+      return true;
+    }
+  }
+  return false;
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 var SOURCE_CATEGORY_OVERRIDE_CACHE = null;
 var SOURCE_CATEGORY_SHEET_NAME = 'rss_source_map';
@@ -207,6 +238,11 @@ function ingestFromTheOldReader() {
       stats.articlesProcessed++;
       try {
         var record = mapTORArticleToSchema(articles[i]);
+        if (isNoisyArticle_(record)) {
+          stats.duplicatesSkipped++;
+          ingestedIds.push(articles[i].id); // mark read in TOR
+          continue;
+        }
         var duplicateResult = reviewDuplicateRecord_(record);
         if (duplicateResult.error) {
           stats.errors++;
@@ -797,6 +833,11 @@ function processInboxTier(label) {
         date_added: date.toISOString()
       };
 
+      if (isNoisyArticle_(record)) {
+        msg.markRead(); thread.addLabel(label);
+        stats.duplicatesSkipped++;
+        return;
+      }
       var duplicateResult = reviewDuplicateRecord_(record);
       if (duplicateResult.error) {
         Logger.log('Inbox duplicate review failed: ' + duplicateResult.error);

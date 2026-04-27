@@ -8,13 +8,11 @@
     <ownerEmail>moltoboto@gmail.com</ownerEmail>
   </head>
   <body>
-    <!-- NOTE: Kagi feeds use allorigins.win as a CORS proxy. These feeds may break silently
-         if allorigins.win has downtime. Monitor for gaps in Kagi content in the Viewer.
-         Direct Kagi RSS (news.kagi.com) requires no proxy — consider switching if TOR supports it. -->
-    <outline type="rss" xmlUrl="http://api.allorigins.win/raw?url=https://news.kagi.com/business.xml"/>
-    <outline type="rss" xmlUrl="https://api.allorigins.win/raw?url=https://news.kagi.com/usa.xml"/>
-    <outline type="rss" xmlUrl="https://api.allorigins.win/raw?url=https://news.kagi.com/world.xml"/>
-    <outline type="rss" xmlUrl="http://api.allorigins.win/raw?url=https://news.kagi.com/technology.xml"/>
+    <!-- Kagi feeds removed 2026-04-27: allorigins.win proxy broken, feeds not delivering content -->
+    <!-- Replaced with Reuters and CNBC for business/world/tech news without celebrity noise -->
+    <outline type="rss" xmlUrl="https://feeds.reuters.com/reuters/businessNews"/>
+    <outline type="rss" xmlUrl="https://feeds.reuters.com/reuters/technologyNews"/>
+    <outline type="rss" xmlUrl="https://www.cnbc.com/id/100727362/device/rss/rss.html"/>
     <outline type="rss" xmlUrl="https://natesnewsletter.substack.com/feed"/>
 
     <outline title="AI" text="AI">
@@ -58,8 +56,10 @@
     </outline>
 
     <outline title="News" text="News">
-      <outline type="rss" xmlUrl="http://feeds.bbci.co.uk/news/world/rss.xml"/>
-      <outline type="rss" xmlUrl="https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"/>
+      <!-- Swapped to tech/science sections 2026-04-27 to eliminate celebrity and entertainment noise -->
+      <!-- BBC World → BBC Technology; NYT HomePage → NYT Technology -->
+      <outline type="rss" xmlUrl="http://feeds.bbci.co.uk/news/technology/rss.xml"/>
+      <outline type="rss" xmlUrl="https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"/>
     </outline>
 
     <outline title="Reddit" text="Reddit">
