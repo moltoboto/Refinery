@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend - Viewer v2.9
+// REFINERY - Google Apps Script Backend - Viewer v2.10
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.9')
+    .setTitle('Refinery V2.10')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -121,7 +121,7 @@ function getViewerBootstrap(limit, artifactLimit) {
       '*'
     );
     unreadMain = fetchAllArticlesByQuery_(
-      'kept=eq.false&status=not.in.(read,deleted)&order=date_added.desc',
+      'kept=eq.false&status=neq.read&status=neq.deleted&order=date_added.desc',
       '*'
     );
 
@@ -243,7 +243,7 @@ function updateArticle(id, fields) {
 }
 
 function archiveArticle(id) {
-  return updateArticle(id, { status: 'read', archived: true });
+  return updateArticle(id, { status: 'read' });
 }
 
 function keepArticle(id, kept) {
@@ -699,7 +699,7 @@ function getAllArticles_() {
 
 function buildViewerStats_() {
   var unreadRows = fetchAllArticlesByQuery_(
-    'kept=eq.false&status=not.in.(read,deleted)&order=date_added.desc',
+    'kept=eq.false&status=neq.read&status=neq.deleted&order=date_added.desc',
     'id,category,source'
   );
   var categoryCounts = {};

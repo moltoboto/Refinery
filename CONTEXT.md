@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.13 | Viewer: v2.9
+Ingestion: v2.14 | Viewer: v2.10
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -112,6 +112,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.14 | 2026-04-20 | Claude Code | Bug fixes from v2.13: replaced status=not.in.(read,deleted) with safe neq chaining; fixed archivedArticles ref in applyArchiveLocal; archiveArticle() no longer sets archived:true; dedup candidate filter uses status=neq.deleted |
 | v2.13 | 2026-04-20 | Claude Code | Soft delete now uses status='deleted' only (dropped archived=true); all Viewer fetch queries use status=neq.deleted instead of archived=eq.false; hardPurgeDeletedArticles() moved to Ingestion; purgeStaleArticles/purgeOldArchived removed from Viewer; archivedArticles stat renamed deletedArticles |
 | v2.12 | 2026-04-20 | Codex | Converted article cleanup to soft delete by default: pre-cutoff cleanup now moves rows out of the main reader with `archived=true` and `status='deleted'`, protects kept rows, and repurposes the stale purge path to physically remove only rows already marked deleted |
 | v2.11 | 2026-04-20 | Codex | Refactored article purge into a single internal `ARTICLE_PURGE_` module with only two public April cleanup entrypoints, removed redundant TOR listing helpers, and switched destructive purge deletes to a Supabase service-role Script Property (`SUPABASE_SERVICE_ROLE_KEY`) so old articles can be deleted without touching Drive artifacts |

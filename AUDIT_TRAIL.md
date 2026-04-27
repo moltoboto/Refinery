@@ -18,6 +18,23 @@ This file is the running session-level audit trail for Refinery work.
 ## Entries
 
 ### 2026-04-20 - Claude Code
+- Request: Viewer not working at all after v2.13 deploy. Also hundreds of duplicate articles in DB.
+- Files touched:
+  - `Viewer/Code.js` — v2.10: replaced status=not.in.(read,deleted) with status=neq.read&status=neq.deleted (safer PostgREST syntax); archiveArticle() no longer sets archived:true
+  - `Viewer/index.html` — v2.10: fixed VIEWER_STATS.archivedArticles ref in applyArchiveLocal → deletedArticles; bumped all 3 version strings to V2.10
+  - `Ingestion/Code.js` — v2.14: fixed findPossibleDuplicateCandidate_ to use status=neq.deleted instead of archived=eq.false
+  - `CONTEXT.md` + `AUDIT_TRAIL.md` — updated
+- Root causes found:
+  - CRITICAL: status=not.in.(read,deleted) PostgREST syntax likely caused Supabase errors, throwing in fetchAllArticlesByQuery_, collapsing the bootstrap
+  - MISSED: VIEWER_STATS.archivedArticles still referenced in applyArchiveLocal (renamed to deletedArticles but this one instance was missed)
+  - STALE: archiveArticle() still writing archived:true to the dormant archived field
+  - STALE: dedup candidate lookup still filtering archived=eq.false — now uses status=neq.deleted
+- Duplicate articles: pre-existing from before v2.8 dedup was added, or dedup silently failing on Supabase errors. Dedup filter fixed — new ingestion should now catch candidates correctly
+- Validation: all version strings verified consistent (Ingestion v2.14, Viewer V2.10 in 3 locations)
+- Deployment: clasp push both apps; redeploy Viewer via pencil → New version → Deploy
+- Follow-up: monitor ingestion run to confirm dedup is catching duplicates correctly
+
+### 2026-04-20 - Claude Code
 - Request: (1) Viewer should not write to the database — purge belongs in Ingestion. (2) Simplify soft delete to use status='deleted' only, drop the archived=true flag which was confusing and redundant.
 - Files touched:
   - `Ingestion/Code.js` — bumped to v2.13; soft delete now sets only status='deleted' (dropped archived:true from patch payload); all three purge queries updated to filter status=neq.deleted instead of archived=eq.false; added hardPurgeDeletedArticles() public function
