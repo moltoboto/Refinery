@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.18
+ * Version: 2.19
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -59,16 +59,42 @@ var CONFIG = {
 };
 
 var CATEGORY_SOURCE_MAP = {
+  // Social / Video — matched against source name or article URL
   'reddit': 'Reddit',
   'r/': 'Reddit',
   'youtube': 'YouTube',
   'youtu.be': 'YouTube',
+
+  // Watches — source names / domains
   'hodinkee': 'Watches',
   'wornandwound': 'Watches',
   'worn & wound': 'Watches',
   'ablogtowatch': 'Watches',
   'monochrome-watches': 'Watches',
-  'fratello': 'Watches'
+  'fratello': 'Watches',
+  'deployant': 'Watches',
+  'watchesbysjx': 'Watches',
+  'revolutionwatch': 'Watches',
+  'timeandtidewatches': 'Watches',
+  'watchtime': 'Watches',
+  'bobswatches': 'Watches',
+  'acollectedman': 'Watches',
+  'watchboxstudios': 'Watches',
+
+  // AI & LLMs — specific feed domains that are AI-only sources
+  'aws.amazon.com/blogs/machine-learning': 'AI & LLMs',
+  'blog.google/innovation-and-ai': 'AI & LLMs',
+  'news.mit.edu/rss/topic/artificial-intelligence': 'AI & LLMs',
+  'microsoft.com/en-us/research': 'AI & LLMs',
+  'nvidiablog': 'AI & LLMs',
+  'openai.com/news': 'AI & LLMs',
+  'anthropic.com': 'AI & LLMs',
+  'huggingface.co/blog': 'AI & LLMs',
+  'deeplearning.ai': 'AI & LLMs',
+
+  // News
+  'bbci.co.uk/news': 'Top Story',
+  'nytimes.com': 'Top Story'
 };
 
 var CATEGORY_OPTIONS = [
@@ -1595,13 +1621,16 @@ function detectCategory(title, summary, source, url) {
   if (t.match(/reddit|r\//)) return 'Reddit';
   if (t.match(/youtube|youtu\.be/)) return 'YouTube';
   if (t.match(/watchmaking|horology|timepiece|timepieces|patek|rolex|omega|seiko|chronograph|hodinkee|worn.?wound|ablogtowatch|fratello|monochrome|audemars|breitling|cartier|jaeger|iwc|hublot/)) return 'Watches';
-  if (t.match(/stock|market|earnings|valuation|ipo|funding|unicorn|venture|finance|trading|macro|fed|treasury|dealbook/)) return 'Finance';
-  if (t.match(/github|repo|open.?source|framework|library|sdk|npm|pip|cursor|vscode|cli\b|copilot/)) return 'Dev Tools';
-  if (t.match(/research|paper|study|arxiv|benchmark|dataset/)) return 'Research';
-  if (t.match(/tutorial|how.?to|guide|course|learn|cheat sheet/)) return 'Resources';
+  // AI & LLMs checked BEFORE Finance/Research/Policy so "AI funding" and "AI regulation"
+  // land here rather than being pulled into a secondary category.
+  if (t.match(/\bai\b|llm|gpt|claude|gemini|chatgpt|openai|anthropic|deepseek|qwen|mistral|ollama|copilot|diffusion|transformer|multimodal|foundation model/)) return 'AI & LLMs';
+  if (t.match(/github|repo|open.?source|framework|library|sdk|npm|pip|cursor|vscode|cli\b/)) return 'Dev Tools';
+  if (t.match(/arxiv|preprint|benchmark|dataset|peer.?review/)) return 'Research';
+  if (t.match(/tutorial|how.?to|cheat sheet|step.?by.?step/)) return 'Resources';
   if (t.match(/policy|regulation|law|congress|pentagon|dod|government|senate|compliance/)) return 'Policy & Society';
+  if (t.match(/stock|market|earnings|valuation|ipo|funding|unicorn|venture|finance|trading|macro|fed|treasury|dealbook/)) return 'Finance';
+  if (t.match(/research|paper|study|learn|course/)) return 'Research';
   if (t.match(/strategy|playbook|mental model|roadmap|positioning/)) return 'Strategy';
-  if (t.match(/\bai\b|llm|gpt|claude|gemini|model|agent|openai|anthropic|deepseek|qwen|mistral|ollama/)) return 'AI & LLMs';
   if (t.match(/breaking|acquisition|merger|launches|announces|crisis|war|election|top story|headline/)) return 'Top Story';
   if (t.match(/email|newsletter/)) return 'Email';
   return 'Tech & Trends';

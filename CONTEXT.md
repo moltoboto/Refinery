@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.18 | Viewer: v2.10
+Ingestion: v2.19 | Viewer: v2.10
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -113,6 +113,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.19 | 2026-04-27 | Claude Code | Fixed category assignment: (1) AI & LLMs now checked before Finance/Research/Policy in detectCategory() so "AI funding" and "AI regulation" land correctly; (2) expanded CATEGORY_SOURCE_MAP with all watch sites, AI-only feed domains (AWS ML, Google AI, MIT AI, NVIDIA, OpenAI, Anthropic, HuggingFace, deeplearning.ai), and BBC/NYT→Top Story |
 | v2.18 | 2026-04-27 | Claude Code | Added simhash 64-bit fingerprinting to fuzzy dedup (computeSimhash_, hammingDistance_, SIMHASH_THRESHOLD=8); simhash now scores alongside Jaccard/token-overlap in scorePossibleDuplicateMatch_ — hdist<=4 raises score to 0.90, hdist<=8 raises to 0.80; fixed OPML: removed duplicate TechCrunch+Verge AI feeds from AI folder (covered by main feeds in Tech), moved OpenClaw feeds from YouTube to Learning & Skills, added Kagi allorigins.win proxy warning comment |
 | v2.17 | 2026-04-20 | Claude Code | Fixed fuzzy dedup: WINDOW_DAYS 2→7, MAX_CANDIDATES 250→500, removed status=neq.read filter from candidate pool so already-read articles are still checked against incoming articles |
 | v2.15 | 2026-04-20 | Claude Code | Added previewDuplicateArticles() and softDeleteDuplicateArticles() to Ingestion — fetches all articles, groups by cleaned URL, keeps oldest record, soft-deletes dupes; never touches kept=true |
