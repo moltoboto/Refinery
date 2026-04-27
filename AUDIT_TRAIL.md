@@ -407,3 +407,18 @@ ode --check passed for the extracted index.html script block.
   - Import cleaned subscriptions.opml back into The Old Reader to actually remove the duplicate feeds from the live reader
   - Run ingestion to verify simhash is catching near-duplicates (check Duplicate category)
   - Monitor Kagi content in Viewer — if it goes blank, check allorigins.win status
+
+### 2026-04-27 - Claude Code
+- Request: Daily ingestion timing out.
+- Root cause: Per-article Supabase calls — every article made 5 HTTP calls (URL check, title check, 500-candidate fuzzy fetch, insert, audit write). 100 TOR + 100 Gmail articles ≈ 1000 HTTP calls per run @ 200-400ms each = 3-7 min. Over Apps Script 6-min limit.
+- Fixes (Ingestion v2.20):
+  - INGESTION_DEDUP_CACHE_: 500-candidate dedup pool fetched once per phase, reused for all articles (was fetched per-article — ~100 calls → 1)
+  - AUDIT_TRAIL_BATCH_ + flushAuditTrailBatch_(): audit trail writes queued and flushed as one batch call per phase (was one write per article — ~100 calls → 1)
+  - Added runTORIngestionOnly() and runGmailIngestionOnly() as separate entry points for independent time triggers if needed in future
+  - MAX_EMAILS_PER_RUN: 100 → 40
+- Files touched: Ingestion/Code.js, CONTEXT.md
+- Validation: User confirmed runDailyIngestion completed successfully with Option A (combined trigger). No split needed.
+- Deployment: clasp push done, pencil → New version → Deploy in Apps Script
+- Follow-up:
+  - Run applySourceCategoryBackfill() in Ingestion to re-tag existing articles with corrected v2.19 category logic (AI & LLMs now checked before Finance/Policy)
+  - Import updated subscriptions.opml into The Old Reader
