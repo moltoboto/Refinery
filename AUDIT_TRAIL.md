@@ -386,3 +386,24 @@ ode --check passed for the extracted index.html script block.
   - Push the updated ingestion Apps Script project.
   - Run `previewPurgeArticlesBeforeApril2026()` before any deletion.
   - Run `listKagiTorSubscriptions()` to see exactly which Kagi feeds are currently in TOR before replacing them.
+
+### 2026-04-27 - Claude Code
+- Request: (1) Implement simhash fingerprinting for near-duplicate detection. (2) Fix subscriptions.opml: remove duplicate TC/Verge feeds, move OpenClaw feeds, document Kagi proxy fragility. (3) Commit OPML to repo.
+- Files touched:
+  - `Ingestion/Code.js` — bumped to v2.18
+  - `subscriptions.opml` — fixed structure, committed to repo
+  - `CONTEXT.md` — version bump, changelog entry, Kagi gotcha, subscription cleanup note
+  - `AUDIT_TRAIL.md` — this entry
+- Actions taken:
+  - **Simhash (Ingestion v2.18):** Added `computeSimhash_()` (64-bit, djb2-based), `hammingDistance_()`, `popcount32_()`, `simhashText_()`, and `SIMHASH_THRESHOLD=8` constant. Updated `scorePossibleDuplicateMatch_()` to compute simhash fingerprints for both incoming and candidate text (title+summary), then boost score: hdist<=4 → score 0.90, hdist<=8 → score 0.80. Simhash is a complementary signal alongside existing Jaccard/token-overlap scoring.
+  - **OPML fixes:** Removed `techcrunch.com/category/artificial-intelligence/feed/` and `theverge.com/rss/ai-artificial-intelligence/index.xml` from AI folder — both publications already covered by main feeds in Tech folder, so these were causing source-level duplicates. Moved `openclaw.substack.com/feed` and `openclaw.ai/rss.xml` from YouTube folder to Learning & Skills (correct category). Added XML comment documenting Kagi allorigins.win proxy fragility.
+  - **CONTEXT.md:** Added Kagi proxy gotcha to Known Patterns section.
+  - Committed OPML and Code.js to git, pushed to main.
+- Validation:
+  - OPML diff reviewed — duplicate feeds removed, OpenClaw relocated, comments added
+  - Simhash functions visually verified for correctness (djb2 hash, 64-bit v array, popcount)
+- Deployment: clasp push Ingestion (no Viewer changes); user must redeploy in Apps Script (pencil → New version → Deploy)
+- Follow-up:
+  - Import cleaned subscriptions.opml back into The Old Reader to actually remove the duplicate feeds from the live reader
+  - Run ingestion to verify simhash is catching near-duplicates (check Duplicate category)
+  - Monitor Kagi content in Viewer — if it goes blank, check allorigins.win status

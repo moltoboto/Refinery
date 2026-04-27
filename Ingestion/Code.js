@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.17
+ * Version: 2.18
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1335,13 +1335,31 @@ function scorePossibleDuplicateMatch_(record, candidate) {
   var containment = Math.max(titleStats.leftCoverage, titleStats.rightCoverage);
   var minShared = Math.max(2, parseInt(CONFIG.DEDUPE_REVIEW.MIN_SHARED_TOKENS, 10) || 3);
 
+  // Simhash: compute 64-bit fingerprints for combined title+summary text
+  var incomingFullText = (record && record.title || '') + ' ' + cleanSummaryForDedupe_(record && record.summary || '');
+  var candidateFullText = (candidate && candidate.title || '') + ' ' + cleanSummaryForDedupe_(candidate && candidate.summary || '');
+  var incomingSH  = simhashText_(incomingFullText);
+  var candidateSH = simhashText_(candidateFullText);
+  var hdist = hammingDistance_(incomingSH, candidateSH);
+
   var score = Math.max(
     titleStats.jaccard * 0.85 + topicStats.jaccard * 0.15,
     containment * 0.75 + Math.min(topicStats.shared.length, 6) * 0.04
   );
 
+  // Simhash boost: near-identical fingerprint → raise score regardless of token path
+  if (hdist <= 4) {
+    score = Math.max(score, 0.90);
+  } else if (hdist <= SIMHASH_THRESHOLD) {
+    score = Math.max(score, 0.80);
+  }
+
   var reason = '';
-  if (titleStats.shared.length >= minShared && containment >= 0.7) {
+  if (hdist <= 4) {
+    reason = 'simhash near-identical (hamming=' + hdist + ')';
+  } else if (hdist <= SIMHASH_THRESHOLD) {
+    reason = 'simhash strong match (hamming=' + hdist + ')';
+  } else if (titleStats.shared.length >= minShared && containment >= 0.7) {
     reason = 'same event with overlapping titles';
     score = Math.max(score, 0.78);
   } else if (titleStats.shared.length >= minShared && topicStats.shared.length >= (minShared + 1)) {
@@ -1418,6 +1436,67 @@ function tokenOverlapStats_(left, right) {
     rightCoverage: Object.keys(rightMap).length ? (shared.length / Object.keys(rightMap).length) : 0
   };
 }
+
+// ─── SIMHASH NEAR-DUPLICATE FINGERPRINTING ───────────────────────────────────
+// Simhash produces a 64-bit fingerprint per text block. Two documents are
+// near-duplicates when their fingerprints differ by <= SIMHASH_THRESHOLD bits
+// (Hamming distance). Works alongside token-overlap scoring to catch paraphrased
+// duplicates that share structure but not identical wording.
+//
+// Threshold guide (out of 64 bits):
+//   <= 4  : extremely similar / likely same article, different whitespace
+//   <= 8  : strong near-duplicate
+//   <= 12 : moderate overlap (use with care — may false-positive on short texts)
+
+var SIMHASH_THRESHOLD = 8;
+
+function djb2Hash_(str) {
+  var hash = 5381;
+  for (var i = 0; i < str.length; i++) {
+    hash = (((hash << 5) + hash) + str.charCodeAt(i)) | 0; // keep 32-bit signed
+  }
+  return hash;
+}
+
+function computeSimhash_(text) {
+  var tokens = dedupeTokens_(text, false);
+  if (!tokens || !tokens.length) return { hi: 0, lo: 0 };
+  var v = [];
+  var i;
+  for (i = 0; i < 64; i++) v[i] = 0;
+  for (var t = 0; t < tokens.length; t++) {
+    var token = tokens[t];
+    var h1 = djb2Hash_(token);
+    var h2 = djb2Hash_(token + '\x01');
+    for (var bit = 0; bit < 32; bit++) {
+      v[bit]      += ((h1 >>> bit) & 1) ? 1 : -1;
+      v[bit + 32] += ((h2 >>> bit) & 1) ? 1 : -1;
+    }
+  }
+  var lo = 0, hi = 0;
+  for (i = 0; i < 32; i++) {
+    if (v[i]      > 0) lo |= (1 << i);
+    if (v[i + 32] > 0) hi |= (1 << i);
+  }
+  return { hi: hi >>> 0, lo: lo >>> 0 };
+}
+
+function popcount32_(n) {
+  n = n >>> 0;
+  n = n - ((n >>> 1) & 0x55555555);
+  n = (n & 0x33333333) + ((n >>> 2) & 0x33333333);
+  n = (n + (n >>> 4)) & 0x0f0f0f0f;
+  return ((n * 0x01010101) >>> 24);
+}
+
+function hammingDistance_(a, b) {
+  return popcount32_((a.hi ^ b.hi) >>> 0) + popcount32_((a.lo ^ b.lo) >>> 0);
+}
+
+function simhashText_(text) {
+  return computeSimhash_(String(text || ''));
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function markRecordAsDuplicateReview_(record, duplicateResult) {
   var primary = duplicateResult && duplicateResult.primary || {};

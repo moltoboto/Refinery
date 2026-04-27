@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="1.1">
+  <head>
+    <title>The Old Reader</title>
+    <dateCreated>Mon, 27 Apr 2026 01:53:30 GMT</dateCreated>
+    <dateModified>Mon, 27 Apr 2026 01:53:30 GMT</dateModified>
+    <ownerName>OpenClaw Agent</ownerName>
+    <ownerEmail>moltoboto@gmail.com</ownerEmail>
+  </head>
+  <body>
+    <!-- NOTE: Kagi feeds use allorigins.win as a CORS proxy. These feeds may break silently
+         if allorigins.win has downtime. Monitor for gaps in Kagi content in the Viewer.
+         Direct Kagi RSS (news.kagi.com) requires no proxy — consider switching if TOR supports it. -->
+    <outline type="rss" xmlUrl="http://api.allorigins.win/raw?url=https://news.kagi.com/business.xml"/>
+    <outline type="rss" xmlUrl="https://api.allorigins.win/raw?url=https://news.kagi.com/usa.xml"/>
+    <outline type="rss" xmlUrl="https://api.allorigins.win/raw?url=https://news.kagi.com/world.xml"/>
+    <outline type="rss" xmlUrl="http://api.allorigins.win/raw?url=https://news.kagi.com/technology.xml"/>
+    <outline type="rss" xmlUrl="https://natesnewsletter.substack.com/feed"/>
+    <outline title="AI" text="AI">
+      <outline type="rss" xmlUrl="https://aws.amazon.com/blogs/machine-learning/feed/"/>
+      <outline type="rss" xmlUrl="https://blog.google/innovation-and-ai/technology/ai/rss/"/>
+      <outline type="rss" xmlUrl="https://news.mit.edu/rss/topic/artificial-intelligence2"/>
+      <outline type="rss" xmlUrl="https://www.microsoft.com/en-us/research/feed/"/>
+      <outline type="rss" xmlUrl="http://feeds.feedburner.com/nvidiablog"/>
+      <!-- TechCrunch AI and Verge AI feeds removed 2026-04-27: duplicated by main feeds in Tech folder.
+           TC/Verge AI articles still ingested; category assigned by Refinery normalizeCategory() logic. -->
+    </outline>
+    <outline title="Essential Watches" text="Essential Watches">
+      <outline type="rss" xmlUrl="https://www.acollectedman.com/blogs/journal.atom"/>
+      <outline type="rss" xmlUrl="https://www.bobswatches.com/rolex-blog/feed"/>
+      <outline type="rss" xmlUrl="https://deployant.com/feed/"/>
+      <outline type="rss" xmlUrl="https://www.fratellowatches.com/feed/"/>
+      <outline type="rss" xmlUrl="https://monochrome-watches.com/feed/"/>
+      <outline type="rss" xmlUrl="https://revolutionwatch.com/feed/"/>
+      <outline type="rss" xmlUrl="https://watchesbysjx.com/feed"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCpIdSH75bNfHIsryKCTzTWw"/>
+      <outline type="rss" xmlUrl="http://feed.podbean.com/watchboxstudios/feed.xml"/>
+      <outline type="rss" xmlUrl="https://timeandtidewatches.com/feed/"/>
+      <outline type="rss" xmlUrl="http://www.watchtime.com/feed/rss"/>
+      <outline type="rss" xmlUrl="http://watchtime.net/feed/news"/>
+      <outline type="rss" xmlUrl="http://wornandwound.com/feed/"/>
+      <outline type="rss" xmlUrl="http://feeds.feedburner.com/Ablogtowatch"/>
+    </outline>
+    <outline title="Learning &amp; Skills" text="Learning &amp; Skills">
+      <outline type="rss" xmlUrl="http://blog.coursera.org/feed"/>
+      <outline type="rss" xmlUrl="https://dailystoic.com/feed/"/>
+      <outline type="rss" xmlUrl="https://openai.com/news/rss.xml"/>
+      <!-- OpenClaw feeds moved from YouTube folder 2026-04-27 -->
+      <outline type="rss" xmlUrl="https://openclaw.substack.com/feed"/>
+      <outline type="rss" xmlUrl="http://openclaw.ai/rss.xml"/>
+    </outline>
+    <outline title="News" text="News">
+      <outline type="rss" xmlUrl="http://feeds.bbci.co.uk/news/world/rss.xml"/>
+      <outline type="rss" xmlUrl="https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"/>
+    </outline>
+    <outline title="Reddit" text="Reddit">
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/AItradingOpportunity/.rss"/>
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/artificial/.rss"/>
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/ChatGPT/.rss"/>
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/PromptEngineering/.rss"/>
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/notebooklm/.rss"/>
+    </outline>
+    <outline title="Tech" text="Tech">
+      <outline type="rss" xmlUrl="http://feeds.arstechnica.com/arstechnica/index"/>
+      <outline type="rss" xmlUrl="https://www.engadget.com/rss-full.xml"/>
+      <outline type="rss" xmlUrl="http://feeds.macrumors.com/MacRumors-Front"/>
+      <outline type="rss" xmlUrl="https://techcrunch.com/feed/"/>
+      <outline type="rss" xmlUrl="https://www.theverge.com/rss/index.xml"/>
+    </outline>
+    <outline title="YouTube" text="YouTube">
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC0yHbz4OxdQFwmVX2BBQqLg"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC0C-17n9iuUQPylguM1d-lQ"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCfQNB91qRP_5ILeu_S_bSkg"/>
+      <outline type="rss" xmlUrl="http://www.youtube.com/feeds/videos.xml?channel_id=UCESLZhusAkFfsNsApnjF_Cg"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCQg3kFK12laHnCfuQpBThDw"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCY0VLqmA80i4cSMdjQoxFYg"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC_RovKmk0OCbuZjA8f08opw"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC8qxhdxV0U2NQ9vinFffDJQ"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCwAnu01qlnVg1Ai2AbtTMaA"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCfJT_eYDTmDE-ovKaxVE1ig"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCHkzp52CldSPZqU5T49mOnA"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCzJXNzqz6VMHSNInQt_7q6w"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCBcPPMQmVe5O3on4v5VKrYA"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC2dSE9W3lGYbFi_CPmVtA-A"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCGX7nGXpz-CmO_Arg-cgJ7A"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC-Iu-wRWwWX8NjVRxDnW8JA"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCwSozl89jl2zUDzQ4jGJD3g"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCHhYXsLBEVVnbvsq57n1MTQ"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCkkhmBWfS7pILYIk0izkc3A"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC2UXDak6o7rBm23k3Vv5dww"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCIHdDJ0tjn_3j-FS7s_X1kQ"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCJKpwdNyD54Wcvh23-N1EWQ"/>
+    </outline>
+  </body>
+</opml>

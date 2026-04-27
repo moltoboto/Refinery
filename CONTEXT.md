@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.17 | Viewer: v2.10
+Ingestion: v2.18 | Viewer: v2.10
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -95,13 +95,14 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 - URL dedup is canonical (tracking params stripped before comparison)
 - Gmail MCP in Claude.ai uses Anthropic OAuth - separate from Apps Script auth
 - `deriveSignal()` currently returns empty string - stubbed for OpenClaw Phase 2
+- Kagi feeds in TOR use `allorigins.win` as a CORS proxy (e.g. `api.allorigins.win/raw?url=https://news.kagi.com/...`). This 3rd-party proxy can go down silently — if Kagi content disappears from the Viewer, check allorigins.win first
 - Source files live locally at `C:\Users\exact\Refinery\`; deployed to Apps Script via clasp
 - All working docs consolidated to `C:\Users\exact\Refinery\` (previously split across OneDrive\Refinery and two separate clasp folders)
 
 ## On the Horizon
 - **Duplicate removal** - needs improvement (current dedup misses some cases)
 - **Substack ingestion** - confirm working end-to-end via TOR RSS
-- **Subscription cleanup** - audit and clean up active TOR feeds
+- **Subscription cleanup** - subscriptions.opml committed; duplicate TC/Verge feeds removed; OpenClaw moved; Kagi proxy documented. Still TODO: import cleaned OPML back into TOR to actually remove the duplicate feeds from the live reader
 - **Add new subscriptions** - new feeds/newsletters to onboard
 - **Direct URL input for artifacts** - UI to paste a URL and save as artifact manually
 - OpenClaw Phase 2 - signal/category enrichment (stubbed, deriveSignal returns '')
@@ -112,6 +113,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.18 | 2026-04-27 | Claude Code | Added simhash 64-bit fingerprinting to fuzzy dedup (computeSimhash_, hammingDistance_, SIMHASH_THRESHOLD=8); simhash now scores alongside Jaccard/token-overlap in scorePossibleDuplicateMatch_ — hdist<=4 raises score to 0.90, hdist<=8 raises to 0.80; fixed OPML: removed duplicate TechCrunch+Verge AI feeds from AI folder (covered by main feeds in Tech), moved OpenClaw feeds from YouTube to Learning & Skills, added Kagi allorigins.win proxy warning comment |
 | v2.17 | 2026-04-20 | Claude Code | Fixed fuzzy dedup: WINDOW_DAYS 2→7, MAX_CANDIDATES 250→500, removed status=neq.read filter from candidate pool so already-read articles are still checked against incoming articles |
 | v2.15 | 2026-04-20 | Claude Code | Added previewDuplicateArticles() and softDeleteDuplicateArticles() to Ingestion — fetches all articles, groups by cleaned URL, keeps oldest record, soft-deletes dupes; never touches kept=true |
 | v2.14 | 2026-04-20 | Claude Code | Bug fixes from v2.13: replaced status=not.in.(read,deleted) with safe neq chaining; fixed archivedArticles ref in applyArchiveLocal; archiveArticle() no longer sets archived:true; dedup candidate filter uses status=neq.deleted |

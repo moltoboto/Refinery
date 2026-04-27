@@ -1,0 +1,154 @@
+# How Refinery Works — Plain English
+
+## What Is Refinery?
+
+Refinery is your personal news reader. It pulls articles from RSS feeds and Gmail newsletters,
+stores them in a database, and displays them in a clean 3-pane reader you open in a browser.
+
+There are two separate mini-apps that run on Google's servers:
+
+| App | What it does |
+|-----|-------------|
+| **Ingestion** | Fetches new articles from RSS and Gmail, saves them to the database |
+| **Viewer** | Serves the reader UI — the thing you actually read in your browser |
+
+---
+
+## Where Everything Lives
+
+```
+Your laptop (P16)
+└── C:\Users\exact\Refinery\          ← all your source code lives here
+    ├── Ingestion\                     ← the fetcher app
+    │   └── Code.js                    ← the actual code (v2.12)
+    ├── Viewer\                        ← the reader app
+    │   ├── Code.js                    ← backend code (v2.8)
+    │   └── index.html                 ← the UI you see in the browser
+    ├── CONTEXT.md                     ← project brain — full state and history
+    ├── AUDIT_TRAIL.md                 ← log of every session
+    ├── HANDOFF_PROMPT.md              ← how to start any AI session
+    └── PROCESS.md                     ← step-by-step workflow
+
+GitHub (cloud backup + sync point)
+└── github.com/moltoboto/Refinery      ← copy of everything above, always in sync
+    └── branch: main                   ← always use this one
+
+Google Apps Script (where the code actually runs)
+└── script.google.com (moltoboto account)
+    ├── Refinery Ingestion             ← live running ingestion app
+    └── Refinery Viewer                ← live running viewer app
+
+Supabase (the database)
+└── project: hwropcciwxzzukfcjlsr
+    └── table: articles                ← every article you've ever ingested
+
+Google Drive (moltoboto account)
+└── My Drive > Refinery                ← doc backups + email artifact HTML files
+```
+
+---
+
+## The Three AI Tools and What Each One Does
+
+### Claude Code (that's me — what you're using right now)
+- I can read and edit your files **directly on your laptop**
+- I can run commands (clasp push, git, etc.)
+- I commit and push changes to GitHub automatically
+- Best for: making code changes, reading logs, managing git
+
+### Codex (ChatGPT)
+- You upload files to it, it edits them, you download the result
+- It cannot touch your laptop or GitHub directly
+- Best for: focused code changes when you give it one file at a time
+
+### Claude.ai (browser)
+- Good for thinking through design and logic
+- You upload files, it advises, you implement the changes yourself
+- Best for: planning and architecture discussions
+
+---
+
+## How to Switch Between Claude Code and Codex
+
+### Starting fresh with Claude Code (after Codex was last used)
+1. Open Claude Code in `C:\Users\exact\Refinery\`
+2. Run: `git pull` — gets the latest from GitHub
+3. Start your session — I read the files directly, no uploads needed
+
+### Handing off to Codex (after Claude Code session)
+1. I commit and push to GitHub before closing
+2. In Codex: download `Ingestion/Code.js` or `Viewer/Code.js` from GitHub
+3. Upload to Codex along with `CONTEXT.md` and `AUDIT_TRAIL.md`
+4. After Codex is done: download the result and push back to GitHub manually
+
+---
+
+## How a Change Gets from Your Laptop to Your Browser
+
+```
+You edit code here          Claude Code / Codex
+       ↓
+C:\Users\exact\Refinery\   (local source)
+       ↓  git push
+github.com/moltoboto/Refinery   (cloud backup)
+       ↓  clasp push
+Google Apps Script              (where it runs)
+       ↓  deploy
+Your browser URL                (what you actually use)
+```
+
+Every step matters. A change isn't live until it's been clasp-pushed AND deployed in Apps Script.
+
+---
+
+## What clasp Is
+
+`clasp` is a command-line tool that syncs your local `.js` files up to Google Apps Script.
+Think of it like "git push, but for Google's servers instead of GitHub."
+
+```bash
+# From the Ingestion folder:
+cd C:\Users\exact\Refinery\Ingestion
+clasp push --force
+
+# From the Viewer folder:
+cd C:\Users\exact\Refinery\Viewer
+clasp push --force
+```
+
+After clasp push, you still need to go into Apps Script and create a new deployment
+(or add a new version) before the live URL picks up the change.
+
+---
+
+## End of Session Checklist
+
+After any meaningful change:
+
+- [ ] Bump the version number in Code.js (e.g. v2.12 → v2.13)
+- [ ] Add a row to the Change Log in CONTEXT.md
+- [ ] Append an entry to AUDIT_TRAIL.md
+- [ ] `clasp push` in the relevant app folder
+- [ ] Deploy in Apps Script (new version or new deployment)
+- [ ] `git add -A && git commit -m "v2.13 - what changed" && git push`
+- [ ] Upload updated docs to Google Drive manually
+
+---
+
+## Current Versions
+
+| App | Version | Last changed | What changed |
+|-----|---------|-------------|--------------|
+| Ingestion | v2.12 | 2026-04-20 | Soft delete for old articles (reversible cleanup) |
+| Viewer | v2.8 | 2026-04-19 | Duplicate review queue |
+
+---
+
+## Things That Must Never Be Changed Without Care
+
+- **Supabase credentials** in CONFIG — if these break, nothing works
+- **`normalizeCategory()`** — fragile pipeline, test before touching
+- **`cleanUrl()`** — how duplicates are detected; changing this can cause re-ingestion of everything
+- **`sanitizeRecord()`** — enforces field length limits on every database write
+
+If any AI tool touches these without being asked, reject the change.
