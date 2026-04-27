@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.16 | Viewer: v2.10
+Ingestion: v2.17 | Viewer: v2.10
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -112,6 +112,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.17 | 2026-04-20 | Claude Code | Fixed fuzzy dedup: WINDOW_DAYS 2→7, MAX_CANDIDATES 250→500, removed status=neq.read filter from candidate pool so already-read articles are still checked against incoming articles |
 | v2.15 | 2026-04-20 | Claude Code | Added previewDuplicateArticles() and softDeleteDuplicateArticles() to Ingestion — fetches all articles, groups by cleaned URL, keeps oldest record, soft-deletes dupes; never touches kept=true |
 | v2.14 | 2026-04-20 | Claude Code | Bug fixes from v2.13: replaced status=not.in.(read,deleted) with safe neq chaining; fixed archivedArticles ref in applyArchiveLocal; archiveArticle() no longer sets archived:true; dedup candidate filter uses status=neq.deleted |
 | v2.13 | 2026-04-20 | Claude Code | Soft delete now uses status='deleted' only (dropped archived=true); all Viewer fetch queries use status=neq.deleted instead of archived=eq.false; hardPurgeDeletedArticles() moved to Ingestion; purgeStaleArticles/purgeOldArchived removed from Viewer; archivedArticles stat renamed deletedArticles |

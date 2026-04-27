@@ -18,6 +18,19 @@ This file is the running session-level audit trail for Refinery work.
 ## Entries
 
 ### 2026-04-20 - Claude Code
+- Request: Fuzzy dedup not catching similar articles — seeing 90% similar articles repeatedly.
+- Root causes found:
+  - WINDOW_DAYS was 2 — only looked back 2 days. AI news on same story spans 3-7 days across sources.
+  - Candidate filter included status=neq.read — excluded already-read articles from comparison pool. Once user read the original, the dedup was blind to it.
+- Fixes applied (Ingestion v2.17):
+  - WINDOW_DAYS: 2 → 7
+  - MAX_CANDIDATES: 250 → 500
+  - Removed status=neq.read from findPossibleDuplicateCandidate_ query
+- Files touched: Ingestion/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push done — Ingestion only, no Viewer change
+- Follow-up: Run ingestion and check Duplicate category to verify similar articles are being caught
+
+### 2026-04-20 - Claude Code
 - Request: Clean up duplicate articles in Supabase (half the DB was dupes).
 - Actions taken:
   - Added previewDuplicateArticles() and softDeleteDuplicateArticles() to Ingestion v2.15

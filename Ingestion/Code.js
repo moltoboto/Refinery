@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.16
+ * Version: 2.17
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -51,8 +51,8 @@ var CONFIG = {
   },
 
   DEDUPE_REVIEW: {
-    WINDOW_DAYS: 2,
-    MAX_CANDIDATES: 250,
+    WINDOW_DAYS: 7,
+    MAX_CANDIDATES: 500,
     MIN_SCORE: 0.66,
     MIN_SHARED_TOKENS: 3
   }
@@ -1285,7 +1285,7 @@ function findPossibleDuplicateCandidate_(record, headers) {
   var response = UrlFetchApp.fetch(
     CONFIG.SUPABASE_URL
       + '/rest/v1/articles?select=id,source,title,url,summary,category,date_added,status,kept,archived'
-      + '&kept=eq.false&status=neq.read&status=neq.deleted'
+      + '&kept=eq.false&status=neq.deleted'
       + '&date_added=gte.' + encodeURIComponent(sinceIso)
       + '&order=date_added.asc'
       + '&limit=' + encodeURIComponent(maxCandidates),
