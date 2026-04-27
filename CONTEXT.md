@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.22 | Viewer: v2.11
+Ingestion: v2.23 | Viewer: v2.11
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -113,6 +113,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.23 | 2026-04-27 | Claude Code | Fixed normalizeCategory() overwriting Duplicate category: possible duplicates were being re-categorized at insert time by sanitizeRecord() calling normalizeCategory(), stripping the Duplicate flag and causing them to appear in All Unread with wrong categories; now Duplicate is checked first and returned immediately |
 | v2.22 | 2026-04-27 | Claude Code | Fixed hardPurgeDeletedArticles: CONFIG.PURGE_DAYS was undefined causing RangeError on toISOString(); replaced with tomorrow-date upper bound to purge all soft-deleted rows unconditionally |
 | v2.21 | 2026-04-27 | Claude Code | Ingestion: exact duplicates now skipped entirely (no insert, TOR marked read) instead of being inserted as Duplicate category; Viewer v2.11: Duplicate category excluded from All Unread, read-fill, and stats queries via category=neq.Duplicate |
 | v2.20 | 2026-04-27 | Claude Code | Performance: dedup candidate pool now pre-fetched once per phase (INGESTION_DEDUP_CACHE_) instead of per-article — eliminates ~100-200 Supabase HTTP calls per run; audit trail writes batched (AUDIT_TRAIL_BATCH_ + flushAuditTrailBatch_()) into one call per phase; added runTORIngestionOnly() and runGmailIngestionOnly() for separate time triggers; MAX_EMAILS_PER_RUN 100→40 |

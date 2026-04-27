@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.22
+ * Version: 2.23
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1013,6 +1013,10 @@ function categoryFromUrl_(url) {
 }
 
 function normalizeCategory(category, source, title, summary, url) {
+  // Duplicate is set intentionally by markRecordAsDuplicateReview_ — never overwrite it.
+  // Any source/content match that fires later would silently un-flag the duplicate.
+  if (canonicalCategoryName_(category) === 'Duplicate') return 'Duplicate';
+
   var override = getSourceCategoryOverrideFor_(source, url);
   if (override) return override;
 
