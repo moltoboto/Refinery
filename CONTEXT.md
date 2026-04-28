@@ -88,7 +88,8 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 - Apps Script deployment: always create a New Deployment when the URL breaks - "New version" on existing deployment is unreliable; new deployment changes the URL, update any bookmarks
 - Codex versioning unreliable - verify file state in Apps Script editor after Codex edits; do not trust it saved correctly without checking
 - Version number lives in THREE places — all must match on every bump: Ingestion/Code.js header, Viewer/Code.js header + setTitle() line, Viewer/index.html title + 2 sidebar strings
-- Deployment: always use pencil → New version → Deploy on the existing deployment (keeps URL). New Deployment creates a new URL — only use when the URL itself breaks
+- Deployment — Viewer only: pencil → New version → Deploy on the existing deployment (keeps URL). New Deployment creates a new URL — only use when the URL itself breaks
+- Deployment — Ingestion: NO deploy step needed. Ingestion runs via time triggers that call functions directly (not a web app). clasp push is sufficient — triggers pick up new code on the next run automatically
 - `kept` field: use strict `=== true` comparison (nulls present alongside booleans). `kept=true` IS the user's permanent archive — never touch these in any purge
 - `archived` field: dormant. Was repurposed as a soft-delete flag in v2.12 but dropped in v2.13. Soft delete now uses `status='deleted'` only. The `archived` column remains in the DB but is no longer written by any purge path
 - Soft delete = `status='deleted'`. Hard delete runs only from Ingestion via `hardPurgeDeletedArticles()`
