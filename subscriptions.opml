@@ -3,32 +3,27 @@
   <head>
     <title>The Old Reader</title>
     <dateCreated>Mon, 27 Apr 2026 01:53:30 GMT</dateCreated>
-    <dateModified>Sun, 27 Apr 2026 22:15:00 GMT</dateModified>
+    <dateModified>Mon, 27 Apr 2026 23:00:00 GMT</dateModified>
     <ownerName>OpenClaw Agent</ownerName>
     <ownerEmail>moltoboto@gmail.com</ownerEmail>
   </head>
   <body>
-    <!-- Kagi feeds removed 2026-04-27: allorigins.win proxy broken, feeds not delivering content -->
-    <!-- Replaced with Reuters and CNBC for business/world/tech news without celebrity noise -->
+    <!-- Kagi feeds removed 2026-04-27: allorigins.win proxy broken -->
     <outline type="rss" xmlUrl="https://feeds.reuters.com/reuters/businessNews"/>
     <outline type="rss" xmlUrl="https://feeds.reuters.com/reuters/technologyNews"/>
     <outline type="rss" xmlUrl="https://www.cnbc.com/id/100727362/device/rss/rss.html"/>
     <outline type="rss" xmlUrl="https://natesnewsletter.substack.com/feed"/>
 
     <outline title="AI" text="AI">
-      <!-- Core lab / research blogs -->
       <outline type="rss" xmlUrl="https://aws.amazon.com/blogs/machine-learning/feed/"/>
       <outline type="rss" xmlUrl="https://blog.google/innovation-and-ai/technology/ai/rss/"/>
       <outline type="rss" xmlUrl="https://news.mit.edu/rss/topic/artificial-intelligence2"/>
       <outline type="rss" xmlUrl="https://www.microsoft.com/en-us/research/feed/"/>
       <outline type="rss" xmlUrl="http://feeds.feedburner.com/nvidiablog"/>
-      <!-- AI newsletters / high-signal blogs — added 2026-04-27 -->
       <outline type="rss" xmlUrl="https://www.deeplearning.ai/the-batch/feed/"/>
       <outline type="rss" xmlUrl="https://huggingface.co/blog/feed.xml"/>
       <outline type="rss" xmlUrl="https://simonwillison.net/atom/everything/"/>
       <outline type="rss" xmlUrl="https://venturebeat.com/category/ai/feed/"/>
-      <!-- TechCrunch AI and Verge AI feeds removed 2026-04-27: duplicated by main feeds in Tech folder.
-           TC/Verge AI articles still ingested; category assigned by Refinery normalizeCategory() logic. -->
     </outline>
 
     <outline title="Essential Watches" text="Essential Watches">
@@ -44,31 +39,49 @@
       <outline type="rss" xmlUrl="http://feed.podbean.com/watchboxstudios/feed.xml"/>
       <outline type="rss" xmlUrl="https://timeandtidewatches.com/feed/"/>
       <outline type="rss" xmlUrl="http://www.watchtime.com/feed/rss"/>
-      <!-- watchtime.net removed 2026-04-27: duplicate of watchtime.com above (same publication) -->
       <outline type="rss" xmlUrl="http://wornandwound.com/feed/"/>
       <outline type="rss" xmlUrl="http://feeds.feedburner.com/Ablogtowatch"/>
     </outline>
 
+    <!-- Finance folder added 2026-04-27 -->
+    <outline title="Finance" text="Finance">
+      <!-- Yahoo Finance news -->
+      <outline type="rss" xmlUrl="https://finance.yahoo.com/news/rssindex"/>
+      <!-- MarketWatch top stories — reliable, broad market coverage -->
+      <outline type="rss" xmlUrl="http://feeds.marketwatch.com/marketwatch/topstories/"/>
+      <!-- CNBC Mad Money — Cramer's picks and commentary -->
+      <outline type="rss" xmlUrl="https://www.cnbc.com/id/100370673/device/rss/rss.html"/>
+      <!-- Seeking Alpha — stock analysis and investor commentary -->
+      <outline type="rss" xmlUrl="https://seekingalpha.com/market_currents.xml"/>
+      <!-- The Motley Fool — long-term stock picks and analysis -->
+      <outline type="rss" xmlUrl="https://www.fool.com/feeds/index.aspx"/>
+      <!-- Fox Business — markets and business news -->
+      <outline type="rss" xmlUrl="http://feeds.foxbusiness.com/foxbusiness/latest"/>
+    </outline>
+
     <outline title="Learning &amp; Skills" text="Learning &amp; Skills">
-      <!-- removed 2026-04-27: blog.coursera.org (marketing), openai.com, openclaw.substack.com, openclaw.ai -->
       <outline type="rss" xmlUrl="https://dailystoic.com/feed/"/>
       <outline type="rss" xmlUrl="https://stratechery.com/feed/"/>
     </outline>
 
     <outline title="News" text="News">
-      <!-- Swapped to tech/science sections 2026-04-27 to eliminate celebrity and entertainment noise -->
-      <!-- BBC World → BBC Technology; NYT HomePage → NYT Technology -->
+      <!-- BBC Technology and NYT Technology — scoped to tech to avoid celebrity noise -->
       <outline type="rss" xmlUrl="http://feeds.bbci.co.uk/news/technology/rss.xml"/>
       <outline type="rss" xmlUrl="https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"/>
+      <!-- Google News top stories — broad, personalized by Google -->
+      <outline type="rss" xmlUrl="https://news.google.com/rss?hl=en-US&amp;gl=US&amp;ceid=US:en"/>
+      <!-- Yahoo News -->
+      <outline type="rss" xmlUrl="https://news.yahoo.com/rss"/>
+      <!-- Fox News — general US news -->
+      <outline type="rss" xmlUrl="http://feeds.foxnews.com/foxnews/latest"/>
+      <!-- MSN: no standard public RSS feed — access via browser only -->
     </outline>
 
     <outline title="Reddit" text="Reddit">
-      <!-- r/AItradingOpportunity removed 2026-04-27: low-quality, likely spam-heavy subreddit -->
       <outline type="rss" xmlUrl="https://www.reddit.com/r/artificial/.rss"/>
       <outline type="rss" xmlUrl="https://www.reddit.com/r/ChatGPT/.rss"/>
       <outline type="rss" xmlUrl="https://www.reddit.com/r/PromptEngineering/.rss"/>
       <outline type="rss" xmlUrl="https://www.reddit.com/r/notebooklm/.rss"/>
-      <!-- Added 2026-04-27: high-value AI communities -->
       <outline type="rss" xmlUrl="https://www.reddit.com/r/LocalLLaMA/.rss"/>
       <outline type="rss" xmlUrl="https://www.reddit.com/r/MachineLearning/.rss"/>
     </outline>

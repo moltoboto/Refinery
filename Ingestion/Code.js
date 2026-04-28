@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.25
+ * Version: 2.26
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -91,12 +91,24 @@ var CATEGORY_SOURCE_MAP = {
   'anthropic.com': 'AI & LLMs',
   'huggingface.co/blog': 'AI & LLMs',
   'deeplearning.ai': 'AI & LLMs',
+  'simonwillison.net': 'AI & LLMs',
+  'venturebeat.com': 'AI & LLMs',
 
   // News
   'bbci.co.uk/news': 'Top Story',
   'nytimes.com': 'Top Story',
   'reuters.com': 'Top Story',
-  'cnbc.com': 'Finance'
+  'foxnews.com': 'Top Story',
+  'news.google.com': 'Top Story',
+  'news.yahoo.com': 'Top Story',
+
+  // Finance
+  'cnbc.com': 'Finance',
+  'foxbusiness.com': 'Finance',
+  'marketwatch.com': 'Finance',
+  'finance.yahoo.com': 'Finance',
+  'seekingalpha.com': 'Finance',
+  'fool.com': 'Finance'
 };
 
 var CATEGORY_OPTIONS = [
@@ -1787,14 +1799,19 @@ function detectCategory(title, summary, source, url) {
   // AI & LLMs checked BEFORE Finance/Research/Policy so "AI funding" and "AI regulation"
   // land here rather than being pulled into a secondary category.
   if (t.match(/\bai\b|llm|gpt|claude|gemini|chatgpt|openai|anthropic|deepseek|qwen|mistral|ollama|copilot|diffusion|transformer|multimodal|foundation model/)) return 'AI & LLMs';
-  if (t.match(/github|repo|open.?source|framework|library|sdk|npm|pip|cursor|vscode|cli\b/)) return 'Dev Tools';
+  // Dev Tools: intentionally narrow — only clear developer tooling content.
+  // "open source", "repo", "framework", "library" removed — they appear in mainstream
+  // tech news constantly and cause false positives from HN/Verge/TechCrunch.
+  if (t.match(/\bgithub\.com\b|npm install|pip install|\bvscode\b|\bvs code\b|\bcursor ide\b|\bxcode\b|cli tool|command.?line tool|developer tool|dev tool|package manager|\bsdk release\b|\bapi client\b/)) return 'Dev Tools';
   if (t.match(/arxiv|preprint|benchmark|dataset|peer.?review/)) return 'Research';
   if (t.match(/tutorial|how.?to|cheat sheet|step.?by.?step/)) return 'Resources';
   if (t.match(/policy|regulation|law|congress|pentagon|dod|government|senate|compliance/)) return 'Policy & Society';
   if (t.match(/stock|market|earnings|valuation|ipo|funding|unicorn|venture|finance|trading|macro|fed|treasury|dealbook/)) return 'Finance';
   if (t.match(/research|paper|study|learn|course/)) return 'Research';
   if (t.match(/strategy|playbook|mental model|roadmap|positioning/)) return 'Strategy';
-  if (t.match(/breaking|acquisition|merger|launches|announces|crisis|war|election|top story|headline/)) return 'Top Story';
+  // Top Story: major news events only — "launches" and "announces" removed because
+  // every product announcement matches them, drowning real top stories in Tech & Trends.
+  if (t.match(/breaking|acquisition|merger|crisis|war|election|top story|headline/)) return 'Top Story';
   if (t.match(/email|newsletter/)) return 'Email';
   return 'Tech & Trends';
 }
