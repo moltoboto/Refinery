@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.26 | Viewer: v2.11
+Ingestion: v2.27 | Viewer: v2.11
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -113,6 +113,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.27 | 2026-04-27 | Claude Code | YouTube full description: finalizeSummaryForRecord_ now stores up to 20 sentences / 3500 chars for YouTube articles (was 5/850) — the RSS feed already includes the complete video description via media:description, it was just being truncated |
 | v2.26 | 2026-04-27 | Claude Code | Category cleanup: added simonwillison.net→AI & LLMs and venturebeat.com→AI & LLMs to CATEGORY_SOURCE_MAP; tightened Dev Tools keyword regex (removed overbroad open.?source, repo, framework, library — now matches only specific dev tooling terms); removed launches|announces from Top Story regex (matched every product announcement, bloating Tech & Trends); OPML: added Finance folder (Yahoo Finance, MarketWatch, CNBC Mad Money, Seeking Alpha, Motley Fool, Fox Business) and expanded News folder (Google News, Yahoo News, Fox News); removed 3 Open-* feeds; CATEGORY_SOURCE_MAP: added foxnews.com, news.google.com, news.yahoo.com→Top Story and foxbusiness.com, marketwatch.com, finance.yahoo.com, seekingalpha.com, fool.com→Finance |
 | v2.25 | 2026-04-27 | Claude Code | Added NOISE_TITLE_PATTERNS filter (isNoisyArticle_) wired into TOR and Gmail loops — skips celebrity gossip, AI art spam, clickbait on title match, marks TOR read; OPML: removed 4 broken Kagi proxy feeds, replaced with Reuters Business + Reuters Technology + CNBC; swapped BBC World + NYT Homepage for BBC Technology + NYT Technology to cut celebrity noise; added reuters.com→Top Story, cnbc.com→Finance to source map |
 | v2.24 | 2026-04-27 | Claude Code | Exact title dedup now uses ilike (case-insensitive) instead of eq — catches "I've Built" vs "I VE BUILT" vs "i've built" mismatches caused by apostrophe stripping and capitalization differences across RSS feeds; % and _ escaped to prevent wildcard interpretation |

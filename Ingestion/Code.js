@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.26
+ * Version: 2.27
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1821,12 +1821,16 @@ function deriveSignal(title, summary) {
 }
 
 function finalizeSummaryForRecord_(summary, category, url, title) {
-  var clean = sanitizeText(summary || '', 2000);
+  var clean = sanitizeText(summary || '', 4000);
   if (!clean) clean = sanitizeText(title || '', 250);
   if (String(category || '') === 'Reddit' || isRedditUrl_(url)) {
     clean = cleanRedditSummary_(clean, title);
+    return normalizeSummaryLength_(clean, title, 5, 850);
   } else if (String(category || '') === 'YouTube' || /youtube\.com|youtu\.be/i.test(String(url || ''))) {
+    // YouTube: keep the full cleaned description — it's the closest thing to a transcript summary.
+    // Allow up to 20 sentences / 3500 chars so the reading pane shows the full description.
     clean = cleanYoutubeSummary_(clean, title);
+    return normalizeSummaryLength_(clean, title, 20, 3500);
   }
   return normalizeSummaryLength_(clean, title, 5, 850);
 }
