@@ -17,6 +17,79 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-04-27 - Claude Code (v2.18 → v2.27, Viewer v2.11)
+**Session scope:** Simhash dedup, OPML cleanup, category fixes, performance, duplicate purge, noise filter, feed replacements, new feeds, category cleanup, YouTube description
+
+#### v2.18 — Simhash fuzzy dedup
+- Request: Near-duplicate articles slipping through Jaccard/token-overlap dedup.
+- Added 64-bit simhash fingerprinting (computeSimhash_, hammingDistance_). hdist ≤ 4 → score 0.90; hdist ≤ 8 → score 0.80. Scores alongside Jaccard/token-overlap in scorePossibleDuplicateMatch_.
+- Files: Ingestion/Code.js, subscriptions.opml (fixed: removed duplicate TC/Verge AI feeds from AI folder, moved OpenClaw feeds, added Kagi proxy warning)
+
+#### v2.19 — Category source map & detectCategory fix
+- Request: Articles from AI-specific feeds landing in Finance/Policy; watch sites not reliably categorized.
+- AI & LLMs checked before Finance/Research/Policy in detectCategory().
+- CATEGORY_SOURCE_MAP expanded: all watch domains, AI-only feed domains (AWS ML, Google AI, MIT AI, NVIDIA, OpenAI, Anthropic, HuggingFace, deeplearning.ai), BBC/NYT → Top Story.
+
+#### v2.20 — Performance: dedup cache + audit trail batching
+- Request: runDailyIngestion() timing out (~1000 HTTP calls per run, 5 per article × 200 articles).
+- INGESTION_DEDUP_CACHE_: candidate pool fetched once per phase (was once per article).
+- AUDIT_TRAIL_BATCH_: audit writes queued and flushed in one call per phase.
+- Added runTORIngestionOnly() and runGmailIngestionOnly() for separate time triggers.
+- MAX_EMAILS_PER_RUN: 100 → 40.
+- Validation: user confirmed runDailyIngestion() completes without timeout.
+
+#### v2.21 — Exact duplicate skip + Viewer Duplicate exclusion
+- Request: Duplicate articles still appearing in All Unread; exact dupes being inserted as Duplicate category.
+- Ingestion: exact duplicates now skipped entirely (no insert, TOR marked read) instead of inserted as Duplicate category.
+- Viewer v2.11: category=neq.Duplicate added to All Unread, read-fill, and stats queries.
+- Files: Ingestion/Code.js, Viewer/Code.js, Viewer/index.html (version bump to V2.11 in 3 locations)
+
+#### v2.22 — Fix hardPurgeDeletedArticles RangeError
+- Request: hardPurgeDeletedArticles crashing with RangeError: Invalid time value.
+- Root cause: CONFIG.PURGE_DAYS undefined → getDate() - undefined = NaN → toISOString() threw.
+- Fix: replaced with new Date(Date.now() + 86400000).toISOString() (tomorrow as upper bound = purge all deleted).
+- Ran softDeleteDuplicateArticles() → 453 dupes soft-deleted. Ran hardPurgeDeletedArticles() → 939 rows removed (453 from this run + 486 from previous failed run).
+
+#### v2.23 — Fix normalizeCategory overwriting Duplicate category
+- Request: Possible duplicate articles showing wrong category (DEV TOOLS instead of Duplicate) in Viewer.
+- Root cause: sanitizeRecord() calls normalizeCategory() after markRecordAsDuplicateReview_() set category=Duplicate — source/keyword match overwrote it.
+- Fix: early return at top of normalizeCategory(): if (canonicalCategoryName_(category) === 'Duplicate') return 'Duplicate'.
+
+#### v2.24 — Case-insensitive title dedup
+- Request: Identical articles with apostrophe/capitalization variants slipping past exact title dedup (e.g. "I've Built" vs "I VE BUILT").
+- Fix: title=eq. → title=ilike. in PostgREST query; % and _ escaped to prevent wildcard interpretation.
+
+#### v2.25 — Noise filter + feed replacements
+- Request: Too many celebrity gossip, AI art spam, Kagi feeds broken, too much celebrity noise from BBC/NYT.
+- Added NOISE_TITLE_PATTERNS (isNoisyArticle_): weight loss, celebrity gossip, AI art showcase, clickbait patterns. Wired into TOR and Gmail loops — matching articles skipped and TOR marked read.
+- OPML: removed 4 broken Kagi proxy feeds; replaced with Reuters Business + Reuters Technology + CNBC.
+- Swapped BBC World → BBC Technology, NYT HomePage → NYT Technology.
+- CATEGORY_SOURCE_MAP: added reuters.com → Top Story, cnbc.com → Finance.
+
+#### v2.26 — New Finance/News feeds + category cleanup
+- Request: Add Google News, Yahoo News, Yahoo Finance, MSN, Cramer/stock feeds, Fox News; clean up categories.
+- OPML: added Finance folder (Yahoo Finance, MarketWatch, CNBC Mad Money, Seeking Alpha, Motley Fool, Fox Business); News folder expanded (Google News, Yahoo News, Fox News); MSN noted as no public RSS; removed 3 Open-* feeds.
+- CATEGORY_SOURCE_MAP: foxnews.com/news.google.com/news.yahoo.com → Top Story; foxbusiness.com/marketwatch.com/finance.yahoo.com/seekingalpha.com/fool.com → Finance; simonwillison.net/venturebeat.com → AI & LLMs.
+- detectCategory() tightened: Dev Tools regex narrowed (removed overbroad open.?source, repo, framework, library); Top Story regex removed launches|announces (matched every product announcement, bloating Tech & Trends).
+
+#### v2.27 — YouTube full description
+- Request: How to get full video description in reading pane without an API key.
+- YouTube RSS feed already provides full description via media:description element — it was just being truncated.
+- finalizeSummaryForRecord_: YouTube path now allows 20 sentences / 3500 chars (was 5/850 shared with all categories).
+- cleanYoutubeSummary_ still runs first to strip timestamps, hashtags, @mentions, promo lines.
+
+#### Documentation / Process
+- CONTEXT.md: clarified Ingestion needs no deploy step (runs via triggers, not web app) — only Viewer needs pencil → New version → Deploy.
+- PROCESS.md note (added to CONTEXT.md Gotchas): Ingestion deploy = clasp push only; Viewer deploy = clasp push + Apps Script redeploy.
+
+#### Pending after this session
+- **User action**: Remove Kagi feeds manually from TOR, then import updated subscriptions.opml (TOR import is additive — only adds new Finance/News feeds, skips existing, never deletes).
+- **User action**: Deploy Viewer in Apps Script (pencil → New version → Deploy) for v2.11 changes to take effect.
+- **Run in Ingestion editor**: applySourceCategoryBackfill() to re-tag existing articles with updated source map (simonwillison, venturebeat, foxnews, finance domains).
+- **Run in Ingestion editor**: softDeleteDuplicateArticles() + hardPurgeDeletedArticles() if additional duplicates surface.
+- **Future**: Feed rework (user mentioned wanting to revisit subscriptions after category work settles).
+- **Future**: YouTube summarize button (would require Anthropic API key in Script Properties + doPost action in Viewer).
+
 ### 2026-04-20 - Claude Code
 - Request: Fuzzy dedup not catching similar articles — seeing 90% similar articles repeatedly.
 - Root causes found:
