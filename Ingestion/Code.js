@@ -356,6 +356,7 @@ function ingestFromTheOldReader() {
         if (isTORArticleFromSkippedSource_(articles[i])) {
           stats.duplicatesSkipped++;
           ingestedIds.push(articles[i].id);
+          Logger.log('TOR: source-skipped — ' + String(articles[i].origin && articles[i].origin.title || 'unknown source'));
           continue;
         }
         var record = mapTORArticleToSchema(articles[i]);
