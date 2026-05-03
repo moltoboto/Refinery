@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.27
+ * Version: 2.28
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -157,6 +157,73 @@ function isNoisyArticle_(record) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── FINANCE SOURCE ALLOWLIST FILTER ─────────────────────────────────────────
+// High-volume dedicated finance feeds are filtered to portfolio/sector topics.
+// General news finance (Reuters, top-level CNBC) is NOT in this list — those
+// pass through unfiltered as Top Story / broad market coverage.
+// Add tickers or companies to FINANCE_ALLOW_PATTERNS as the portfolio grows.
+var FINANCE_FILTER_DOMAINS = [
+  'seekingalpha.com',
+  'fool.com',
+  'finance.yahoo.com',
+  'marketwatch.com',
+  'foxbusiness.com'
+  // cnbc.com Mad Money feed also uses cnbc.com — leave out to keep broad CNBC coverage
+];
+
+var FINANCE_ALLOW_PATTERNS = [
+  // ── Sectors ──────────────────────────────────────────────────────────────
+  /\bdividend/i,
+  /\bcrypto\b|bitcoin|ethereum|\bbtc\b|\beth\b|blockchain/i,
+  /\bpharma\b|pharmaceutical|biotech|drug approval|\bfda\b|clinical trial/i,
+  /\bsemiconductor\b|chip maker|chip stock/i,
+  // ── Macro / broad market (always keep) ───────────────────────────────────
+  /\bfed\b|federal reserve|interest rate|inflation|\bgdp\b|recession/i,
+  /\bearnings\b|\bipo\b|\bmarket\b|nasdaq|s&p 500|\bdow\b|wall street/i,
+  /\brate cut\b|rate hike|bond yield|treasury/i,
+  /\bmerger\b|acquisition|\bbuyout\b|\bbreaking\b/i,
+  // ── Magnificent 7 ────────────────────────────────────────────────────────
+  /\bapple\b|\baapl\b/i,
+  /\bmicrosoft\b|\bmsft\b/i,
+  /\bgoogle\b|\balphabet\b|\bgoogl\b|\bgoog\b/i,
+  /\bamazon\b|\bamzn\b/i,
+  /\bnvidia\b|\bnvda\b/i,
+  /\btesla\b|\btsla\b/i,
+  /\bmeta\b|\bfacebook\b/i,
+  // ── Portfolio holdings ───────────────────────────────────────────────────
+  /\bamd\b/i,
+  /\bcoatue\b/i,
+  /\boracle\b|\borcl\b/i,
+  /\bcomcast\b|\bcmcsa\b/i,
+  // ── AI (tech sector crossover) ───────────────────────────────────────────
+  /\bartificial intelligence\b|\bai stock\b|\bai invest/i
+];
+
+function isFinanceSourceFiltered_(url) {
+  var lower = String(url || '').toLowerCase();
+  for (var i = 0; i < FINANCE_FILTER_DOMAINS.length; i++) {
+    if (lower.indexOf(FINANCE_FILTER_DOMAINS[i]) !== -1) return true;
+  }
+  return false;
+}
+
+function passesFinanceAllowlist_(record) {
+  var haystack = (String(record.title || '') + ' ' + String(record.summary || '')).toLowerCase();
+  for (var i = 0; i < FINANCE_ALLOW_PATTERNS.length; i++) {
+    if (FINANCE_ALLOW_PATTERNS[i].test(haystack)) return true;
+  }
+  return false;
+}
+
+// Returns true if the article should be skipped (finance source but off-topic).
+function isFinanceFiltered_(record) {
+  if (!isFinanceSourceFiltered_(record.url)) return false;
+  if (passesFinanceAllowlist_(record)) return false;
+  Logger.log('FINANCE FILTER: skipping off-portfolio — ' + record.title);
+  return true;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 var SOURCE_CATEGORY_OVERRIDE_CACHE = null;
 var SOURCE_CATEGORY_SHEET_NAME = 'rss_source_map';
 
@@ -251,6 +318,11 @@ function ingestFromTheOldReader() {
       try {
         var record = mapTORArticleToSchema(articles[i]);
         if (isNoisyArticle_(record)) {
+          stats.duplicatesSkipped++;
+          ingestedIds.push(articles[i].id); // mark read in TOR
+          continue;
+        }
+        if (isFinanceFiltered_(record)) {
           stats.duplicatesSkipped++;
           ingestedIds.push(articles[i].id); // mark read in TOR
           continue;

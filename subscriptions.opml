@@ -68,9 +68,9 @@
       <!-- BBC Technology and NYT Technology — scoped to tech to avoid celebrity noise -->
       <outline type="rss" xmlUrl="http://feeds.bbci.co.uk/news/technology/rss.xml"/>
       <outline type="rss" xmlUrl="https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"/>
-      <!-- Google News top stories — broad, personalized by Google -->
-      <outline type="rss" xmlUrl="https://news.google.com/rss?hl=en-US&amp;gl=US&amp;ceid=US:en"/>
-      <!-- Yahoo News -->
+      <!-- Google News removed 2026-05-03: meta-aggregator republishes Reuters/BBC/TC/Verge
+           articles we already receive directly — structural duplicate generator -->
+      <!-- Yahoo News — AP wire + Yahoo-original content, less overlap than Google News -->
       <outline type="rss" xmlUrl="https://news.yahoo.com/rss"/>
       <!-- Fox News — general US news -->
       <outline type="rss" xmlUrl="http://feeds.foxnews.com/foxnews/latest"/>

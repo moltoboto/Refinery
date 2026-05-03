@@ -17,6 +17,23 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-03 - Claude Code (v2.28)
+- Request: (1) Finance feeds producing too many off-portfolio articles (Seeking Alpha etc.); (2) Google News creating structural duplicates; (3) Viewer did not change in v2.26-v2.27; (4) Files dropped to Drive Artifacts folder appear in Viewer automatically; (5) YouTube full description already in RSS — no API needed.
+- Actions taken:
+  - Added FINANCE_FILTER_DOMAINS + FINANCE_ALLOW_PATTERNS + isFinanceFiltered_() to Ingestion.
+    Domains filtered: seekingalpha.com, fool.com, finance.yahoo.com, marketwatch.com, foxbusiness.com.
+    Allowlist: Magnificent 7 (AAPL/MSFT/GOOGL/AMZN/NVDA/TSLA/META), AMD, Coatue, Oracle/ORCL, Comcast/CMCSA; sectors: dividends, crypto/BTC/ETH, pharma/biotech/FDA, semiconductors; macro: Fed/rates/inflation/GDP/earnings/IPO/market/NASDAQ/S&P.
+    Off-portfolio articles skipped and marked read in TOR — never reach Supabase.
+  - Wired isFinanceFiltered_() into TOR ingestion loop after isNoisyArticle_() check.
+  - OPML: removed Google News feed (meta-aggregator republishes Reuters/BBC/NYT/TechCrunch/Verge which are already directly subscribed — primary structural duplicate source). Yahoo News retained (more AP-wire original content).
+  - Confirmed: Ingestion has NO deploy step (clasp push only); only Viewer needs Apps Script redeploy. Added to CONTEXT.md gotchas.
+- Files touched: Ingestion/Code.js (v2.28), subscriptions.opml, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion done. No Viewer change.
+- Follow-up:
+  - User to remove Google News from TOR manually (OPML import only adds, never removes).
+  - User to import updated subscriptions.opml (Kagi feeds removal also pending from prior session).
+  - Add more tickers to FINANCE_ALLOW_PATTERNS as portfolio grows — just add to the list.
+
 ### 2026-04-27 - Claude Code (v2.18 → v2.27, Viewer v2.11)
 **Session scope:** Simhash dedup, OPML cleanup, category fixes, performance, duplicate purge, noise filter, feed replacements, new feeds, category cleanup, YouTube description
 
