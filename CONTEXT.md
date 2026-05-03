@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.28 | Viewer: v2.11
+Ingestion: v2.29 | Viewer: v2.11
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -114,6 +114,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.29 | 2026-05-03 | Claude Code | Feed-driven categorization: added explicit CATEGORY_SOURCE_MAP entries for all Tech feeds (techcrunch/ars/engadget/macrumors/theverge/ycombinator → Tech & Trends) and Learning & Skills (stratechery → Strategy, dailystoic/natesnewsletter → Resources) so keyword fallback never overrides feed intent. Watch photos: extractFirstImageFromHtml_() pulls featured image from RSS HTML content before stripping tags — avoids bot-blocked HTTP fetch; also checks TOR enclosure field; prependImageMarker now includes Finance/AI/Tech categories |
 | v2.28 | 2026-05-03 | Claude Code | Finance allowlist filter: high-volume finance feeds (Seeking Alpha, Motley Fool, Yahoo Finance, MarketWatch, Fox Business) now gated by FINANCE_ALLOW_PATTERNS — only articles matching portfolio (Mag 7, AMD, Coatue, Oracle, Comcast), sectors (IT/dividends/crypto/pharma/semiconductors), or macro market keywords pass through; others skipped and TOR marked read. OPML: removed Google News (meta-aggregator, structural duplicate source); added comment explaining why |
 | v2.27 | 2026-04-27 | Claude Code | YouTube full description: finalizeSummaryForRecord_ now stores up to 20 sentences / 3500 chars for YouTube articles (was 5/850) — the RSS feed already includes the complete video description via media:description, it was just being truncated |
 | v2.26 | 2026-04-27 | Claude Code | Category cleanup: added simonwillison.net→AI & LLMs and venturebeat.com→AI & LLMs to CATEGORY_SOURCE_MAP; tightened Dev Tools keyword regex (removed overbroad open.?source, repo, framework, library — now matches only specific dev tooling terms); removed launches|announces from Top Story regex (matched every product announcement, bloating Tech & Trends); OPML: added Finance folder (Yahoo Finance, MarketWatch, CNBC Mad Money, Seeking Alpha, Motley Fool, Fox Business) and expanded News folder (Google News, Yahoo News, Fox News); removed 3 Open-* feeds; CATEGORY_SOURCE_MAP: added foxnews.com, news.google.com, news.yahoo.com→Top Story and foxbusiness.com, marketwatch.com, finance.yahoo.com, seekingalpha.com, fool.com→Finance |

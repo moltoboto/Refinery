@@ -17,6 +17,17 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-03 - Claude Code (v2.29)
+- Request: (1) Feed should dictate category, not keyword fallback; (2) Watch posts should show photos; (3) Is Convex better than Supabase?
+- Actions taken:
+  - CATEGORY_SOURCE_MAP: added explicit entries for Tech feeds (techcrunch.com, arstechnica.com, engadget.com, macrumors.com, theverge.com, ycombinator.com → Tech & Trends) and Learning & Skills (stratechery.com → Strategy, dailystoic.com/natesnewsletter.substack.com → Resources). These take priority over detectCategory() keyword matching, so a TechCrunch article about GitHub Copilot stays in Tech & Trends instead of Dev Tools.
+  - Watch photos: added extractFirstImageFromHtml_() to pull first <img src> from RSS feed HTML content before stripHtml() discards it. Also checks article.enclosure.url if present. rssImageUrl preferred over enrichArticleFromUrl og:image (watch sites block bots). prependImageMarker category guard expanded to include Finance/AI/Tech.
+  - mapTORArticleToSchema updated to pass combined imageUrl (rss || enriched) to prependImageMarker.
+- Files touched: Ingestion/Code.js (v2.29), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+- Convex vs Supabase decision: Supabase is correct for this stack. Convex is TypeScript-first, designed for websocket-reactive Next.js/React apps — Apps Script cannot use its client SDK or reactive model. Migration would require full rewrite in Node.js/TypeScript. No action needed.
+- Follow-up: Run applySourceCategoryBackfill() to re-tag existing articles with new source map entries (TechCrunch articles currently in Dev Tools should move to Tech & Trends).
+
 ### 2026-05-03 - Claude Code (v2.28)
 - Request: (1) Finance feeds producing too many off-portfolio articles (Seeking Alpha etc.); (2) Google News creating structural duplicates; (3) Viewer did not change in v2.26-v2.27; (4) Files dropped to Drive Artifacts folder appear in Viewer automatically; (5) YouTube full description already in RSS — no API needed.
 - Actions taken:

@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.28
+ * Version: 2.29
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -108,7 +108,21 @@ var CATEGORY_SOURCE_MAP = {
   'marketwatch.com': 'Finance',
   'finance.yahoo.com': 'Finance',
   'seekingalpha.com': 'Finance',
-  'fool.com': 'Finance'
+  'fool.com': 'Finance',
+
+  // Tech — explicit mapping so keyword fallback never overrides feed intent.
+  // Articles from these sources stay in Tech & Trends regardless of title content.
+  'techcrunch.com': 'Tech & Trends',
+  'arstechnica.com': 'Tech & Trends',
+  'engadget.com': 'Tech & Trends',
+  'macrumors.com': 'Tech & Trends',
+  'theverge.com': 'Tech & Trends',
+  'ycombinator.com': 'Tech & Trends',
+
+  // Learning & Skills
+  'stratechery.com': 'Strategy',
+  'dailystoic.com': 'Resources',
+  'natesnewsletter.substack.com': 'Resources'
 };
 
 var CATEGORY_OPTIONS = [
@@ -456,10 +470,22 @@ function mapTORArticleToSchema(article) {
     rawSummary = article.summary.content;
   }
 
+  // Extract image from RSS HTML content before stripping tags.
+  // Watch sites (and many others) embed the featured image in the feed HTML,
+  // but block bot HTTP requests so enrichArticleFromUrl can't fetch og:image.
+  // Also check TOR's enclosure field (media attachments from the feed).
+  var rssImageUrl = extractFirstImageFromHtml_(rawSummary);
+  if (!rssImageUrl && article.enclosure && article.enclosure.url &&
+      /^image\//i.test(String(article.enclosure.type || ''))) {
+    rssImageUrl = article.enclosure.url;
+  }
+
   var cleanSummary = stripHtml(rawSummary);
   var source = article.origin ? article.origin.title : 'Unknown';
   url = cleanUrl(url);
   var enriched = enrichArticleFromUrl(url, article.title || 'Untitled');
+  // Prefer RSS-embedded image over og:image (more reliable for watch/photo sites)
+  var imageUrl = rssImageUrl || enriched.imageUrl || '';
   var finalTitle = sanitizeText(enriched.title || article.title || 'Untitled', 250);
   var finalSummary = finalizeSummaryForRecord_(enriched.summary || cleanSummary, '', url, article.title || 'Untitled');
   var finalCategory = normalizeCategory('', source, finalTitle, finalSummary, url);
@@ -471,13 +497,21 @@ function mapTORArticleToSchema(article) {
     category:   finalCategory,
     status:     'unread',
     title:      finalTitle,
-    summary:    prependImageMarker(finalSummary, enriched.imageUrl, finalCategory).substring(0, 2000),
+    summary:    prependImageMarker(finalSummary, imageUrl, finalCategory).substring(0, 2000),
     signal:     deriveSignal(finalTitle, finalSummary || cleanSummary),
     url:        url,
     archived:   false,
     kept:       false,
     date_added: pubDate.toISOString()
   };
+}
+
+// Extract the first <img src="..."> from HTML content (e.g. RSS feed body).
+// Returns empty string if none found.
+function extractFirstImageFromHtml_(html) {
+  if (!html) return '';
+  var m = String(html).match(/<img[^>]+src=["']([^"']+)["']/i);
+  return (m && m[1] && /^https?:\/\//i.test(m[1])) ? m[1] : '';
 }
 
 // FIX: build "i=id1&i=id2&...&a=..." as a simple string Ã¢â‚¬â€ v2.1 was malforming multi-value arrays
@@ -2005,7 +2039,9 @@ function cleanRedditSummary_(summary, title) {
 function prependImageMarker(summary, imageUrl, category) {
   var cleanSummary = sanitizeText(summary || '', 2000);
   if (!imageUrl) return cleanSummary;
-  if (!/(top story|watches|youtube|watch|video|news)/i.test(String(category || ''))) return cleanSummary;
+  // Include image for all categories that commonly have photos.
+  // Watches especially — featured watch photos are the main value of those posts.
+  if (!/(top story|watches|youtube|watch|video|news|finance|ai|tech)/i.test(String(category || ''))) return cleanSummary;
   return '[[image_url=' + imageUrl + ']] ' + cleanSummary;
 }
 
