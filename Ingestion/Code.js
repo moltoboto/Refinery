@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.33
+ * Version: 2.34
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -403,11 +403,8 @@ function ingestFromTheOldReader() {
           ingestedIds.push(articles[i].id);
           continue;
         }
-        if (isFastFinanceFiltered_(articles[i])) {
-          stats.duplicatesSkipped++;
-          ingestedIds.push(articles[i].id);
-          continue;
-        }
+        // Finance filter disabled — curate by removing feeds from OPML instead.
+        // if (isFastFinanceFiltered_(articles[i])) { stats.duplicatesSkipped++; ingestedIds.push(articles[i].id); continue; }
         // ── Basic mapping (no HTTP) — used for all remaining filtering & dedup ──
         var basic = mapTORArticleBasic_(articles[i]);
         if (isNoisyArticle_(basic)) {
@@ -415,11 +412,8 @@ function ingestFromTheOldReader() {
           ingestedIds.push(articles[i].id);
           continue;
         }
-        if (isFinanceFiltered_(basic)) {
-          stats.duplicatesSkipped++;
-          ingestedIds.push(articles[i].id);
-          continue;
-        }
+        // Finance filter disabled — curate by removing feeds from OPML instead.
+        // if (isFinanceFiltered_(basic)) { stats.duplicatesSkipped++; ingestedIds.push(articles[i].id); continue; }
         var duplicateResult = reviewDuplicateRecord_(basic);
         if (duplicateResult.error) {
           stats.errors++;
@@ -582,10 +576,12 @@ var SKIP_ENRICHMENT_SOURCES_ = /hacker news|ycombinator/i;
 // Phase 2: HTTP enrichment — called ONLY for articles that passed all filters and dedup.
 // Fetches og:title, og:description, og:image from the article URL.
 function enrichTORArticle_(basic) {
+  // HTTP enrichment disabled — eliminates all timeout risk from slow/unresponsive destination URLs.
+  // RSS title, summary, and image are sufficient. Re-enable selectively if needed.
+  // if (!SKIP_ENRICHMENT_SOURCES_.test(String(basic.source || ''))) {
+  //   enriched = enrichArticleFromUrl(basic.url, basic._rawTitle);
+  // }
   var enriched = { title: '', summary: '', imageUrl: '' };
-  if (!SKIP_ENRICHMENT_SOURCES_.test(String(basic.source || ''))) {
-    enriched = enrichArticleFromUrl(basic.url, basic._rawTitle);
-  }
   var imageUrl = basic._rssImageUrl || enriched.imageUrl || '';
   var finalTitle = sanitizeText(enriched.title || basic.title, 250);
   var rssSummary = basic.summary;

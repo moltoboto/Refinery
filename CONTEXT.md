@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.33 | Viewer: v2.11
+Ingestion: v2.34 | Viewer: v2.11
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -114,6 +114,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.34 | 2026-05-03 | Claude Code | (1) Finance filter disabled — isFastFinanceFiltered_() and isFinanceFiltered_() checks commented out in TOR loop; user curates by removing feeds from OPML instead of keyword filtering. (2) enrichArticleFromUrl() disabled for all sources — HTTP fetch commented out in enrichTORArticle_(); RSS title/summary/image is sufficient and eliminates all timeout risk from slow destination URLs. Both changes are commented-out (not deleted) for easy re-enable |
 | v2.33 | 2026-05-03 | Claude Code | HN enrichment hang fix: added SKIP_ENRICHMENT_SOURCES_ (/hacker news|ycombinator/i) checked in enrichTORArticle_() — when source matches, enrichArticleFromUrl() is skipped entirely and enriched defaults to empty (RSS title/summary used directly). Root cause: HN RSS links to destination URLs (not ycombinator.com) so URL-pattern check doesn't work; source name is the only reliable signal |
 | v2.32 | 2026-05-03 | Claude Code | Two-phase TOR mapping: mapTORArticleBasic_() (no HTTP) + enrichTORArticle_() (HTTP). Basic mapping used for all filtering and dedup — enrichArticleFromUrl() only called for articles that pass everything and will actually be inserted. Eliminates HTTP fetch for ~95% of articles (duplicates, filtered). Root cause of persistent timeout: v2.31 fast cache only caught recent dupes; older dupes still triggered enrichArticleFromUrl before reviewDuplicateRecord_ caught them |
 | v2.31 | 2026-05-03 | Claude Code | Pre-map fast path: isFastExactDuplicate_() + isFastFinanceFiltered_() run before mapTORArticleToSchema() — eliminates enrichArticleFromUrl() HTTP fetch and 2 Supabase calls for articles that will be discarded. warmDedupCache_() now builds DEDUP_URL_MAP_ and DEDUP_TITLE_MAP_ for O(1) exact dedup lookup. Root cause: 500 articles × 3 HTTP calls each = 1500 calls → timeout. New path: only truly new articles get the HTTP fetch |

@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-03 - Claude Code (v2.34)
+- Request: (1) Remove finance topic filter — curate by removing feeds, not keyword blocks. (2) Fix ongoing ingestion slowness — any site can hang UrlFetchApp for 60s. (3) Still getting exact duplicates.
+- Fix 1 — Finance filter removed: commented out isFastFinanceFiltered_() and isFinanceFiltered_() checks in TOR loop. All finance feed articles now pass through. User should remove unwanted feeds from subscriptions.opml instead.
+- Fix 2 — enrichArticleFromUrl() disabled: commented out the HTTP fetch call in enrichTORArticle_(). enriched always defaults to {title:'', summary:'', imageUrl:''}. RSS title/summary/image is sufficient for all categories. This eliminates ALL timeout risk — no more slow-site hangs regardless of source.
+- Fix 3 — Exact duplicates: existing duplicates in DB pre-date the dedup system and will be removed by purge. New ingestions are caught by isFastExactDuplicate_() (7-day cache) + reviewDuplicateRecord_() (Supabase URL+title queries). Run the purge steps to clear stale data.
+- Files touched: Ingestion/Code.js (v2.34), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+- Follow-up: User should run previewPurgeBeforeApr15() → purgeBeforeApr15() → hardPurgeDeletedArticles() to remove 12K old articles. Then review OPML feeds to remove any unwanted finance feeds.
+
 ### 2026-05-03 - Claude Code (v2.33)
 - Request: "Creating a Color Palette from an Image" Hacker News article hanging ingestion again — enrichArticleFromUrl() was fetching the destination URL (a slow third-party site), not ycombinator.com.
 - Root cause: HN RSS items link to arbitrary destination URLs. A URL-based skip (checking for ycombinator.com) doesn't work because the article URL IS the destination. The only reliable signal is the source name from article.origin.title ("Hacker News").
