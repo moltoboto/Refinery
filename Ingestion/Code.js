@@ -2375,6 +2375,18 @@ function purgeArticlesBeforeApril2026(batchSize) {
   return ARTICLE_PURGE_.run(false, '2026-04-01', batchSize);
 }
 
+// Purge everything before April 15 2026 (kept=true rows always protected).
+// Step 1: run previewPurgeBeforeApr15() to see what will be deleted.
+// Step 2: run purgeBeforeApr15() to soft-delete.
+// Step 3: run hardPurgeDeletedArticles() to permanently remove.
+function previewPurgeBeforeApr15(batchSize) {
+  return ARTICLE_PURGE_.run(true, '2026-04-15', batchSize);
+}
+
+function purgeBeforeApr15(batchSize) {
+  return ARTICLE_PURGE_.run(false, '2026-04-15', batchSize);
+}
+
 // Hard-delete rows already soft-deleted (status='deleted'), older than PURGE_DAYS days.
 // kept=true rows are never touched. Run this only after confirming the soft-delete list is correct.
 function hardPurgeDeletedArticles() {
