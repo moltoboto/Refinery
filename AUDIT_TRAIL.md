@@ -17,6 +17,17 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-03 - Claude Code (v2.31)
+- Request: Ingestion timing out — log showed articles being processed at ~1/second, 500 articles × 3 HTTP calls = 1500 calls total.
+- Root cause: mapTORArticleToSchema() calls enrichArticleFromUrl() (1 HTTP fetch) for EVERY article including ones immediately discarded as duplicates or finance-filtered. reviewDuplicateRecord_() then makes 2 more Supabase calls per article. The dedup cache only covered fuzzy dedup — exact URL/title checks bypassed the cache entirely.
+- Fix: added pre-map fast path before mapTORArticleToSchema():
+  - isFastExactDuplicate_(): checks article URL/title against DEDUP_URL_MAP_/DEDUP_TITLE_MAP_ (O(1) dict lookup, zero HTTP calls)
+  - isFastFinanceFiltered_(): checks raw article URL domain + title against allowlist before HTTP fetch
+  - warmDedupCache_() now builds DEDUP_URL_MAP_ and DEDUP_TITLE_MAP_ from cache rows at warm time
+  - DEDUP_URL_MAP_/DEDUP_TITLE_MAP_ cleared alongside INGESTION_DEDUP_CACHE_ at phase end
+- Result: enrichArticleFromUrl() HTTP fetch only runs for articles that are genuinely new and pass all filters. Expected: TOR phase drops from 8+ minutes to ~1-2 minutes.
+- Files touched: Ingestion/Code.js (v2.31), CONTEXT.md, AUDIT_TRAIL.md
+
 ### 2026-05-03 - Claude Code (v2.30)
 - Request: Ingestion log showing 17+ "exact duplicate skipped — Google News" lines eating ~17 seconds per run.
 - Root cause: Google News still in TOR (not yet manually removed). Each article ran through mapTORArticleToSchema() which calls enrichArticleFromUrl() (HTTP fetch ~1s) before the dedup check caught it as a duplicate.

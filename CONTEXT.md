@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.30 | Viewer: v2.11
+Ingestion: v2.31 | Viewer: v2.11
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -114,6 +114,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.31 | 2026-05-03 | Claude Code | Pre-map fast path: isFastExactDuplicate_() + isFastFinanceFiltered_() run before mapTORArticleToSchema() — eliminates enrichArticleFromUrl() HTTP fetch and 2 Supabase calls for articles that will be discarded. warmDedupCache_() now builds DEDUP_URL_MAP_ and DEDUP_TITLE_MAP_ for O(1) exact dedup lookup. Root cause: 500 articles × 3 HTTP calls each = 1500 calls → timeout. New path: only truly new articles get the HTTP fetch |
 | v2.30 | 2026-05-03 | Claude Code | Source-level skip list: SKIP_SOURCE_PATTERNS + isTORArticleFromSkippedSource_() checked before mapTORArticleToSchema() — Google News articles now skipped with zero HTTP fetches (was burning ~1s each for enrichArticleFromUrl before exact-dupe check caught them). Add any future unwanted-but-still-in-TOR feeds here |
 | v2.29 | 2026-05-03 | Claude Code | Feed-driven categorization: added explicit CATEGORY_SOURCE_MAP entries for all Tech feeds (techcrunch/ars/engadget/macrumors/theverge/ycombinator → Tech & Trends) and Learning & Skills (stratechery → Strategy, dailystoic/natesnewsletter → Resources) so keyword fallback never overrides feed intent. Watch photos: extractFirstImageFromHtml_() pulls featured image from RSS HTML content before stripping tags — avoids bot-blocked HTTP fetch; also checks TOR enclosure field; prependImageMarker now includes Finance/AI/Tech categories |
 | v2.28 | 2026-05-03 | Claude Code | Finance allowlist filter: high-volume finance feeds (Seeking Alpha, Motley Fool, Yahoo Finance, MarketWatch, Fox Business) now gated by FINANCE_ALLOW_PATTERNS — only articles matching portfolio (Mag 7, AMD, Coatue, Oracle, Comcast), sectors (IT/dividends/crypto/pharma/semiconductors), or macro market keywords pass through; others skipped and TOR marked read. OPML: removed Google News (meta-aggregator, structural duplicate source); added comment explaining why |

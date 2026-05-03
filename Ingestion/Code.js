@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.30
+ * Version: 2.31
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -258,6 +258,41 @@ function isFinanceFiltered_(record) {
   Logger.log('FINANCE FILTER: skipping off-portfolio — ' + record.title);
   return true;
 }
+
+// PRE-MAP finance filter: uses only the raw TOR article fields (no HTTP fetch).
+// Catches finance noise BEFORE mapTORArticleToSchema() runs.
+function isFastFinanceFiltered_(article) {
+  var rawUrl = String((article.canonical && article.canonical[0] && article.canonical[0].href) ||
+                      (article.alternate  && article.alternate[0]  && article.alternate[0].href) || '');
+  if (!isFinanceSourceFiltered_(rawUrl)) return false;
+  var rawTitle = String(article.title || '');
+  if (passesFinanceAllowlist_({ title: rawTitle, summary: '' })) return false;
+  Logger.log('FINANCE FILTER (pre-map): skipping — ' + rawTitle);
+  return true;
+}
+
+// PRE-MAP exact dedup: checks URL and title against the in-memory lookup maps built
+// from the dedup cache — zero HTTP calls. Falls back gracefully if cache not warm.
+function isFastExactDuplicate_(article) {
+  if (!INGESTION_DEDUP_CACHE_) return false; // cache not warm — let reviewDuplicateRecord_ handle it
+  var rawUrl = cleanUrl(
+    (article.canonical && article.canonical[0] && article.canonical[0].href) ||
+    (article.alternate  && article.alternate[0]  && article.alternate[0].href) || ''
+  );
+  if (rawUrl && DEDUP_URL_MAP_[rawUrl]) {
+    Logger.log('FAST DEDUP (url): ' + (article.title || rawUrl));
+    return true;
+  }
+  var rawTitle = String(article.title || '');
+  if (rawTitle) {
+    var normTitle = normalizeTitleForDedupe(rawTitle).toLowerCase();
+    if (normTitle && DEDUP_TITLE_MAP_[normTitle]) {
+      Logger.log('FAST DEDUP (title): ' + rawTitle);
+      return true;
+    }
+  }
+  return false;
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 var SOURCE_CATEGORY_OVERRIDE_CACHE = null;
@@ -268,6 +303,8 @@ var SOURCE_CATEGORY_SHEET_NAME = 'rss_source_map';
 // Eliminates per-article Supabase HTTP calls for dedup candidate fetching
 // and audit trail writing — reduces ~1000 HTTP calls/run to ~200.
 var INGESTION_DEDUP_CACHE_ = null;   // candidate rows for fuzzy dedup
+var DEDUP_URL_MAP_         = {};     // cleanUrl → true, built from cache for O(1) exact URL lookup
+var DEDUP_TITLE_MAP_       = {};     // normalizedTitle → true, built from cache for O(1) title lookup
 var AUDIT_TRAIL_BATCH_     = [];     // queued audit trail records, flushed at phase end
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -352,13 +389,26 @@ function ingestFromTheOldReader() {
 
       stats.articlesProcessed++;
       try {
-        // Source-level skip: runs BEFORE mapTORArticleToSchema so no HTTP fetch occurs.
+        // ── Fast pre-map filters (zero HTTP calls) ──────────────────────────
+        // These run before mapTORArticleToSchema() so enrichArticleFromUrl()
+        // is never called for articles that will be discarded anyway.
         if (isTORArticleFromSkippedSource_(articles[i])) {
           stats.duplicatesSkipped++;
           ingestedIds.push(articles[i].id);
           Logger.log('TOR: source-skipped — ' + String(articles[i].origin && articles[i].origin.title || 'unknown source'));
           continue;
         }
+        if (isFastExactDuplicate_(articles[i])) {
+          stats.duplicatesSkipped++;
+          ingestedIds.push(articles[i].id);
+          continue;
+        }
+        if (isFastFinanceFiltered_(articles[i])) {
+          stats.duplicatesSkipped++;
+          ingestedIds.push(articles[i].id);
+          continue;
+        }
+        // ── Full mapping (HTTP fetch for enrichment) — only for new articles ──
         var record = mapTORArticleToSchema(articles[i]);
         if (isNoisyArticle_(record)) {
           stats.duplicatesSkipped++;
@@ -411,6 +461,8 @@ function ingestFromTheOldReader() {
   } finally {
     // Clear cache and flush audit trail regardless of success/failure
     INGESTION_DEDUP_CACHE_ = null;
+    DEDUP_URL_MAP_ = {};
+    DEDUP_TITLE_MAP_ = {};
     flushAuditTrailBatch_();
   }
   return stats;
@@ -575,6 +627,8 @@ function ingestGmailTwoTier() {
   } catch(e) { Logger.log("ERROR ingestGmailTwoTier: "+e); stats.error = e.toString(); }
   finally {
     INGESTION_DEDUP_CACHE_ = null;
+    DEDUP_URL_MAP_ = {};
+    DEDUP_TITLE_MAP_ = {};
     flushAuditTrailBatch_();
   }
   return stats;
@@ -1894,10 +1948,21 @@ function warmDedupCache_(headers) {
       { headers: headers, muteHttpExceptions: true }
     );
     INGESTION_DEDUP_CACHE_ = JSON.parse(response.getContentText()) || [];
-    Logger.log('DEDUP CACHE: warmed with ' + INGESTION_DEDUP_CACHE_.length + ' candidates');
+    // Build O(1) lookup maps so pre-map exact dedup needs zero HTTP calls.
+    DEDUP_URL_MAP_   = {};
+    DEDUP_TITLE_MAP_ = {};
+    INGESTION_DEDUP_CACHE_.forEach(function(row) {
+      if (row.url)   DEDUP_URL_MAP_[cleanUrl(row.url)]                             = true;
+      if (row.title) DEDUP_TITLE_MAP_[normalizeTitleForDedupe(row.title).toLowerCase()] = true;
+    });
+    Logger.log('DEDUP CACHE: warmed with ' + INGESTION_DEDUP_CACHE_.length + ' candidates (' +
+               Object.keys(DEDUP_URL_MAP_).length + ' URLs, ' +
+               Object.keys(DEDUP_TITLE_MAP_).length + ' titles)');
   } catch(e) {
     Logger.log('DEDUP CACHE: warm failed, will query per-article — ' + e);
     INGESTION_DEDUP_CACHE_ = null;
+    DEDUP_URL_MAP_   = {};
+    DEDUP_TITLE_MAP_ = {};
   }
 }
 
