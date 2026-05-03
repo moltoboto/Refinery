@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.31
+ * Version: 2.32
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -408,19 +408,19 @@ function ingestFromTheOldReader() {
           ingestedIds.push(articles[i].id);
           continue;
         }
-        // ── Full mapping (HTTP fetch for enrichment) — only for new articles ──
-        var record = mapTORArticleToSchema(articles[i]);
-        if (isNoisyArticle_(record)) {
+        // ── Basic mapping (no HTTP) — used for all remaining filtering & dedup ──
+        var basic = mapTORArticleBasic_(articles[i]);
+        if (isNoisyArticle_(basic)) {
           stats.duplicatesSkipped++;
-          ingestedIds.push(articles[i].id); // mark read in TOR
+          ingestedIds.push(articles[i].id);
           continue;
         }
-        if (isFinanceFiltered_(record)) {
+        if (isFinanceFiltered_(basic)) {
           stats.duplicatesSkipped++;
-          ingestedIds.push(articles[i].id); // mark read in TOR
+          ingestedIds.push(articles[i].id);
           continue;
         }
-        var duplicateResult = reviewDuplicateRecord_(record);
+        var duplicateResult = reviewDuplicateRecord_(basic);
         if (duplicateResult.error) {
           stats.errors++;
           if (duplicateResult.error === 'temporary') {
@@ -430,16 +430,16 @@ function ingestFromTheOldReader() {
           continue;
         }
         if (duplicateResult.duplicate) {
-          // Exact duplicate — skip insert entirely, just mark as read in TOR
           stats.duplicatesSkipped++;
           ingestedIds.push(articles[i].id);
-          Logger.log("TOR: exact duplicate skipped — " + (record.title || record.url));
+          Logger.log("TOR: exact duplicate skipped — " + (basic.title || basic.url));
           continue;
         }
+        // ── HTTP enrichment — only runs for genuinely new articles ────────────
+        var record = enrichTORArticle_(basic);
         if (duplicateResult.possibleDuplicate) {
           record = markRecordAsDuplicateReview_(record, duplicateResult);
         }
-
         var insertResult = insertToSupabase(record);
         if (insertResult.ok) {
           stats.articlesInserted++;
@@ -539,52 +539,71 @@ function getTORUnreadArticles() {
   } catch(e) { Logger.log("ERROR getTORUnreadArticles: "+e); return []; }
 }
 
-function mapTORArticleToSchema(article) {
+// Phase 1: extract everything TOR provides — no HTTP fetch.
+// Used for filtering and dedup. Only genuinely new articles proceed to phase 2.
+function mapTORArticleBasic_(article) {
   var pubDate = new Date(article.published * 1000);
-  var url = (article.canonical && article.canonical[0]) ? article.canonical[0].href
-          : (article.alternate  && article.alternate[0])  ? article.alternate[0].href : '';
-
+  var url = cleanUrl(
+    (article.canonical && article.canonical[0] && article.canonical[0].href) ||
+    (article.alternate  && article.alternate[0]  && article.alternate[0].href) || ''
+  );
   var rawSummary = '';
   if (typeof article.summary === 'string') {
     rawSummary = article.summary;
   } else if (article.summary && typeof article.summary.content === 'string') {
     rawSummary = article.summary.content;
   }
-
-  // Extract image from RSS HTML content before stripping tags.
-  // Watch sites (and many others) embed the featured image in the feed HTML,
-  // but block bot HTTP requests so enrichArticleFromUrl can't fetch og:image.
-  // Also check TOR's enclosure field (media attachments from the feed).
   var rssImageUrl = extractFirstImageFromHtml_(rawSummary);
   if (!rssImageUrl && article.enclosure && article.enclosure.url &&
       /^image\//i.test(String(article.enclosure.type || ''))) {
     rssImageUrl = article.enclosure.url;
   }
-
   var cleanSummary = stripHtml(rawSummary);
   var source = article.origin ? article.origin.title : 'Unknown';
-  url = cleanUrl(url);
-  var enriched = enrichArticleFromUrl(url, article.title || 'Untitled');
-  // Prefer RSS-embedded image over og:image (more reliable for watch/photo sites)
-  var imageUrl = rssImageUrl || enriched.imageUrl || '';
-  var finalTitle = sanitizeText(enriched.title || article.title || 'Untitled', 250);
-  var finalSummary = finalizeSummaryForRecord_(enriched.summary || cleanSummary, '', url, article.title || 'Untitled');
-  var finalCategory = normalizeCategory('', source, finalTitle, finalSummary, url);
-  finalSummary = finalizeSummaryForRecord_(finalSummary, finalCategory, url, finalTitle);
-
+  var title = sanitizeText(article.title || 'Untitled', 250);
+  var category = normalizeCategory('', source, title, cleanSummary, url);
   return {
-    source:     source,
-    issue:      Utilities.formatDate(pubDate, 'UTC', 'MMM d yyyy'),
+    source:      source,
+    url:         url,
+    title:       title,
+    summary:     cleanSummary,
+    category:    category,
+    date_added:  pubDate.toISOString(),
+    issue:       Utilities.formatDate(pubDate, 'UTC', 'MMM d yyyy'),
+    _rssImageUrl: rssImageUrl,
+    _rawTitle:   article.title || 'Untitled'
+  };
+}
+
+// Phase 2: HTTP enrichment — called ONLY for articles that passed all filters and dedup.
+// Fetches og:title, og:description, og:image from the article URL.
+function enrichTORArticle_(basic) {
+  var enriched = enrichArticleFromUrl(basic.url, basic._rawTitle);
+  var imageUrl = basic._rssImageUrl || enriched.imageUrl || '';
+  var finalTitle = sanitizeText(enriched.title || basic.title, 250);
+  var rssSummary = basic.summary;
+  var finalSummary = finalizeSummaryForRecord_(enriched.summary || rssSummary, '', basic.url, basic._rawTitle);
+  var finalCategory = normalizeCategory('', basic.source, finalTitle, finalSummary, basic.url);
+  finalSummary = finalizeSummaryForRecord_(finalSummary, finalCategory, basic.url, finalTitle);
+  return {
+    source:     basic.source,
+    issue:      basic.issue,
     category:   finalCategory,
     status:     'unread',
     title:      finalTitle,
     summary:    prependImageMarker(finalSummary, imageUrl, finalCategory).substring(0, 2000),
-    signal:     deriveSignal(finalTitle, finalSummary || cleanSummary),
-    url:        url,
+    signal:     deriveSignal(finalTitle, finalSummary),
+    url:        basic.url,
     archived:   false,
     kept:       false,
-    date_added: pubDate.toISOString()
+    date_added: basic.date_added
   };
+}
+
+// Legacy wrapper kept for any callers outside the TOR loop.
+function mapTORArticleToSchema(article) {
+  var basic = mapTORArticleBasic_(article);
+  return enrichTORArticle_(basic);
 }
 
 // Extract the first <img src="..."> from HTML content (e.g. RSS feed body).
