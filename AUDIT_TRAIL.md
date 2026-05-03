@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-03 - Claude Code (v2.35)
+- Request: Ingestion erroring "Service invoked too many times for one day: urlfetch" — daily quota exhausted.
+- Root cause chain: markTORArticlesAsRead sent all IDs in one POST → TOR silently rejected oversized payload → articles stayed unread → same 500 articles returned every run → reviewDuplicateRecord_() made 2 Supabase calls per article → ~1000 urlfetch calls/run × multiple runs/day = quota exhausted.
+- Fix 1: markTORArticlesAsRead now loops in batches of 50 IDs per POST. Logs HTTP error code if TOR rejects a batch. Previously: silent failure with no error logging.
+- Fix 2: DEDUPE_REVIEW.WINDOW_DAYS 7→30, MAX_CANDIDATES 500→2000. Wider fast cache means repeatedly-returned old articles are caught in O(1) memory lookup instead of falling through to 2 Supabase HTTP calls each.
+- Note: Quota resets at midnight Pacific. Do not run ingestion again today.
+- Files touched: Ingestion/Code.js (v2.35), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+
 ### 2026-05-03 - Claude Code (v2.34)
 - Request: (1) Remove finance topic filter — curate by removing feeds, not keyword blocks. (2) Fix ongoing ingestion slowness — any site can hang UrlFetchApp for 60s. (3) Still getting exact duplicates.
 - Fix 1 — Finance filter removed: commented out isFastFinanceFiltered_() and isFinanceFiltered_() checks in TOR loop. All finance feed articles now pass through. User should remove unwanted feeds from subscriptions.opml instead.

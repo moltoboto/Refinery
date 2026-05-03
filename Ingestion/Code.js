@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.34
+ * Version: 2.35
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -51,8 +51,8 @@ var CONFIG = {
   },
 
   DEDUPE_REVIEW: {
-    WINDOW_DAYS: 7,
-    MAX_CANDIDATES: 500,
+    WINDOW_DAYS: 30,    // Extended from 7 — TOR re-returns old articles when mark-read fails; wider cache catches them fast
+    MAX_CANDIDATES: 2000, // Extended from 500 — covers the backlog of repeatedly-returned articles
     MIN_SCORE: 0.66,
     MIN_SHARED_TOKENS: 3
   }
@@ -619,16 +619,30 @@ function extractFirstImageFromHtml_(html) {
 
 // FIX: build "i=id1&i=id2&...&a=..." as a simple string Ã¢â‚¬â€ v2.1 was malforming multi-value arrays
 function markTORArticlesAsRead(ids) {
+  // Batch into groups of 50 — sending 500 IDs in one POST silently fails on TOR.
+  // A failed mark-read means articles stay unread and come back every run,
+  // burning ~1000 UrlFetchApp quota calls/run on repeated duplicate checks.
+  var BATCH_SIZE = 50;
+  var totalMarked = 0;
   try {
-    var payload = ids.map(function(id){ return "i=" + encodeURIComponent(id); }).join("&")
-                + "&a=" + encodeURIComponent("user/-/state/com.google/read");
-    UrlFetchApp.fetch(CONFIG.TOR_BASE_URL + "/edit-tag", {
-      method: 'post',
-      headers: {'Authorization': 'GoogleLogin auth=' + CONFIG.TOR_AUTH_TOKEN, 'Content-Type': 'application/x-www-form-urlencoded'},
-      payload: payload,
-      muteHttpExceptions: true
-    });
-    Logger.log("TOR: marked " + ids.length + " as read");
+    for (var b = 0; b < ids.length; b += BATCH_SIZE) {
+      var batch = ids.slice(b, b + BATCH_SIZE);
+      var payload = batch.map(function(id){ return "i=" + encodeURIComponent(id); }).join("&")
+                  + "&a=" + encodeURIComponent("user/-/state/com.google/read");
+      var resp = UrlFetchApp.fetch(CONFIG.TOR_BASE_URL + "/edit-tag", {
+        method: 'post',
+        headers: {'Authorization': 'GoogleLogin auth=' + CONFIG.TOR_AUTH_TOKEN, 'Content-Type': 'application/x-www-form-urlencoded'},
+        payload: payload,
+        muteHttpExceptions: true
+      });
+      var code = resp.getResponseCode();
+      if (code >= 400) {
+        Logger.log("TOR mark-read error: HTTP " + code + " batch " + b);
+      } else {
+        totalMarked += batch.length;
+      }
+    }
+    Logger.log("TOR: marked " + totalMarked + "/" + ids.length + " as read (" + Math.ceil(ids.length / BATCH_SIZE) + " batches)");
   } catch(e) { Logger.log("ERROR markTORArticlesAsRead: "+e); }
 }
 
