@@ -96,20 +96,36 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 - URL dedup is canonical (tracking params stripped before comparison)
 - Gmail MCP in Claude.ai uses Anthropic OAuth - separate from Apps Script auth
 - `deriveSignal()` currently returns empty string - stubbed for OpenClaw Phase 2
+- `enrichArticleFromUrl()` is currently disabled — HTTP fetch commented out in `enrichTORArticle_()`. Re-enable by uncommenting the if/call block. See v2.34 in changelog.
+- Finance filter (`isFastFinanceFiltered_`, `isFinanceFiltered_`) is disabled — checks commented out in TOR loop. Re-enable by uncommenting both lines. See v2.34 in changelog.
+- UrlFetchApp daily quota: ~20,000 calls/day. Exhausted 2026-05-03 due to markTORArticlesAsRead batch bug (v2.35 fixed). Resets at midnight Pacific. Do not run ingestion multiple times/hour.
 - Kagi feeds in TOR use `allorigins.win` as a CORS proxy (e.g. `api.allorigins.win/raw?url=https://news.kagi.com/...`). This 3rd-party proxy can go down silently — if Kagi content disappears from the Viewer, check allorigins.win first
 - Source files live locally at `C:\Users\exact\Refinery\`; deployed to Apps Script via clasp
 - All working docs consolidated to `C:\Users\exact\Refinery\` (previously split across OneDrive\Refinery and two separate clasp folders)
 
+## Current Disabled Features (intentional, easy to re-enable)
+- **enrichArticleFromUrl()** — HTTP fetch commented out in enrichTORArticle_(). Any slow destination URL could hang UrlFetchApp indefinitely. RSS title/summary/image is sufficient. Re-enable selectively if richer summaries are needed.
+- **Finance filter** — isFastFinanceFiltered_() and isFinanceFiltered_() checks commented out in TOR loop. Decision: curate by removing feeds from OPML rather than keyword-blocking topics.
+
+## Pending (Tomorrow)
+1. **Purge 8K old articles**: run in Ingestion editor in order:
+   - `previewPurgeBeforeApr15()` — dry run, shows count + sample
+   - `purgeBeforeApr15()` — soft-deletes everything before April 15 (kept=true rows safe)
+   - `hardPurgeDeletedArticles()` — permanently removes soft-deleted rows
+2. **Verify v2.35 fixes**: first run after quota reset (midnight Pacific) should show:
+   - `DEDUP CACHE: warmed with ~2000 candidates`
+   - `TOR: marked X/500 as read (10 batches)` — confirms batched mark-read is working
+   - Subsequent run should return far fewer articles (TOR actually marks them read now)
+3. **Finance feed curation**: decide which feeds to remove from subscriptions.opml (currently: Yahoo Finance, MarketWatch, CNBC Mad Money, Seeking Alpha, Motley Fool, Fox Business). Remove unwanted ones, import updated OPML into TOR.
+4. **Import OPML into TOR**: Google News was removed from subscriptions.opml but TOR still has it. Import the OPML to drop it from the live reader.
+
 ## On the Horizon
-- **Duplicate removal** - needs improvement (current dedup misses some cases)
 - **Substack ingestion** - confirm working end-to-end via TOR RSS
-- **Subscription cleanup** - subscriptions.opml committed; duplicate TC/Verge feeds removed; OpenClaw moved; Kagi proxy documented. Still TODO: import cleaned OPML back into TOR to actually remove the duplicate feeds from the live reader
-- **Add new subscriptions** - new feeds/newsletters to onboard
 - **Direct URL input for artifacts** - UI to paste a URL and save as artifact manually
 - OpenClaw Phase 2 - signal/category enrichment (stubbed, deriveSignal returns '')
 - Raindrop / Reddit integration
-- Yahoo/Google News RSS
 - TipRanks alerts as separate category
+- Per-ticker Yahoo Finance feeds (AAPL/MSFT/GOOGL/AMZN/NVDA/TSLA/META/AMD/ORCL/CMCSA) as alternative to broad Yahoo Finance feed
 
 ## Change Log
 | Version | Date | Tool | Changes |

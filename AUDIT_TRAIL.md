@@ -17,6 +17,13 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-03 - Session Close (v2.35, end of day)
+- Quota: UrlFetchApp daily limit exhausted. Do not run ingestion until midnight Pacific reset.
+- Code state: v2.35 pushed and committed. All fixes are live in Apps Script.
+- Key disabled features: enrichArticleFromUrl() (HTTP fetch commented out); finance filter (both checks commented out). Both intentional — see CONTEXT.md.
+- Pending tomorrow: (1) Run purge — previewPurgeBeforeApr15 → purgeBeforeApr15 → hardPurgeDeletedArticles. (2) Verify v2.35 mark-read batching via log output. (3) Decide which finance feeds to cut from OPML.
+- Next model review: user switching to Opus for code review of Ingestion/Code.js for slop/cleanup.
+
 ### 2026-05-03 - Claude Code (v2.35)
 - Request: Ingestion erroring "Service invoked too many times for one day: urlfetch" — daily quota exhausted.
 - Root cause chain: markTORArticlesAsRead sent all IDs in one POST → TOR silently rejected oversized payload → articles stayed unread → same 500 articles returned every run → reviewDuplicateRecord_() made 2 Supabase calls per article → ~1000 urlfetch calls/run × multiple runs/day = quota exhausted.
