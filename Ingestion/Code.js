@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.32
+ * Version: 2.33
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -575,10 +575,17 @@ function mapTORArticleBasic_(article) {
   };
 }
 
+// Sources whose destination URLs can hang UrlFetchApp indefinitely.
+// HN RSS links to arbitrary third-party sites — skip HTTP enrichment for these sources.
+var SKIP_ENRICHMENT_SOURCES_ = /hacker news|ycombinator/i;
+
 // Phase 2: HTTP enrichment — called ONLY for articles that passed all filters and dedup.
 // Fetches og:title, og:description, og:image from the article URL.
 function enrichTORArticle_(basic) {
-  var enriched = enrichArticleFromUrl(basic.url, basic._rawTitle);
+  var enriched = { title: '', summary: '', imageUrl: '' };
+  if (!SKIP_ENRICHMENT_SOURCES_.test(String(basic.source || ''))) {
+    enriched = enrichArticleFromUrl(basic.url, basic._rawTitle);
+  }
   var imageUrl = basic._rssImageUrl || enriched.imageUrl || '';
   var finalTitle = sanitizeText(enriched.title || basic.title, 250);
   var rssSummary = basic.summary;

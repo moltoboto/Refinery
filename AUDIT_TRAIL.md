@@ -17,6 +17,26 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-03 - Claude Code (v2.33)
+- Request: "Creating a Color Palette from an Image" Hacker News article hanging ingestion again — enrichArticleFromUrl() was fetching the destination URL (a slow third-party site), not ycombinator.com.
+- Root cause: HN RSS items link to arbitrary destination URLs. A URL-based skip (checking for ycombinator.com) doesn't work because the article URL IS the destination. The only reliable signal is the source name from article.origin.title ("Hacker News").
+- Fix: Added SKIP_ENRICHMENT_SOURCES_ regex (/hacker news|ycombinator/i) checked in enrichTORArticle_() before calling enrichArticleFromUrl(). When source matches, enriched = { title:'', summary:'', imageUrl:'' } — no HTTP fetch. RSS title and summary already sufficient for HN articles.
+- Files touched: Ingestion/Code.js (v2.33), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+- Follow-up: None — HN articles will use RSS title/summary/image directly, same as Reddit.
+
+### 2026-05-03 - Claude Code (v2.32)
+- Request: Ingestion still timing out after v2.31 — older HN/TechCrunch articles (>7 days, not in dedup cache) still triggered enrichArticleFromUrl() before reviewDuplicateRecord_() could catch them.
+- Root cause: isFastExactDuplicate_() only covers articles already in the 7-day dedup cache. Older articles not in cache fell through to mapTORArticleToSchema() → enrichArticleFromUrl() HTTP fetch BEFORE the Supabase dedup check.
+- Fix: Split mapTORArticleToSchema() into two phases:
+  - mapTORArticleBasic_(): no HTTP — extracts URL/title/source/date/RSS summary/RSS image from TOR article object
+  - enrichTORArticle_(): HTTP fetch via enrichArticleFromUrl() — called ONLY after all filters and reviewDuplicateRecord_() confirm article is new
+  - mapTORArticleToSchema() kept as legacy wrapper for callers outside TOR loop
+  - TOR loop order: skip source → fast dedup → fast finance filter → mapTORArticleBasic_() → isNoisyArticle_() → isFinanceFiltered_() → reviewDuplicateRecord_() → enrichTORArticle_() → insert
+- Result: enrichArticleFromUrl() HTTP fetches reduced from ~250/run to ~5-20/run (only genuinely new articles).
+- Files touched: Ingestion/Code.js (v2.32), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+
 ### 2026-05-03 - Claude Code (v2.31)
 - Request: Ingestion timing out — log showed articles being processed at ~1/second, 500 articles × 3 HTTP calls = 1500 calls total.
 - Root cause: mapTORArticleToSchema() calls enrichArticleFromUrl() (1 HTTP fetch) for EVERY article including ones immediately discarded as duplicates or finance-filtered. reviewDuplicateRecord_() then makes 2 more Supabase calls per article. The dedup cache only covered fuzzy dedup — exact URL/title checks bypassed the cache entirely.
