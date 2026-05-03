@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.29
+ * Version: 2.30
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -171,6 +171,28 @@ function isNoisyArticle_(record) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── SOURCE-LEVEL SKIP LIST ───────────────────────────────────────────────────
+// Checked against article.origin.title and the article URL BEFORE mapTORArticleToSchema()
+// runs — avoids the enrichArticleFromUrl() HTTP fetch entirely for known bad sources.
+// Use this for feeds that are still in TOR but should be fully ignored
+// (e.g. Google News while waiting for it to be removed from TOR).
+var SKIP_SOURCE_PATTERNS = [
+  /google\s*news/i,
+  /news\.google\.com/i
+];
+
+function isTORArticleFromSkippedSource_(article) {
+  var originTitle = String(article.origin && article.origin.title || '');
+  var originUrl   = String((article.canonical && article.canonical[0] && article.canonical[0].href) ||
+                           (article.alternate  && article.alternate[0]  && article.alternate[0].href) || '');
+  var haystack = originTitle + ' ' + originUrl;
+  for (var i = 0; i < SKIP_SOURCE_PATTERNS.length; i++) {
+    if (SKIP_SOURCE_PATTERNS[i].test(haystack)) return true;
+  }
+  return false;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ─── FINANCE SOURCE ALLOWLIST FILTER ─────────────────────────────────────────
 // High-volume dedicated finance feeds are filtered to portfolio/sector topics.
 // General news finance (Reuters, top-level CNBC) is NOT in this list — those
@@ -330,6 +352,12 @@ function ingestFromTheOldReader() {
 
       stats.articlesProcessed++;
       try {
+        // Source-level skip: runs BEFORE mapTORArticleToSchema so no HTTP fetch occurs.
+        if (isTORArticleFromSkippedSource_(articles[i])) {
+          stats.duplicatesSkipped++;
+          ingestedIds.push(articles[i].id);
+          continue;
+        }
         var record = mapTORArticleToSchema(articles[i]);
         if (isNoisyArticle_(record)) {
           stats.duplicatesSkipped++;

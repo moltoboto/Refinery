@@ -17,6 +17,16 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-03 - Claude Code (v2.30)
+- Request: Ingestion log showing 17+ "exact duplicate skipped — Google News" lines eating ~17 seconds per run.
+- Root cause: Google News still in TOR (not yet manually removed). Each article ran through mapTORArticleToSchema() which calls enrichArticleFromUrl() (HTTP fetch ~1s) before the dedup check caught it as a duplicate.
+- Fix: Added SKIP_SOURCE_PATTERNS + isTORArticleFromSkippedSource_() checked against article.origin.title and URL BEFORE mapTORArticleToSchema() — zero HTTP fetches for skipped sources.
+- SKIP_SOURCE_PATTERNS currently: /google\s*news/i, /news\.google\.com/i
+- To add future unwanted feeds still in TOR: add a pattern to SKIP_SOURCE_PATTERNS.
+- Files touched: Ingestion/Code.js (v2.30), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+- Follow-up: User should still manually remove Google News from TOR and import updated OPML to permanently stop it from being fetched at all.
+
 ### 2026-05-03 - Claude Code (v2.29)
 - Request: (1) Feed should dictate category, not keyword fallback; (2) Watch posts should show photos; (3) Is Convex better than Supabase?
 - Actions taken:
