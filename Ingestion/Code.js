@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.41
+ * Version: 2.42
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -126,9 +126,23 @@ var CATEGORY_SOURCE_MAP = {
   'ycombinator.com': 'Tech & Trends',
 
   // Learning & Skills
-  'stratechery.com': 'Strategy',
+  'stratechery.com': 'Resources',
   'dailystoic.com': 'Resources',
   'natesnewsletter.substack.com': 'Resources'
+};
+
+// TOR folder labels → Refinery categories. The folder is the user's organizational
+// intent; this mapping is checked AFTER per-source overrides but BEFORE keyword
+// detection. Add a folder in TOR and a row here when you add new categories.
+var TOR_FOLDER_CATEGORY_MAP = {
+  'ai': 'AI & LLMs',
+  'essential watches': 'Watches',
+  'finance': 'Finance',
+  'learning & skills': 'Resources',
+  'news': 'Top Story',
+  'reddit': 'Reddit',
+  'tech': 'Tech & Trends',
+  'youtube': 'YouTube'
 };
 
 var CATEGORY_OPTIONS = [
@@ -137,10 +151,6 @@ var CATEGORY_OPTIONS = [
   'Finance',
   'Resources',
   'Tech & Trends',
-  'Policy & Society',
-  'Dev Tools',
-  'Research',
-  'Strategy',
   'Watches',
   'YouTube',
   'Reddit',
@@ -637,10 +647,12 @@ function mapTORArticleBasic_(article) {
   var cleanSummary = stripHtml(rawSummary);
   var source = article.origin ? article.origin.title : 'Unknown';
   var title = sanitizeText(article.title || 'Untitled', 250);
-  var category = normalizeCategory('', source, title, cleanSummary, url);
+  var torFolders = extractTORFolders_(article);
+  var category = normalizeCategory('', source, title, cleanSummary, url, torFolders);
   return {
     source:      source,
     url:         url,
+    _torFolders: torFolders,
     title:       title,
     summary:     cleanSummary,
     category:    category,
@@ -660,7 +672,7 @@ function enrichTORArticle_(basic) {
   var finalTitle = basic.title;
   var rssSummary = basic.summary;
   var finalSummary = finalizeSummaryForRecord_(rssSummary, '', basic.url, basic._rawTitle);
-  var finalCategory = normalizeCategory('', basic.source, finalTitle, finalSummary, basic.url);
+  var finalCategory = normalizeCategory('', basic.source, finalTitle, finalSummary, basic.url, basic._torFolders);
   finalSummary = finalizeSummaryForRecord_(finalSummary, finalCategory, basic.url, finalTitle);
   return {
     source:     basic.source,
@@ -1305,13 +1317,16 @@ function canonicalCategoryName_(value) {
     'watches': 'Watches',
     'video': 'YouTube',
     'youtube': 'YouTube',
-    'policy society': 'Policy & Society',
-    'policy & society': 'Policy & Society',
     'ai llms': 'AI & LLMs',
     'ai & llms': 'AI & LLMs',
     'tech trends': 'Tech & Trends',
     'tech & trends': 'Tech & Trends',
-    'dev tools': 'Dev Tools',
+    // Legacy categories that have been retired — fold into closest current category
+    'policy society': 'Top Story',
+    'policy & society': 'Top Story',
+    'dev tools': 'Tech & Trends',
+    'research': 'Tech & Trends',
+    'strategy': 'Resources',
     'duplicate': 'Duplicate',
     'duplicates': 'Duplicate'
   };
@@ -1327,10 +1342,6 @@ function isKnownCategory_(value) {
     'Finance',
     'Resources',
     'Tech & Trends',
-    'Policy & Society',
-    'Dev Tools',
-    'Research',
-    'Strategy',
     'Watches',
     'YouTube',
     'Reddit',
@@ -1358,15 +1369,43 @@ function categoryFromUrl_(url) {
   return '';
 }
 
-function normalizeCategory(category, source, title, summary, url) {
+// Map TOR folder labels (extracted from article.categories) to a Refinery category.
+// This is the user's organizational intent and outranks keyword detection.
+function categoryFromTORFolder_(folders) {
+  if (!folders || !folders.length) return '';
+  for (var i = 0; i < folders.length; i++) {
+    var key = String(folders[i] || '').toLowerCase().trim();
+    if (key && TOR_FOLDER_CATEGORY_MAP[key]) return TOR_FOLDER_CATEGORY_MAP[key];
+  }
+  return '';
+}
+
+// Pull user-folder labels from a TOR article. Google Reader API stores them as
+// 'user/-/label/<Folder Name>' alongside system tags ('user/-/state/...').
+function extractTORFolders_(article) {
+  if (!article || !article.categories || !article.categories.length) return [];
+  var labels = [];
+  for (var i = 0; i < article.categories.length; i++) {
+    var c = String(article.categories[i] || '');
+    var m = c.match(/^user\/-\/label\/(.+)$/);
+    if (m && m[1]) labels.push(m[1]);
+  }
+  return labels;
+}
+
+function normalizeCategory(category, source, title, summary, url, torFolders) {
   // Duplicate is set intentionally by markRecordAsDuplicateReview_ — never overwrite it.
-  // Any source/content match that fires later would silently un-flag the duplicate.
   if (canonicalCategoryName_(category) === 'Duplicate') return 'Duplicate';
 
   var override = getSourceCategoryOverrideFor_(source, url);
   if (override) return override;
 
   var mapped = categoryFromSource_(source, url);
+  if (mapped) return mapped;
+
+  // TOR folder takes precedence over URL pattern and keyword fallback —
+  // the folder reflects the user's manual organization in the reader.
+  mapped = categoryFromTORFolder_(torFolders);
   if (mapped) return mapped;
 
   mapped = categoryFromUrl_(url);
@@ -2136,27 +2175,18 @@ function flushAuditTrailBatch_() {
   } catch(e) { Logger.log("ERROR flushAuditTrailBatch_: " + e); }
 }
 
+// Last-resort category detection. Only used when source mapping AND TOR folder
+// mapping both fail to assign a category. Kept narrow — categorization is
+// primarily driven by TOR folder (the user's organizational intent).
 function detectCategory(title, summary, source, url) {
   var t = (String(source || '') + ' ' + String(title || '') + ' ' + String(summary || '') + ' ' + String(url || '')).toLowerCase();
   if (t.match(/\bpossible duplicate review\b|\bduplicate review\b/)) return 'Duplicate';
   if (t.match(/reddit|r\//)) return 'Reddit';
   if (t.match(/youtube|youtu\.be/)) return 'YouTube';
   if (t.match(/watchmaking|horology|timepiece|timepieces|patek|rolex|omega|seiko|chronograph|hodinkee|worn.?wound|ablogtowatch|fratello|monochrome|audemars|breitling|cartier|jaeger|iwc|hublot/)) return 'Watches';
-  // AI & LLMs checked BEFORE Finance/Research/Policy so "AI funding" and "AI regulation"
-  // land here rather than being pulled into a secondary category.
   if (t.match(/\bai\b|llm|gpt|claude|gemini|chatgpt|openai|anthropic|deepseek|qwen|mistral|ollama|copilot|diffusion|transformer|multimodal|foundation model/)) return 'AI & LLMs';
-  // Dev Tools: intentionally narrow — only clear developer tooling content.
-  // "open source", "repo", "framework", "library" removed — they appear in mainstream
-  // tech news constantly and cause false positives from HN/Verge/TechCrunch.
-  if (t.match(/\bgithub\.com\b|npm install|pip install|\bvscode\b|\bvs code\b|\bcursor ide\b|\bxcode\b|cli tool|command.?line tool|developer tool|dev tool|package manager|\bsdk release\b|\bapi client\b/)) return 'Dev Tools';
-  if (t.match(/arxiv|preprint|benchmark|dataset|peer.?review/)) return 'Research';
   if (t.match(/tutorial|how.?to|cheat sheet|step.?by.?step/)) return 'Resources';
-  if (t.match(/policy|regulation|law|congress|pentagon|dod|government|senate|compliance/)) return 'Policy & Society';
   if (t.match(/stock|market|earnings|valuation|ipo|funding|unicorn|venture|finance|trading|macro|fed|treasury|dealbook/)) return 'Finance';
-  if (t.match(/research|paper|study|learn|course/)) return 'Research';
-  if (t.match(/strategy|playbook|mental model|roadmap|positioning/)) return 'Strategy';
-  // Top Story: major news events only — "launches" and "announces" removed because
-  // every product announcement matches them, drowning real top stories in Tech & Trends.
   if (t.match(/breaking|acquisition|merger|crisis|war|election|top story|headline/)) return 'Top Story';
   if (t.match(/email|newsletter/)) return 'Email';
   return 'Tech & Trends';

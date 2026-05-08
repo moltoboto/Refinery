@@ -17,6 +17,23 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-08 - Claude Code (v2.42 — folder-driven categorization)
+- Request: Articles often land in wrong category. Refinery has 14 categories, TOR has 9 folders. Use TOR folder as the category source. Drop categories that don't exist in TOR.
+- Implementation:
+  1. Added TOR_FOLDER_CATEGORY_MAP — maps lowercased TOR folder labels (`'ai'`, `'essential watches'`, `'finance'`, `'learning & skills'`, `'news'`, `'reddit'`, `'tech'`, `'youtube'`) to Refinery categories.
+  2. Added extractTORFolders_(article) — parses `user/-/label/<Folder Name>` entries from article.categories array (Google Reader API standard).
+  3. Added categoryFromTORFolder_(folders) — looks up first matching label in the map.
+  4. normalizeCategory signature gains optional torFolders param. New priority: Duplicate guard → sheet override → CATEGORY_SOURCE_MAP → **TOR folder** → URL pattern → existing-known → keyword fallback. Folder beats URL/keyword but yields to explicit per-source mapping.
+  5. mapTORArticleBasic_ extracts folders into `basic._torFolders` and passes them to normalizeCategory. enrichTORArticle_ passes them through too.
+  6. CATEGORY_OPTIONS reduced from 14 → 10. Dropped: Policy & Society, Dev Tools, Research, Strategy.
+  7. canonicalCategoryName_ map folds the legacy values into closest current category so existing rows render sensibly until backfill runs (policy → Top Story, dev tools → Tech & Trends, research → Tech & Trends, strategy → Resources).
+  8. detectCategory keyword paths for Dev Tools / Research / Policy & Society / Strategy removed.
+  9. CATEGORY_SOURCE_MAP: stratechery.com 'Strategy' → 'Resources' (Stratechery sits in Learning & Skills folder).
+- New articles get folder-driven categories immediately. To re-tag the existing collection, run applySourceCategoryBackfill() in the editor — it re-runs normalizeCategory over old rows.
+- Files touched: Ingestion/Code.js (v2.42), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+- Follow-up: User to add new TOR folders if any new categories emerge — just create the folder in TOR, add a row to TOR_FOLDER_CATEGORY_MAP, push. Viewer category nav probably hardcodes the old list — to verify next session.
+
 ### 2026-05-08 - Claude Code (v2.41 — cleanup pass)
 - Request: Consolidate the date-specific purge functions to one date-input pair. Review ingestion for AI slop.
 - Purge consolidation:
