@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.42
+ * Version: 2.43
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -88,17 +88,17 @@ var CATEGORY_SOURCE_MAP = {
   'watchboxstudios': 'Watches',
 
   // AI & LLMs — specific feed domains that are AI-only sources
-  'aws.amazon.com/blogs/machine-learning': 'AI & LLMs',
-  'blog.google/innovation-and-ai': 'AI & LLMs',
-  'news.mit.edu/rss/topic/artificial-intelligence': 'AI & LLMs',
-  'microsoft.com/en-us/research': 'AI & LLMs',
-  'nvidiablog': 'AI & LLMs',
-  'openai.com/news': 'AI & LLMs',
-  'anthropic.com': 'AI & LLMs',
-  'huggingface.co/blog': 'AI & LLMs',
-  'deeplearning.ai': 'AI & LLMs',
-  'simonwillison.net': 'AI & LLMs',
-  'venturebeat.com': 'AI & LLMs',
+  'aws.amazon.com/blogs/machine-learning': 'AI',
+  'blog.google/innovation-and-ai': 'AI',
+  'news.mit.edu/rss/topic/artificial-intelligence': 'AI',
+  'microsoft.com/en-us/research': 'AI',
+  'nvidiablog': 'AI',
+  'openai.com/news': 'AI',
+  'anthropic.com': 'AI',
+  'huggingface.co/blog': 'AI',
+  'deeplearning.ai': 'AI',
+  'simonwillison.net': 'AI',
+  'venturebeat.com': 'AI',
 
   // News
   'bbci.co.uk/news': 'Top Story',
@@ -118,12 +118,12 @@ var CATEGORY_SOURCE_MAP = {
 
   // Tech — explicit mapping so keyword fallback never overrides feed intent.
   // Articles from these sources stay in Tech & Trends regardless of title content.
-  'techcrunch.com': 'Tech & Trends',
-  'arstechnica.com': 'Tech & Trends',
-  'engadget.com': 'Tech & Trends',
-  'macrumors.com': 'Tech & Trends',
-  'theverge.com': 'Tech & Trends',
-  'ycombinator.com': 'Tech & Trends',
+  'techcrunch.com': 'Tech',
+  'arstechnica.com': 'Tech',
+  'engadget.com': 'Tech',
+  'macrumors.com': 'Tech',
+  'theverge.com': 'Tech',
+  'ycombinator.com': 'Tech',
 
   // Learning & Skills
   'stratechery.com': 'Resources',
@@ -135,22 +135,22 @@ var CATEGORY_SOURCE_MAP = {
 // intent; this mapping is checked AFTER per-source overrides but BEFORE keyword
 // detection. Add a folder in TOR and a row here when you add new categories.
 var TOR_FOLDER_CATEGORY_MAP = {
-  'ai': 'AI & LLMs',
+  'ai': 'AI',
   'essential watches': 'Watches',
   'finance': 'Finance',
   'learning & skills': 'Resources',
   'news': 'Top Story',
   'reddit': 'Reddit',
-  'tech': 'Tech & Trends',
+  'tech': 'Tech',
   'youtube': 'YouTube'
 };
 
 var CATEGORY_OPTIONS = [
   'Top Story',
-  'AI & LLMs',
+  'AI',
   'Finance',
   'Resources',
-  'Tech & Trends',
+  'Tech',
   'Watches',
   'YouTube',
   'Reddit',
@@ -1317,15 +1317,15 @@ function canonicalCategoryName_(value) {
     'watches': 'Watches',
     'video': 'YouTube',
     'youtube': 'YouTube',
-    'ai llms': 'AI & LLMs',
-    'ai & llms': 'AI & LLMs',
-    'tech trends': 'Tech & Trends',
-    'tech & trends': 'Tech & Trends',
+    'ai llms': 'AI',
+    'ai & llms': 'AI',
+    'tech trends': 'Tech',
+    'tech & trends': 'Tech',
     // Legacy categories that have been retired — fold into closest current category
     'policy society': 'Top Story',
     'policy & society': 'Top Story',
-    'dev tools': 'Tech & Trends',
-    'research': 'Tech & Trends',
+    'dev tools': 'Tech',
+    'research': 'Tech',
     'strategy': 'Resources',
     'duplicate': 'Duplicate',
     'duplicates': 'Duplicate'
@@ -1338,10 +1338,10 @@ function canonicalCategoryName_(value) {
 function isKnownCategory_(value) {
   return [
     'Top Story',
-    'AI & LLMs',
+    'AI',
     'Finance',
     'Resources',
-    'Tech & Trends',
+    'Tech',
     'Watches',
     'YouTube',
     'Reddit',
@@ -2184,12 +2184,12 @@ function detectCategory(title, summary, source, url) {
   if (t.match(/reddit|r\//)) return 'Reddit';
   if (t.match(/youtube|youtu\.be/)) return 'YouTube';
   if (t.match(/watchmaking|horology|timepiece|timepieces|patek|rolex|omega|seiko|chronograph|hodinkee|worn.?wound|ablogtowatch|fratello|monochrome|audemars|breitling|cartier|jaeger|iwc|hublot/)) return 'Watches';
-  if (t.match(/\bai\b|llm|gpt|claude|gemini|chatgpt|openai|anthropic|deepseek|qwen|mistral|ollama|copilot|diffusion|transformer|multimodal|foundation model/)) return 'AI & LLMs';
+  if (t.match(/\bai\b|llm|gpt|claude|gemini|chatgpt|openai|anthropic|deepseek|qwen|mistral|ollama|copilot|diffusion|transformer|multimodal|foundation model/)) return 'AI';
   if (t.match(/tutorial|how.?to|cheat sheet|step.?by.?step/)) return 'Resources';
   if (t.match(/stock|market|earnings|valuation|ipo|funding|unicorn|venture|finance|trading|macro|fed|treasury|dealbook/)) return 'Finance';
   if (t.match(/breaking|acquisition|merger|crisis|war|election|top story|headline/)) return 'Top Story';
   if (t.match(/email|newsletter/)) return 'Email';
-  return 'Tech & Trends';
+  return 'Tech';
 }
 
 function deriveSignal(title, summary) {

@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-08 - Claude Code (v2.43 — shorter category names)
+- Request: Long category names ('AI & LLMs', 'Tech & Trends') don't match TOR folder names. Use the same short names TOR uses.
+- Renames: `AI & LLMs` → `AI`, `Tech & Trends` → `Tech`. Bulk-replaced across CATEGORY_SOURCE_MAP, TOR_FOLDER_CATEGORY_MAP, CATEGORY_OPTIONS, isKnownCategory_, detectCategory return values.
+- canonicalCategoryName_ retains legacy mappings ('ai llms', 'ai & llms', 'tech trends', 'tech & trends') folding to the new short names — so existing DB rows display correctly until applySourceCategoryBackfill() retags them.
+- Other category names left unchanged for now (Top Story, Resources, Watches, etc.) — pending user confirmation on whether to also rename those to match TOR folder labels exactly.
+- Files touched: Ingestion/Code.js (v2.43), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+- Follow-up: Run applySourceCategoryBackfill() once to retag rows with old long names.
+
 ### 2026-05-08 - Claude Code (v2.42 — folder-driven categorization)
 - Request: Articles often land in wrong category. Refinery has 14 categories, TOR has 9 folders. Use TOR folder as the category source. Drop categories that don't exist in TOR.
 - Implementation:
