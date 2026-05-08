@@ -69,7 +69,9 @@ Source files at C:\Users\exact\Refinery\
 
 Before doing anything:
   1. Read CONTEXT.md (current version + change log)
-  2. Read the 2 most recent entries in AUDIT_TRAIL.md
+  2. Read the 2 most recent entries in AUDIT_TRAIL.md — this is the running
+     project journal. Recent entries show why decisions were made, not just
+     what changed. Skim further back if a topic isn't obvious.
   3. Read the relevant Code.js section before editing
 
 Push commands:
@@ -78,9 +80,22 @@ Push commands:
   Viewer ALSO needs Apps Script redeploy (pencil → New version → Deploy).
   Ingestion is push-only, no deploy step.
 
-After every meaningful change:
-  - Append an AUDIT_TRAIL.md entry
-  - git add -A && git commit -m "vX.Y - summary" && git push
+After every meaningful change — IN THIS ORDER:
+  1. Bump version in the file header (Ingestion `Version: X.Y` line, Viewer
+     bumps version in 3 places — see CONTEXT.md gotchas).
+  2. Add a row to the CONTEXT.md Change Log (top of the table).
+  3. Append a new entry to the TOP of AUDIT_TRAIL.md (above the previous
+     entry). Match the format of the 2-3 most recent entries: header line
+     `### YYYY-MM-DD - Claude Code (vX.Y)`, then bullets covering Request,
+     Root cause / context, Fix(es), Files touched, Deployment, Follow-up.
+     Be specific — these entries are read by future sessions to understand
+     why something is the way it is.
+  4. clasp push (Viewer also needs redeploy).
+  5. git add -A && git commit -m "vX.Y: short summary" && git push
+
+The audit trail is the single most important durable artifact. If the trail
+is wrong or missing, future sessions will rediscover bugs that were already
+fixed and intent that was already decided.
 
 Today's task: [DESCRIBE TASK HERE]
 ```
