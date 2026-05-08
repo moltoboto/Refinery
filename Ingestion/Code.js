@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.35
+ * Version: 2.36
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -381,6 +381,7 @@ function ingestFromTheOldReader() {
     warmDedupCache_(headers);
 
     var ingestedIds = [];
+    var INCREMENTAL_MARK_READ_AT = 25; // flush mark-read every N articles so timeouts don't undo the work
     for (var i = 0; i < articles.length; i++) {
       if (Date.now() - startedAt > (CONFIG.TOR_EXECUTION_LIMIT_MS || 330000)) {
         Logger.log("TOR: stopping early to avoid Apps Script timeout at article " + i);
@@ -390,8 +391,6 @@ function ingestFromTheOldReader() {
       stats.articlesProcessed++;
       try {
         // ── Fast pre-map filters (zero HTTP calls) ──────────────────────────
-        // These run before mapTORArticleToSchema() so enrichArticleFromUrl()
-        // is never called for articles that will be discarded anyway.
         if (isTORArticleFromSkippedSource_(articles[i])) {
           stats.duplicatesSkipped++;
           ingestedIds.push(articles[i].id);
@@ -403,8 +402,6 @@ function ingestFromTheOldReader() {
           ingestedIds.push(articles[i].id);
           continue;
         }
-        // Finance filter disabled — curate by removing feeds from OPML instead.
-        // if (isFastFinanceFiltered_(articles[i])) { stats.duplicatesSkipped++; ingestedIds.push(articles[i].id); continue; }
         // ── Basic mapping (no HTTP) — used for all remaining filtering & dedup ──
         var basic = mapTORArticleBasic_(articles[i]);
         if (isNoisyArticle_(basic)) {
@@ -412,8 +409,6 @@ function ingestFromTheOldReader() {
           ingestedIds.push(articles[i].id);
           continue;
         }
-        // Finance filter disabled — curate by removing feeds from OPML instead.
-        // if (isFinanceFiltered_(basic)) { stats.duplicatesSkipped++; ingestedIds.push(articles[i].id); continue; }
         var duplicateResult = reviewDuplicateRecord_(basic);
         if (duplicateResult.error) {
           stats.errors++;
@@ -426,10 +421,11 @@ function ingestFromTheOldReader() {
         if (duplicateResult.duplicate) {
           stats.duplicatesSkipped++;
           ingestedIds.push(articles[i].id);
+          // Add to in-memory cache so any later same-run occurrence is caught instantly
+          addToFastDedupCache_(basic.url, basic.title);
           Logger.log("TOR: exact duplicate skipped — " + (basic.title || basic.url));
           continue;
         }
-        // ── HTTP enrichment — only runs for genuinely new articles ────────────
         var record = enrichTORArticle_(basic);
         if (duplicateResult.possibleDuplicate) {
           record = markRecordAsDuplicateReview_(record, duplicateResult);
@@ -439,12 +435,26 @@ function ingestFromTheOldReader() {
           stats.articlesInserted++;
           logToAuditTrail(record.source, record.url, record.title, duplicateResult.possibleDuplicate ? 'possible_duplicate' : 'ingested', null);
           ingestedIds.push(articles[i].id);
+          // CRITICAL: add inserted article to fast dedup cache so a re-occurrence
+          // later in the SAME run (e.g. same story from two feeds) is caught.
+          addToFastDedupCache_(record.url, record.title);
         } else {
           stats.errors++;
         }
       } catch(e) {
         Logger.log("TOR article error [" + i + "]: " + e);
         stats.errors++;
+      }
+
+      // ── Incremental mark-read flush ───────────────────────────────────────
+      // Without this, a timeout mid-loop leaves articles inserted-but-not-marked-read.
+      // Next run, TOR returns them again, and they may slip past dedup if Supabase
+      // queries fail (quota, transient errors). Flushing every N articles keeps
+      // TOR's read state in sync with what we've actually processed.
+      if (ingestedIds.length >= INCREMENTAL_MARK_READ_AT) {
+        markTORArticlesAsRead(ingestedIds);
+        ingestedIds = [];
+        flushAuditTrailBatch_();
       }
     }
 
@@ -1581,8 +1591,13 @@ function reviewDuplicateRecord_(record) {
     var headers = {'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY};
     var url = cleanUrl(record.url || '');
     var resp;
+    var cacheWarm = (INGESTION_DEDUP_CACHE_ !== null);
 
-    if (url) {
+    // When cache is warm, isFastExactDuplicate_() already covered exact URL/title matches
+    // in the 30-day window. The Supabase URL/title queries below could only find articles
+    // OLDER than that window — rare for active TOR feeds, and not worth the urlfetch quota.
+    // Only fall through to Supabase queries when the cache failed to warm.
+    if (!cacheWarm && url) {
       resp = UrlFetchApp.fetch(
         CONFIG.SUPABASE_URL + '/rest/v1/articles?url=eq.' + encodeURIComponent(url)
         + '&select=id,source,title,url,summary,category,date_added,status,kept,archived&limit=1',
@@ -1605,34 +1620,39 @@ function reviewDuplicateRecord_(record) {
     var title = sanitizeText(normalizeTitleForDedupe(record.title), 250);
     if (!source || !title || !rawTitle) return { duplicate:false, possibleDuplicate:false };
 
-    // Use ilike (case-insensitive) so "I've Built..." matches "I'VE BUILT..." or
-    // "i ve built..." (apostrophes stripped by some RSS feeds). Escape % and _ first
-    // so they don't act as wildcards.
-    var ilikeTitle = rawTitle.replace(/%/g, '\\%').replace(/_/g, '\\_');
-    resp = UrlFetchApp.fetch(
-      CONFIG.SUPABASE_URL + '/rest/v1/articles?title=ilike.' + encodeURIComponent(ilikeTitle)
-      + '&select=id,source,title,url,summary,category,date_added,status,kept,archived&limit=25',
-      {headers: headers, muteHttpExceptions: true}
-    );
-    var exactTitleRows = JSON.parse(resp.getContentText()) || [];
-    var exactTitleMatch = findExactDuplicateCandidate_(record, exactTitleRows);
-    if (exactTitleMatch) {
-      return {
-        duplicate: true,
-        possibleDuplicate: false,
-        primary: exactTitleMatch,
-        reason: 'exact title match (case-insensitive)',
-        score: 0.98
-      };
+    if (!cacheWarm) {
+      var ilikeTitle = rawTitle.replace(/%/g, '\\%').replace(/_/g, '\\_');
+      resp = UrlFetchApp.fetch(
+        CONFIG.SUPABASE_URL + '/rest/v1/articles?title=ilike.' + encodeURIComponent(ilikeTitle)
+        + '&select=id,source,title,url,summary,category,date_added,status,kept,archived&limit=25',
+        {headers: headers, muteHttpExceptions: true}
+      );
+      var exactTitleRows = JSON.parse(resp.getContentText()) || [];
+      var exactTitleMatch = findExactDuplicateCandidate_(record, exactTitleRows);
+      if (exactTitleMatch) {
+        return {
+          duplicate: true,
+          possibleDuplicate: false,
+          primary: exactTitleMatch,
+          reason: 'exact title match (case-insensitive)',
+          score: 0.98
+        };
+      }
     }
 
     if (source === 'reddit') {
-      resp = UrlFetchApp.fetch(
-        CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id,source,title,url,summary,category,date_added,status,kept,archived&order=date_added.desc&limit=250',
-        {headers: headers, muteHttpExceptions: true}
-      );
-      var redditRows = JSON.parse(resp.getContentText()) || [];
-      var redditMatch = findExactDuplicateCandidate_(record, redditRows);
+      // Reuse the in-memory cache for Reddit too — was previously fetching 250 fresh rows per article
+      var redditCandidates = cacheWarm
+        ? INGESTION_DEDUP_CACHE_.filter(function(r){ return normalizeSourceForDedupe(r.source, r.url) === 'reddit'; })
+        : null;
+      if (!redditCandidates) {
+        resp = UrlFetchApp.fetch(
+          CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id,source,title,url,summary,category,date_added,status,kept,archived&order=date_added.desc&limit=250',
+          {headers: headers, muteHttpExceptions: true}
+        );
+        redditCandidates = JSON.parse(resp.getContentText()) || [];
+      }
+      var redditMatch = findExactDuplicateCandidate_(record, redditCandidates);
       if (redditMatch) {
         return {
           duplicate: true,
@@ -1685,10 +1705,22 @@ function findPossibleDuplicateCandidate_(record, headers) {
   }
   if (!rows.length) return null;
 
+  // Hoist incoming-article features OUT of the per-candidate loop.
+  // Previously these were recomputed for every candidate (up to 2000× per article).
+  var incomingSummary = cleanSummaryForDedupe_(record && record.summary || '');
+  var incomingFullText = (record && record.title || '') + ' ' + incomingSummary;
+  var incoming = {
+    url: cleanUrl(record && record.url || ''),
+    titleNorm: normalizeTitleForDedupe(record && record.title || ''),
+    titleTokens: dedupeTokens_(record && record.title || '', true),
+    topicTokens: dedupeTokens_(incomingFullText, false),
+    simhash: simhashText_(incomingFullText)
+  };
+
   var matches = rows.map(function(candidate) {
     if (!candidate || !candidate.id) return null;
     if (canonicalCategoryName_(candidate.category || '') === 'Duplicate') return null;
-    return scorePossibleDuplicateMatch_(record, candidate);
+    return scorePossibleDuplicateMatch_(record, candidate, incoming);
   }).filter(function(match) {
     return !!match;
   });
@@ -1705,32 +1737,39 @@ function findPossibleDuplicateCandidate_(record, headers) {
   return matches[0];
 }
 
-function scorePossibleDuplicateMatch_(record, candidate) {
-  var incomingUrl = cleanUrl(record && record.url || '');
+function scorePossibleDuplicateMatch_(record, candidate, incoming) {
+  // `incoming` is precomputed once per record by findPossibleDuplicateCandidate_.
+  // For backward compatibility (callers outside the TOR loop), fall back to per-call compute.
+  if (!incoming) {
+    var incomingSummary_ = cleanSummaryForDedupe_(record && record.summary || '');
+    var incomingFullText_ = (record && record.title || '') + ' ' + incomingSummary_;
+    incoming = {
+      url: cleanUrl(record && record.url || ''),
+      titleNorm: normalizeTitleForDedupe(record && record.title || ''),
+      titleTokens: dedupeTokens_(record && record.title || '', true),
+      topicTokens: dedupeTokens_(incomingFullText_, false),
+      simhash: simhashText_(incomingFullText_)
+    };
+  }
+
   var candidateUrl = cleanUrl(candidate && candidate.url || '');
-  if (incomingUrl && candidateUrl && incomingUrl === candidateUrl) return null;
+  if (incoming.url && candidateUrl && incoming.url === candidateUrl) return null;
 
-  var incomingTitle = normalizeTitleForDedupe(record && record.title || '');
   var candidateTitle = normalizeTitleForDedupe(candidate && candidate.title || '');
-  if (!incomingTitle || !candidateTitle) return null;
-  if (incomingTitle === candidateTitle) return null;
+  if (!incoming.titleNorm || !candidateTitle) return null;
+  if (incoming.titleNorm === candidateTitle) return null;
 
-  var incomingTitleTokens = dedupeTokens_(record && record.title || '', true);
   var candidateTitleTokens = dedupeTokens_(candidate && candidate.title || '', true);
-  var incomingTopicTokens = dedupeTokens_((record && record.title || '') + ' ' + cleanSummaryForDedupe_(record && record.summary || ''), false);
   var candidateTopicTokens = dedupeTokens_((candidate && candidate.title || '') + ' ' + cleanSummaryForDedupe_(candidate && candidate.summary || ''), false);
 
-  var titleStats = tokenOverlapStats_(incomingTitleTokens, candidateTitleTokens);
-  var topicStats = tokenOverlapStats_(incomingTopicTokens, candidateTopicTokens);
+  var titleStats = tokenOverlapStats_(incoming.titleTokens, candidateTitleTokens);
+  var topicStats = tokenOverlapStats_(incoming.topicTokens, candidateTopicTokens);
   var containment = Math.max(titleStats.leftCoverage, titleStats.rightCoverage);
   var minShared = Math.max(2, parseInt(CONFIG.DEDUPE_REVIEW.MIN_SHARED_TOKENS, 10) || 3);
 
-  // Simhash: compute 64-bit fingerprints for combined title+summary text
-  var incomingFullText = (record && record.title || '') + ' ' + cleanSummaryForDedupe_(record && record.summary || '');
   var candidateFullText = (candidate && candidate.title || '') + ' ' + cleanSummaryForDedupe_(candidate && candidate.summary || '');
-  var incomingSH  = simhashText_(incomingFullText);
   var candidateSH = simhashText_(candidateFullText);
-  var hdist = hammingDistance_(incomingSH, candidateSH);
+  var hdist = hammingDistance_(incoming.simhash, candidateSH);
 
   var score = Math.max(
     titleStats.jaccard * 0.85 + topicStats.jaccard * 0.15,
@@ -1771,16 +1810,20 @@ function scorePossibleDuplicateMatch_(record, candidate) {
   };
 }
 
+// Module-level so it isn't reallocated on every call (was reallocating thousands
+// of times per article in the fuzzy dedup loop).
+var DEDUPE_STOPWORDS_ = {
+  the:true, a:true, an:true, and:true, or:true, but:true, for:true, from:true, with:true,
+  into:true, onto:true, over:true, under:true, after:true, before:true, about:true, this:true,
+  that:true, these:true, those:true, your:true, their:true, his:true, her:true, our:true,
+  why:true, how:true, what:true, when:true, where:true, says:true, say:true, said:true,
+  just:true, new:true, now:true, more:true, most:true, less:true, than:true, then:true,
+  amid:true, amids:true, report:true, reports:true, according:true,
+  review:true, video:true, podcast:true, newsletter:true, email:true, watch:true, watches:true
+};
+
 function dedupeTokens_(text, titleOnly) {
-  var stopwords = {
-    the:true, a:true, an:true, and:true, or:true, but:true, for:true, from:true, with:true,
-    into:true, onto:true, over:true, under:true, after:true, before:true, about:true, this:true,
-    that:true, these:true, those:true, your:true, their:true, his:true, her:true, our:true,
-    why:true, how:true, what:true, when:true, where:true, says:true, say:true, said:true,
-    just:true, new:true, now:true, more:true, most:true, less:true, than:true, then:true,
-    into:true, amid:true, amid:true, amids:true, report:true, reports:true, according:true,
-    review:true, video:true, podcast:true, newsletter:true, email:true, watch:true, watches:true
-  };
+  var stopwords = DEDUPE_STOPWORDS_;
   return String(text || '')
     .toLowerCase()
     .replace(/[“”"']/g, '')
@@ -1965,6 +2008,23 @@ function isDuplicateBySourceId(sourceId) {
 function isTransientSupabaseError_(errorLike) {
   var text = String(errorLike || '');
   return /Address unavailable|timed out|Exception:\s*Service invoked too many times|Exception:\s*Request failed/i.test(text);
+}
+
+// Add a just-inserted (or just-confirmed-duplicate) article to the in-memory
+// fast dedup maps so any later occurrence in the same run is caught immediately
+// without a Supabase round-trip. Critical for cases where the same story shows
+// up from two feeds within a single ingestion batch.
+function addToFastDedupCache_(url, title) {
+  try {
+    if (url) {
+      var clean = cleanUrl(url);
+      if (clean) DEDUP_URL_MAP_[clean] = true;
+    }
+    if (title) {
+      var norm = normalizeTitleForDedupe(title).toLowerCase();
+      if (norm) DEDUP_TITLE_MAP_[norm] = true;
+    }
+  } catch(e) { /* never let cache update break ingestion */ }
 }
 
 // Warm the dedup candidate cache once per ingestion phase.

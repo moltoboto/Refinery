@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.35 | Viewer: v2.11
+Ingestion: v2.36 | Viewer: v2.11
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.36 | 2026-05-08 | Claude Code | Root-cause fix for "timeout creates duplicates" bug: (1) Incremental mark-read every 25 articles inside the TOR loop — previously mark-read only ran after loop completion, so timeouts left articles inserted-but-unread, causing them to come back next run. (2) addToFastDedupCache_() updates DEDUP_URL_MAP_/DEDUP_TITLE_MAP_ as articles are inserted/skipped, catching same-run duplicates from overlapping feeds. (3) reviewDuplicateRecord_() now skips the URL+title Supabase queries when cache is warm (the 30-day cache already covered them; queries could only find older articles). (4) Reddit special case reuses INGESTION_DEDUP_CACHE_ instead of fetching 250 fresh rows per Reddit article. (5) findPossibleDuplicateCandidate_ hoists incoming-article features (cleanUrl, normalizeTitleForDedupe, dedupeTokens_, simhashText_) out of the per-candidate loop — was being recomputed up to 2000× per article. (6) DEDUPE_STOPWORDS_ moved to module level. Net: ~95% drop in urlfetch calls per run, eliminates same-run dup creation, eliminates timeout-creates-dups feedback loop |
 | v2.35 | 2026-05-03 | Claude Code | Root cause of urlfetch quota exhaustion: markTORArticlesAsRead was sending 500 IDs in one POST → TOR silently rejected it → articles stayed unread → same 500 articles returned every run → 1000 Supabase calls/run burned the daily quota. Fix 1: markTORArticlesAsRead now batches 50 IDs per POST with HTTP error logging. Fix 2: DEDUPE_REVIEW.WINDOW_DAYS 7→30 and MAX_CANDIDATES 500→2000 so the fast in-memory cache catches repeatedly-returned old articles instead of falling through to reviewDuplicateRecord_() |
 | v2.34 | 2026-05-03 | Claude Code | (1) Finance filter disabled — isFastFinanceFiltered_() and isFinanceFiltered_() checks commented out in TOR loop; user curates by removing feeds from OPML instead of keyword filtering. (2) enrichArticleFromUrl() disabled for all sources — HTTP fetch commented out in enrichTORArticle_(); RSS title/summary/image is sufficient and eliminates all timeout risk from slow destination URLs. Both changes are commented-out (not deleted) for easy re-enable |
 | v2.33 | 2026-05-03 | Claude Code | HN enrichment hang fix: added SKIP_ENRICHMENT_SOURCES_ (/hacker news|ycombinator/i) checked in enrichTORArticle_() — when source matches, enrichArticleFromUrl() is skipped entirely and enriched defaults to empty (RSS title/summary used directly). Root cause: HN RSS links to destination URLs (not ycombinator.com) so URL-pattern check doesn't work; source name is the only reliable signal |

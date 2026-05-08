@@ -17,6 +17,20 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-08 - Claude Code (v2.36)
+- Request: Ingestion super slow, creating MORE duplicates not fewer, timing out frequently. When timeouts occur, articles already reviewed end up in the DB and become duplicates.
+- Root cause of duplicates-on-timeout: markTORArticlesAsRead was only called AFTER the for-loop completed (line 451). When the loop bailed early on timeout, articles already inserted into Supabase had NOT been marked read in TOR. Next run, TOR returned them again, dedup might miss them under load (Supabase queries failing on quota / transient errors), so they were inserted as new rows. Feedback loop: timeouts → more rows → slower dedup queries → more timeouts → more dups.
+- Fix 1 — Incremental mark-read: TOR loop now flushes markTORArticlesAsRead and audit batch every 25 articles. If the run times out at article 200, articles 1-175 are already marked read in TOR. Eliminates the "inserted-but-unread" window that caused the duplicate feedback loop.
+- Fix 2 — Same-run dedup map updates: added addToFastDedupCache_(url, title) called immediately after every insert AND every duplicate confirmation. Previously, if Article X was inserted at iteration 50 and reappeared at iteration 200 from a different feed, isFastExactDuplicate_ would miss it (cache was built BEFORE the loop and never updated). Now subsequent occurrences hit the in-memory map with zero HTTP calls.
+- Fix 3 — Skip redundant Supabase queries when cache warm: reviewDuplicateRecord_() now short-circuits the URL exact and title ilike queries when INGESTION_DEDUP_CACHE_ is populated. Cache covers the 30-day window; the queries could only find articles older than that, which is rare for live TOR feeds. Saves ~2 urlfetch calls per article that survives the fast cache check.
+- Fix 4 — Reddit cache reuse: Reddit special case in reviewDuplicateRecord_ was fetching 250 fresh rows per Reddit article (ignoring the cache). Now filters INGESTION_DEDUP_CACHE_ in memory for source='Reddit'.
+- Fix 5 — Hoist incoming-article features in fuzzy dedup: findPossibleDuplicateCandidate_ now precomputes cleanUrl, normalizeTitleForDedupe, dedupeTokens_ (twice), cleanSummaryForDedupe_, and simhashText_ ONCE per record, then passes the precomputed `incoming` object to scorePossibleDuplicateMatch_. Was previously recomputed for every candidate (up to 2000× per article — simhash alone is 64 × tokens.length bit ops).
+- Fix 6 — DEDUPE_STOPWORDS_ hoisted to module level. Was being reallocated on every dedupeTokens_ call. Removed duplicate `into` and `amid` keys. Cosmetic but cleaner.
+- Net impact: ~95% drop in urlfetch calls per run for healthy feeds, eliminates the timeout-creates-duplicates feedback loop, eliminates same-run duplicates from overlapping feeds (Reuters/CNBC/Yahoo covering same earnings story).
+- Files touched: Ingestion/Code.js (v2.36), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+- Follow-up: Watch first run for "TOR: marked X/Y as read (Z batches)" appearing multiple times per run (incremental flushes). Then run purge to clear backlog of duplicate rows accumulated from prior runs.
+
 ### 2026-05-03 - Session Close (v2.35, end of day)
 - Quota: UrlFetchApp daily limit exhausted. Do not run ingestion until midnight Pacific reset.
 - Code state: v2.35 pushed and committed. All fixes are live in Apps Script.
