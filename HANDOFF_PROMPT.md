@@ -37,9 +37,11 @@ C:\Users\exact\Refinery\
 
 ### Push commands
 ```bash
-cd C:\Users\exact\Refinery\Viewer && clasp push --force
-cd C:\Users\exact\Refinery\Ingestion && clasp push --force
+cd C:\Users\exact\Refinery\Ingestion && npx --yes @google/clasp push
+cd C:\Users\exact\Refinery\Viewer    && npx --yes @google/clasp push
 ```
+Viewer changes also need an Apps Script redeploy (pencil → New version → Deploy).
+Ingestion is push-only, no redeploy needed.
 
 **Note: Codex cannot push directly to Apps Script or edit Google Drive files.
 Claude Code (this tool) pushes via clasp. Working docs must be manually uploaded to Google Drive.**
@@ -55,24 +57,52 @@ Claude Code (this tool) pushes via clasp. Working docs must be manually uploaded
 
 ---
 
-## PASTE THIS TO START ANY LLM SESSION
+## PASTE THIS TO START ANY CLAUDE SESSION
 
 ```
 You are working on Refinery, a personal news reader built on Google Apps Script + Supabase.
 
-All source files are at C:\Users\exact\Refinery\ on P16.
-- Viewer app: C:\Users\exact\Refinery\Viewer\
+Source files at C:\Users\exact\Refinery\
+- Viewer app:    C:\Users\exact\Refinery\Viewer\
 - Ingestion app: C:\Users\exact\Refinery\Ingestion\
-- Working docs: C:\Users\exact\Refinery\
+- Working docs:  C:\Users\exact\Refinery\
 
-Read CONTEXT.md and the 2 most recent AUDIT_TRAIL.md entries before doing anything.
-Do not touch anything in the "Do Not Touch" section of CONTEXT.md.
-Push changes via: cd C:\Users\exact\Refinery\Viewer && clasp push --force
+Before doing anything:
+  1. Read CONTEXT.md (current version + change log)
+  2. Read the 2 most recent entries in AUDIT_TRAIL.md
+  3. Read the relevant Code.js section before editing
 
-Current versions: Ingestion v2.12 | Viewer v2.8
+Push commands:
+  cd C:\Users\exact\Refinery\Ingestion && npx --yes @google/clasp push
+  cd C:\Users\exact\Refinery\Viewer    && npx --yes @google/clasp push
+  Viewer ALSO needs Apps Script redeploy (pencil → New version → Deploy).
+  Ingestion is push-only, no deploy step.
+
+After every meaningful change:
+  - Append an AUDIT_TRAIL.md entry
+  - git add -A && git commit -m "vX.Y - summary" && git push
 
 Today's task: [DESCRIBE TASK HERE]
 ```
+
+---
+
+## SWITCHING BETWEEN CLAUDE ACCOUNTS (Pro ↔ Team)
+
+Both accounts share this machine's filesystem, git config, clasp auth, and browser
+sessions — no setup needed. Just:
+
+1. In claude.ai sidebar, switch from one account to the other.
+2. Open a fresh Claude Code chat in the new account.
+3. Paste the block above as the first message.
+
+The new chat will read CONTEXT.md and the latest AUDIT_TRAIL.md entries and pick
+up exactly where the previous account left off. Both accounts can edit files,
+run clasp, and push to GitHub on this same project — the only thing that changes
+is which Claude conversation is remembering it.
+
+**Avoid:** running edits from both accounts simultaneously on the same file. The
+last writer wins and the other account won't know its read was stale.
 
 ---
 
