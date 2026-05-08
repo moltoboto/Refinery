@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.43 | Viewer: v2.11
+Ingestion: v2.44 | Viewer: v2.11
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.44 | 2026-05-08 | Claude Code | Renamed remaining long category names: 'Top Story' → 'News', 'Resources' → 'Learning'. canonicalCategoryName_ legacy folds added so existing rows display correctly until backfill (top story/top stories → News, resources/resource → Learning, learning skills/learning & skills → Learning). Run applySourceCategoryBackfill() to retag |
 | v2.43 | 2026-05-08 | Claude Code | Renamed long category names to match TOR folders: 'AI & LLMs' → 'AI', 'Tech & Trends' → 'Tech'. Updated CATEGORY_OPTIONS, CATEGORY_SOURCE_MAP, TOR_FOLDER_CATEGORY_MAP, isKnownCategory_, detectCategory return values. canonicalCategoryName_ keeps legacy mappings ('ai llms'/'ai & llms' → 'AI', 'tech trends'/'tech & trends' → 'Tech') so existing DB rows fold correctly when backfill runs. Run applySourceCategoryBackfill() to retag |
 | v2.42 | 2026-05-08 | Claude Code | Folder-driven categorization. Added TOR_FOLDER_CATEGORY_MAP (TOR folder label → Refinery category). extractTORFolders_(article) parses 'user/-/label/<Folder>' from article.categories. categoryFromTORFolder_() consults the map. normalizeCategory now takes optional torFolders param checked AFTER per-source mapping but BEFORE URL pattern and keyword detection. mapTORArticleBasic_ extracts folders into basic._torFolders; enrichTORArticle_ passes them through. Also dropped categories not in TOR: removed 'Policy & Society', 'Dev Tools', 'Research', 'Strategy' from CATEGORY_OPTIONS and isKnownCategory_. canonicalCategoryName_ folds legacy values into closest current category (policy→Top Story, dev tools→Tech & Trends, research→Tech & Trends, strategy→Resources). detectCategory simplified to drop the 4 retired keyword paths. CATEGORY_SOURCE_MAP: stratechery.com 'Strategy' → 'Resources'. Run applySourceCategoryBackfill() to retag existing articles |
 | v2.41 | 2026-05-08 | Claude Code | Cleanup pass: (1) Consolidated 4 date-specific purge functions into 2 generic ones — `previewPurgeBeforeDate(dateString)` and `purgeBeforeDate(dateString)`. Deleted previewPurgeArticlesBeforeApril2026, purgeArticlesBeforeApril2026, previewPurgeBeforeApr15, purgeBeforeApr15. (2) Removed dead code: mapTORArticleToSchema (only caller was testTORDryRun, redirected to mapTORArticleBasic_), hasDuplicateCandidate_ (zero callers), runEmail (one-line wrapper), SKIP_ENRICHMENT_SOURCES_ var (only referenced in commented-out block). (3) Simplified enrichTORArticle_ — removed the dead-code block referencing the disabled enrichArticleFromUrl path; function now just builds the final record from RSS data. (4) Fixed stale comment referencing deleted mapTORArticleToSchema |

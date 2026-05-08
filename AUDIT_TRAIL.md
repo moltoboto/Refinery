@@ -17,6 +17,14 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-08 - Claude Code (v2.44 — second rename pass)
+- Request: Also shorten 'Top Story' → 'News' and 'Resources' → 'Learning' to match TOR folder names exactly.
+- Bulk-replaced both throughout. Added legacy fold rows in canonicalCategoryName_: 'top story', 'top stories' → 'News'; 'resources', 'resource', 'learning skills', 'learning & skills' → 'Learning'. Pre-existing 'strategy' → 'Resources' fold flipped to 'Learning'.
+- Final 10-category set: News, AI, Finance, Learning, Tech, Watches, YouTube, Reddit, Email, Duplicate.
+- Files touched: Ingestion/Code.js (v2.44), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+- Follow-up: Run applySourceCategoryBackfill() in Apps Script editor to retag existing rows.
+
 ### 2026-05-08 - Claude Code (v2.43 — shorter category names)
 - Request: Long category names ('AI & LLMs', 'Tech & Trends') don't match TOR folder names. Use the same short names TOR uses.
 - Renames: `AI & LLMs` → `AI`, `Tech & Trends` → `Tech`. Bulk-replaced across CATEGORY_SOURCE_MAP, TOR_FOLDER_CATEGORY_MAP, CATEGORY_OPTIONS, isKnownCategory_, detectCategory return values.

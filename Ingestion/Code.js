@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.43
+ * Version: 2.44
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -101,12 +101,12 @@ var CATEGORY_SOURCE_MAP = {
   'venturebeat.com': 'AI',
 
   // News
-  'bbci.co.uk/news': 'Top Story',
-  'nytimes.com': 'Top Story',
-  'reuters.com': 'Top Story',
-  'foxnews.com': 'Top Story',
-  'news.google.com': 'Top Story',
-  'news.yahoo.com': 'Top Story',
+  'bbci.co.uk/news': 'News',
+  'nytimes.com': 'News',
+  'reuters.com': 'News',
+  'foxnews.com': 'News',
+  'news.google.com': 'News',
+  'news.yahoo.com': 'News',
 
   // Finance
   'cnbc.com': 'Finance',
@@ -126,9 +126,9 @@ var CATEGORY_SOURCE_MAP = {
   'ycombinator.com': 'Tech',
 
   // Learning & Skills
-  'stratechery.com': 'Resources',
-  'dailystoic.com': 'Resources',
-  'natesnewsletter.substack.com': 'Resources'
+  'stratechery.com': 'Learning',
+  'dailystoic.com': 'Learning',
+  'natesnewsletter.substack.com': 'Learning'
 };
 
 // TOR folder labels → Refinery categories. The folder is the user's organizational
@@ -138,18 +138,18 @@ var TOR_FOLDER_CATEGORY_MAP = {
   'ai': 'AI',
   'essential watches': 'Watches',
   'finance': 'Finance',
-  'learning & skills': 'Resources',
-  'news': 'Top Story',
+  'learning & skills': 'Learning',
+  'news': 'News',
   'reddit': 'Reddit',
   'tech': 'Tech',
   'youtube': 'YouTube'
 };
 
 var CATEGORY_OPTIONS = [
-  'Top Story',
+  'News',
   'AI',
   'Finance',
-  'Resources',
+  'Learning',
   'Tech',
   'Watches',
   'YouTube',
@@ -1310,23 +1310,31 @@ function canonicalCategoryName_(value) {
     .trim();
 
   var map = {
-    'news': 'Top Story',
-    'top story': 'Top Story',
-    'top stories': 'Top Story',
+    // Renamed categories — fold legacy long-form names into current short names.
+    'news': 'News',
+    'top story': 'News',
+    'top stories': 'News',
+    'resources': 'Learning',
+    'resource': 'Learning',
+    'learning': 'Learning',
+    'learning skills': 'Learning',
+    'learning & skills': 'Learning',
     'watch': 'Watches',
     'watches': 'Watches',
     'video': 'YouTube',
     'youtube': 'YouTube',
+    'ai': 'AI',
     'ai llms': 'AI',
     'ai & llms': 'AI',
+    'tech': 'Tech',
     'tech trends': 'Tech',
     'tech & trends': 'Tech',
-    // Legacy categories that have been retired — fold into closest current category
-    'policy society': 'Top Story',
-    'policy & society': 'Top Story',
+    // Retired categories — fold into closest current category
+    'policy society': 'News',
+    'policy & society': 'News',
     'dev tools': 'Tech',
     'research': 'Tech',
-    'strategy': 'Resources',
+    'strategy': 'Learning',
     'duplicate': 'Duplicate',
     'duplicates': 'Duplicate'
   };
@@ -1337,10 +1345,10 @@ function canonicalCategoryName_(value) {
 
 function isKnownCategory_(value) {
   return [
-    'Top Story',
+    'News',
     'AI',
     'Finance',
-    'Resources',
+    'Learning',
     'Tech',
     'Watches',
     'YouTube',
@@ -2185,9 +2193,9 @@ function detectCategory(title, summary, source, url) {
   if (t.match(/youtube|youtu\.be/)) return 'YouTube';
   if (t.match(/watchmaking|horology|timepiece|timepieces|patek|rolex|omega|seiko|chronograph|hodinkee|worn.?wound|ablogtowatch|fratello|monochrome|audemars|breitling|cartier|jaeger|iwc|hublot/)) return 'Watches';
   if (t.match(/\bai\b|llm|gpt|claude|gemini|chatgpt|openai|anthropic|deepseek|qwen|mistral|ollama|copilot|diffusion|transformer|multimodal|foundation model/)) return 'AI';
-  if (t.match(/tutorial|how.?to|cheat sheet|step.?by.?step/)) return 'Resources';
+  if (t.match(/tutorial|how.?to|cheat sheet|step.?by.?step/)) return 'Learning';
   if (t.match(/stock|market|earnings|valuation|ipo|funding|unicorn|venture|finance|trading|macro|fed|treasury|dealbook/)) return 'Finance';
-  if (t.match(/breaking|acquisition|merger|crisis|war|election|top story|headline/)) return 'Top Story';
+  if (t.match(/breaking|acquisition|merger|crisis|war|election|top story|headline/)) return 'News';
   if (t.match(/email|newsletter/)) return 'Email';
   return 'Tech';
 }
