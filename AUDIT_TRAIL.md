@@ -17,6 +17,17 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-08 - Claude Code (v2.38)
+- Request: Cap article storage at 3000 rows. Always preserve kept=true and all Drive artifacts.
+- Implementation: trimArticlesToCapacity(targetOverride) — counts non-kept/non-deleted rows using Supabase Content-Range header (HEAD-style with Prefer:count=exact). If over cap, fetches oldest excess by date_added asc and soft-deletes via PATCH with id=in.(...) filter. kept=eq.false safety filter included on PATCH so kept=true rows are double-protected.
+- Cost: 1 urlfetch when at/under cap (typical), 3 when over.
+- Wired into runDailyIngestion() as a third phase after TOR + Gmail. Also a public function (manual run / one-shot trim).
+- Drive artifacts: unaffected — separate storage, no purge code touches them.
+- CONFIG.MAX_ARTICLES = 3000. Set to 0 to disable.
+- Note: at current 800 articles, the trim is a no-op. User will see one log line "RETENTION: 800 active rows / 3000 cap" and no deletes. Will start trimming when collection grows past 3000.
+- Files touched: Ingestion/Code.js (v2.38), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+
 ### 2026-05-08 - Claude Code (v2.37)
 - Request: Too many articles from MotleyFool (and previously Seeking Alpha). User wants stock info but ONLY for portfolio tickers, not the broad market chatter MotleyFool floods with.
 - Why the old finance filter (v2.28-v2.34) was the wrong tool: the allowlist included macro/sector keywords (`earnings`, `market`, `fed`, `wall street`, `nasdaq`, `dividend`, `pharma`) which match basically every MotleyFool article. The result was that the filter let everything through, so we disabled it.

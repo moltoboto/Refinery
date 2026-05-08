@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.37
+ * Version: 2.38
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -55,7 +55,13 @@ var CONFIG = {
     MAX_CANDIDATES: 2000, // Extended from 500 — covers the backlog of repeatedly-returned articles
     MIN_SCORE: 0.66,
     MIN_SHARED_TOKENS: 3
-  }
+  },
+
+  // Rolling retention cap. Anything beyond this gets soft-deleted oldest-first.
+  // kept=true rows are excluded from the count AND protected from deletion.
+  // Drive artifacts are untouched (separate storage).
+  // Set to 0 to disable.
+  MAX_ARTICLES: 3000
 };
 
 var CATEGORY_SOURCE_MAP = {
@@ -297,13 +303,15 @@ function runDailyIngestion() {
   // Runs both phases sequentially. If timing out, switch to separate triggers:
   //   runTORIngestionOnly()   — schedule every N hours
   //   runGmailIngestionOnly() — schedule offset by a few minutes
-  var report = { timestamp: new Date().toISOString(), phase1_tor: {}, phase3_gmail: {} };
+  var report = { timestamp: new Date().toISOString(), phase1_tor: {}, phase3_gmail: {}, retention: {} };
   Logger.log("=== REFINERY DAILY INGESTION START === " + report.timestamp);
   try {
     Logger.log("\n--- PHASE 1: The Old Reader ---");
     report.phase1_tor = ingestFromTheOldReader();
     Logger.log("\n--- PHASE 3: Gmail ---");
     report.phase3_gmail = ingestGmailTwoTier();
+    Logger.log("\n--- RETENTION TRIM ---");
+    report.retention = trimArticlesToCapacity();
   } catch (e) {
     Logger.log("FATAL ERROR: " + e);
     report.error = e.toString();
@@ -311,6 +319,91 @@ function runDailyIngestion() {
   Logger.log("\n=== COMPLETE ===\n" + JSON.stringify(report, null, 2));
   return report;
 }
+
+// ─── ROLLING RETENTION CAP ────────────────────────────────────────────────────
+// Soft-deletes the oldest non-kept articles when total exceeds CONFIG.MAX_ARTICLES.
+// Run automatically at the end of runDailyIngestion(); also callable manually.
+//   - kept=true rows: excluded from count, never deleted
+//   - status='deleted' rows: excluded from count (already on death row)
+//   - Drive artifacts: not touched (separate storage)
+// Subsequent hardPurgeDeletedArticles() permanently removes them.
+function trimArticlesToCapacity(targetOverride) {
+  var target = parseInt(targetOverride != null ? targetOverride : CONFIG.MAX_ARTICLES, 10);
+  if (!target || target <= 0) {
+    Logger.log("RETENTION: disabled (MAX_ARTICLES=" + target + ")");
+    return { skipped: true, reason: 'disabled' };
+  }
+
+  var headers = {
+    'apikey': CONFIG.SUPABASE_API_KEY,
+    'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY,
+    'Prefer': 'count=exact'
+  };
+
+  try {
+    // 1. Count non-kept, non-deleted rows (HEAD-style — count comes back in Content-Range header)
+    var countResp = UrlFetchApp.fetch(
+      CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id&kept=eq.false&status=neq.deleted&limit=1',
+      { method: 'get', headers: headers, muteHttpExceptions: true }
+    );
+    var range = countResp.getHeaders()['Content-Range'] || countResp.getHeaders()['content-range'] || '';
+    var totalMatch = range.match(/\/(\d+)$/);
+    var total = totalMatch ? parseInt(totalMatch[1], 10) : NaN;
+    if (isNaN(total)) {
+      Logger.log("RETENTION: could not read row count from Content-Range: " + range);
+      return { error: 'count_failed' };
+    }
+
+    Logger.log("RETENTION: " + total + " active rows / " + target + " cap");
+
+    if (total <= target) {
+      return { total: total, target: target, trimmed: 0 };
+    }
+
+    // 2. Fetch IDs of the oldest (total - target) rows
+    var trimCount = total - target;
+    var idsResp = UrlFetchApp.fetch(
+      CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id'
+        + '&kept=eq.false&status=neq.deleted'
+        + '&order=date_added.asc'
+        + '&limit=' + encodeURIComponent(trimCount),
+      { method: 'get',
+        headers: { 'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY },
+        muteHttpExceptions: true }
+    );
+    var rows = JSON.parse(idsResp.getContentText()) || [];
+    if (!rows.length) {
+      Logger.log("RETENTION: no candidate rows returned");
+      return { total: total, target: target, trimmed: 0 };
+    }
+
+    var ids = rows.map(function(r) { return r.id; }).filter(function(id) { return id != null; });
+    if (!ids.length) return { total: total, target: target, trimmed: 0 };
+
+    // 3. Soft-delete via PATCH with id=in.(...) filter
+    var patchUrl = CONFIG.SUPABASE_URL + '/rest/v1/articles?id=in.(' + ids.join(',') + ')&kept=eq.false';
+    var patchResp = UrlFetchApp.fetch(patchUrl, {
+      method: 'patch',
+      contentType: 'application/json',
+      headers: { 'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY, 'Prefer': 'return=minimal' },
+      payload: JSON.stringify({ status: 'deleted' }),
+      muteHttpExceptions: true
+    });
+    var code = patchResp.getResponseCode();
+    if (code >= 400) {
+      Logger.log("RETENTION: PATCH error " + code + " — " + patchResp.getContentText().substring(0, 200));
+      return { total: total, target: target, trimmed: 0, error: 'patch_failed', code: code };
+    }
+
+    Logger.log("RETENTION: soft-deleted " + ids.length + " oldest rows (run hardPurgeDeletedArticles() to permanently remove)");
+    return { total: total, target: target, trimmed: ids.length };
+
+  } catch(e) {
+    Logger.log("RETENTION: error — " + e);
+    return { error: String(e) };
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Run TOR ingestion only — use as a standalone time trigger to give TOR its own
 // 6-minute Apps Script window, independent of Gmail.
