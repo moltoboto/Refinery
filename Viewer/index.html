@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.11</title>
+<title>Refinery V2.12</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -432,6 +432,28 @@ aside {
   flex-direction: column;
 }
 
+/* ── Layout toggle states (persisted in localStorage) ──────────────────────
+   - body.no-reading-pane → reading pane hidden, list-pane fills the space
+   - body.nav-icons       → left nav collapsed to icons (recovers ~190px)
+   - body.compact-density → tighter padding/line-height for more cards on screen
+   Active toggles get an .active class on the button via JS. */
+body.no-reading-pane .reading-pane { display: none; }
+body.no-reading-pane .list-pane    { width: auto; flex: 1; border-right: none; }
+
+body.nav-icons aside           { width: 60px; }
+body.nav-icons .nav-label,
+body.nav-icons .sidebar-section,
+body.nav-icons .nav-count       { display: none; }
+body.nav-icons .nav-item        { justify-content: center; padding: 8px 0; gap: 0; }
+body.nav-icons .nav-icon        { width: auto; font-size: 18px; }
+
+body.compact-density .nav-item            { padding: 5px 16px; font-size: 12.5px; }
+body.compact-density .article-card,
+body.compact-density .list-item           { padding: 8px 14px; }
+body.compact-density .reading-content     { padding: 14px 24px; }
+body.compact-density .article-summary,
+body.compact-density .summary-text        { line-height: 1.4; font-size: 12.5px; }
+
 .reading-empty {
   flex: 1;
   display: flex;
@@ -831,7 +853,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.11
+    Refinery V2.12
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -847,7 +869,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.11
+      Refinery V2.12
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -861,6 +883,9 @@ kbd {
       <button class="chip active" id="searchScopeView" onclick="setSearchScope('view')">Current view</button>
       <button class="chip" id="searchScopeAll" onclick="setSearchScope('all')">All loaded</button>
       <button class="chip" id="unreadChip" onclick="toggleUnread()">Unread only</button>
+      <button class="chip" id="toggleNavBtn"     onclick="toggleNav()"     title="Collapse left nav">Nav</button>
+      <button class="chip" id="toggleReadingBtn" onclick="toggleReading()" title="Hide reading pane">Reading</button>
+      <button class="chip" id="toggleDensityBtn" onclick="toggleDensity()" title="Compact density">Compact</button>
       <button class="chip" onclick="refreshAll()"> Refresh</button>
     </div>
   </header>
@@ -1016,21 +1041,17 @@ const CATEGORY_MAP = {
   };
 
 const CATEGORIES = [
-  { key: 'Top Story', emoji: '' },
-  { key: 'AI & LLMs', emoji: '' },
+  { key: 'News', emoji: '' },
+  { key: 'AI', emoji: '' },
   { key: 'Finance', emoji: '' },
-  { key: 'Resources', emoji: '' },
-  { key: 'Tech & Trends', emoji: '' },
-  { key: 'Policy & Society', emoji: '' },
-  { key: 'Dev Tools', emoji: '' },
-  { key: 'Research', emoji: '' },
-  { key: 'Strategy', emoji: '' },
+  { key: 'Learning', emoji: '' },
+  { key: 'Tech', emoji: '' },
   { key: 'Watches', emoji: '' },
-    { key: 'YouTube', emoji: '' },
-    { key: 'Reddit', emoji: '' },
-    { key: 'Email', emoji: '' },
-    { key: 'Duplicate', emoji: '' }
-  ];
+  { key: 'YouTube', emoji: '' },
+  { key: 'Reddit', emoji: '' },
+  { key: 'Email', emoji: '' },
+  { key: 'Duplicate', emoji: '' }
+];
 
 window.addEventListener('load', function() {
   updateUnreadChip();
@@ -1815,6 +1836,35 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+
+// ── Layout toggles ─────────────────────────────────────────────────────────
+// Three independent body-class toggles, each persisted in localStorage so the
+// choice sticks across reloads (and per-device, since localStorage is per-browser).
+var LAYOUT_PREFS_ = [
+  { key: 'no-reading-pane', storageKey: 'refinery.hideReadingPane', btnId: 'toggleReadingBtn' },
+  { key: 'nav-icons',       storageKey: 'refinery.iconsNav',        btnId: 'toggleNavBtn' },
+  { key: 'compact-density', storageKey: 'refinery.compactDensity',  btnId: 'toggleDensityBtn' }
+];
+
+function applyLayoutPref_(pref) {
+  var on = localStorage.getItem(pref.storageKey) === '1';
+  document.body.classList.toggle(pref.key, on);
+  var btn = document.getElementById(pref.btnId);
+  if (btn) btn.classList.toggle('active', on);
+}
+
+function toggleLayoutPref_(pref) {
+  var next = localStorage.getItem(pref.storageKey) !== '1';
+  localStorage.setItem(pref.storageKey, next ? '1' : '0');
+  applyLayoutPref_(pref);
+}
+
+function toggleReading() { toggleLayoutPref_(LAYOUT_PREFS_[0]); }
+function toggleNav()     { toggleLayoutPref_(LAYOUT_PREFS_[1]); }
+function toggleDensity() { toggleLayoutPref_(LAYOUT_PREFS_[2]); }
+
+// Apply saved prefs on first paint
+LAYOUT_PREFS_.forEach(applyLayoutPref_);
 
 let navBusy = false;
 document.addEventListener('keydown', function(e) {

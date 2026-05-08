@@ -17,6 +17,17 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-08 - Claude Code (Viewer v2.12 — layout toggles + category sync)
+- Request: iPad landscape ergonomics — let user toggle the reading pane off (cards already contain same content), collapse the left nav, and pick comfortable vs compact density. Also sync category nav to Ingestion v2.44.
+- Implementation:
+  1. Three new chips in the header (`Reading`, `Nav`, `Compact`). Each flips a body class via toggleReading/toggleNav/toggleDensity and persists to localStorage so the choice sticks across reloads. LAYOUT_PREFS_ array drives the on-load hydration.
+  2. CSS body classes: `body.no-reading-pane` hides the reading pane and lets list-pane flex to fill. `body.nav-icons` shrinks aside to 60px and hides labels/sections/counts. `body.compact-density` tightens padding and font-size on nav-item/article-card/reading-content/summaries.
+  3. CATEGORIES const reduced from 14 to 10 entries (News, AI, Finance, Learning, Tech, Watches, YouTube, Reddit, Email, Duplicate). Drops legacy Top Story/AI & LLMs/Tech & Trends/Resources/Policy & Society/Dev Tools/Research/Strategy.
+- Version bumped in 5 locations (3 in index.html — title, 2 logos; 2 in Code.js — header comment, setTitle).
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
+- Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
+
 ### 2026-05-08 - Claude Code (v2.44 — second rename pass)
 - Request: Also shorten 'Top Story' → 'News' and 'Resources' → 'Learning' to match TOR folder names exactly.
 - Bulk-replaced both throughout. Added legacy fold rows in canonicalCategoryName_: 'top story', 'top stories' → 'News'; 'resources', 'resource', 'learning skills', 'learning & skills' → 'Learning'. Pre-existing 'strategy' → 'Resources' fold flipped to 'Learning'.
