@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.40
+ * Version: 2.41
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -178,8 +178,8 @@ function isNoisyArticle_(record) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── SOURCE-LEVEL SKIP LIST ───────────────────────────────────────────────────
-// Checked against article.origin.title and the article URL BEFORE mapTORArticleToSchema()
-// runs — avoids the enrichArticleFromUrl() HTTP fetch entirely for known bad sources.
+// Checked against article.origin.title and the article URL BEFORE mapTORArticleBasic_()
+// runs — articles are skipped with zero processing for known bad sources.
 // Use this for feeds that are still in TOR but should be fully ignored
 // (e.g. Google News while waiting for it to be removed from TOR).
 var SKIP_SOURCE_PATTERNS = [
@@ -435,10 +435,6 @@ function runGmailIngestionOnly() {
 
 // Ã¢â€â‚¬Ã¢â€â‚¬ PHASE 1: TOR Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
-function runEmail(limit, offset) {
-  return runEmailSummaryCleanup(limit, offset);
-}
-
 function ingestFromTheOldReader() {
   var stats = { unreadCount:0, articlesProcessed:0, articlesInserted:0, duplicatesSkipped:0, errors:0 };
   var startedAt = Date.now();
@@ -655,23 +651,15 @@ function mapTORArticleBasic_(article) {
   };
 }
 
-// Sources whose destination URLs can hang UrlFetchApp indefinitely.
-// HN RSS links to arbitrary third-party sites — skip HTTP enrichment for these sources.
-var SKIP_ENRICHMENT_SOURCES_ = /hacker news|ycombinator/i;
-
-// Phase 2: HTTP enrichment — called ONLY for articles that passed all filters and dedup.
-// Fetches og:title, og:description, og:image from the article URL.
+// Phase 2: build the final Supabase record from the basic mapping.
+// HTTP enrichment via enrichArticleFromUrl() is intentionally disabled here —
+// any slow destination URL could hang UrlFetchApp; RSS title/summary/image
+// is sufficient for all categories. Gmail tier still uses enrichArticleFromUrl().
 function enrichTORArticle_(basic) {
-  // HTTP enrichment disabled — eliminates all timeout risk from slow/unresponsive destination URLs.
-  // RSS title, summary, and image are sufficient. Re-enable selectively if needed.
-  // if (!SKIP_ENRICHMENT_SOURCES_.test(String(basic.source || ''))) {
-  //   enriched = enrichArticleFromUrl(basic.url, basic._rawTitle);
-  // }
-  var enriched = { title: '', summary: '', imageUrl: '' };
-  var imageUrl = basic._rssImageUrl || enriched.imageUrl || '';
-  var finalTitle = sanitizeText(enriched.title || basic.title, 250);
+  var imageUrl = basic._rssImageUrl || '';
+  var finalTitle = basic.title;
   var rssSummary = basic.summary;
-  var finalSummary = finalizeSummaryForRecord_(enriched.summary || rssSummary, '', basic.url, basic._rawTitle);
+  var finalSummary = finalizeSummaryForRecord_(rssSummary, '', basic.url, basic._rawTitle);
   var finalCategory = normalizeCategory('', basic.source, finalTitle, finalSummary, basic.url);
   finalSummary = finalizeSummaryForRecord_(finalSummary, finalCategory, basic.url, finalTitle);
   return {
@@ -687,12 +675,6 @@ function enrichTORArticle_(basic) {
     kept:       false,
     date_added: basic.date_added
   };
-}
-
-// Legacy wrapper kept for any callers outside the TOR loop.
-function mapTORArticleToSchema(article) {
-  var basic = mapTORArticleBasic_(article);
-  return enrichTORArticle_(basic);
 }
 
 // Extract the first <img src="..."> from HTML content (e.g. RSS feed body).
@@ -2054,24 +2036,6 @@ function findExactDuplicateCandidate_(record, candidates) {
   return null;
 }
 
-function hasDuplicateCandidate_(record, candidates) {
-  if (!candidates || !candidates.length) return false;
-
-  var incomingUrl = cleanUrl(record && record.url || '');
-  var incomingSource = normalizeSourceForDedupe(record && record.source, incomingUrl);
-  var incomingTitle = normalizeTitleForDedupe(record && record.title || '');
-
-  if (!incomingSource || !incomingTitle) return false;
-
-  return candidates.some(function(candidate) {
-    var candidateUrl = cleanUrl(candidate && candidate.url || '');
-    if (incomingUrl && candidateUrl && incomingUrl === candidateUrl) return true;
-
-    if (normalizeTitleForDedupe(candidate && candidate.title || '') !== incomingTitle) return false;
-    return normalizeSourceForDedupe(candidate && candidate.source, candidateUrl) === incomingSource;
-  });
-}
-
 function isDuplicateBySourceId(sourceId) {
   if (!sourceId) return false;
   try {
@@ -2549,24 +2513,19 @@ var DUPE_CLEANUP_ = {
   }
 };
 
-function previewPurgeArticlesBeforeApril2026(batchSize) {
-  return ARTICLE_PURGE_.run(true, '2026-04-01', batchSize);
+// Date-cutoff purge — pass any ISO date string ('YYYY-MM-DD').
+// kept=true rows are always protected.
+//
+// Workflow:
+//   1. previewPurgeBeforeDate('2026-05-01')  → dry run, shows count + sample
+//   2. purgeBeforeDate('2026-05-01')         → soft-deletes (sets status='deleted')
+//   3. hardPurgeDeletedArticles()            → permanently removes soft-deleted rows
+function previewPurgeBeforeDate(dateString, batchSize) {
+  return ARTICLE_PURGE_.run(true, dateString, batchSize);
 }
 
-function purgeArticlesBeforeApril2026(batchSize) {
-  return ARTICLE_PURGE_.run(false, '2026-04-01', batchSize);
-}
-
-// Purge everything before April 15 2026 (kept=true rows always protected).
-// Step 1: run previewPurgeBeforeApr15() to see what will be deleted.
-// Step 2: run purgeBeforeApr15() to soft-delete.
-// Step 3: run hardPurgeDeletedArticles() to permanently remove.
-function previewPurgeBeforeApr15(batchSize) {
-  return ARTICLE_PURGE_.run(true, '2026-04-15', batchSize);
-}
-
-function purgeBeforeApr15(batchSize) {
-  return ARTICLE_PURGE_.run(false, '2026-04-15', batchSize);
+function purgeBeforeDate(dateString, batchSize) {
+  return ARTICLE_PURGE_.run(false, dateString, batchSize);
 }
 
 // Hard-delete rows already soft-deleted (status='deleted'), older than PURGE_DAYS days.
@@ -3607,7 +3566,7 @@ function testTORDryRun() {
   var articles = getTORUnreadArticles();
   Logger.log("Fetched: " + articles.length);
   articles.slice(0,3).forEach(function(a,i){
-    var r = mapTORArticleToSchema(a);
+    var r = mapTORArticleBasic_(a);
     Logger.log("["+i+"] "+r.source+" | "+r.title.substring(0,60));
   });
 }

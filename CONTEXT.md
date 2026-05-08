@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.40 | Viewer: v2.11
+Ingestion: v2.41 | Viewer: v2.11
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| v2.41 | 2026-05-08 | Claude Code | Cleanup pass: (1) Consolidated 4 date-specific purge functions into 2 generic ones — `previewPurgeBeforeDate(dateString)` and `purgeBeforeDate(dateString)`. Deleted previewPurgeArticlesBeforeApril2026, purgeArticlesBeforeApril2026, previewPurgeBeforeApr15, purgeBeforeApr15. (2) Removed dead code: mapTORArticleToSchema (only caller was testTORDryRun, redirected to mapTORArticleBasic_), hasDuplicateCandidate_ (zero callers), runEmail (one-line wrapper), SKIP_ENRICHMENT_SOURCES_ var (only referenced in commented-out block). (3) Simplified enrichTORArticle_ — removed the dead-code block referencing the disabled enrichArticleFromUrl path; function now just builds the final record from RSS data. (4) Fixed stale comment referencing deleted mapTORArticleToSchema |
 | v2.40 | 2026-05-08 | Claude Code | trimArticlesToCapacity URL-length crash fix: was building `?id=in.(id1,id2,...)` with thousands of IDs — exceeded Apps Script URLFetch URL length limit when 14K rows existed. Rewrote to use a date-based PATCH: find the date_added of the (trimCount)-th oldest row, then PATCH `?date_added=lte.cutoff&kept=eq.false&status=neq.deleted` with status='deleted'. One short PATCH regardless of row count. Returns actual count of trimmed rows via Prefer:return=representation |
 | v2.39 | 2026-05-08 | Claude Code | Speed pass — three sources of slowness eliminated: (1) Candidate features (simhash, tokens, normalized title, cleanUrl) are now precomputed ONCE in warmDedupCache_ and stored on each row as `_simhash`/`_titleTokens`/etc. scorePossibleDuplicateMatch_ uses the precomputed values. Was previously recomputing per-article × per-candidate (N×M simhashes, each ~5-10ms). (2) MAX_CANDIDATES restored to 500 (was 2000 during the broken-mark-read backlog) — mark-read now works so backlog clears naturally. (3) Removed Logger.log spam from the per-article hot path: isFastExactDuplicate_, isFastTickerFiltered_, and the TOR loop's per-duplicate logs replaced with end-of-loop summary line. Logger.log costs 5-30s when called 1000+ times per run. Net: TOR ingestion should now finish 500 articles within the 6-minute Apps Script window |
 | v2.38 | 2026-05-08 | Claude Code | Rolling retention cap: CONFIG.MAX_ARTICLES = 3000. trimArticlesToCapacity() runs at end of runDailyIngestion — counts non-kept/non-deleted rows via Content-Range header, soft-deletes oldest excess. kept=true rows excluded from count and protected. Drive artifacts untouched. Costs 1 query when at/under cap, 3 when over. Manual entry point also exposed. Hard-purge remains separate (existing hardPurgeDeletedArticles) |

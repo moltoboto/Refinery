@@ -17,6 +17,24 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-08 - Claude Code (v2.41 — cleanup pass)
+- Request: Consolidate the date-specific purge functions to one date-input pair. Review ingestion for AI slop.
+- Purge consolidation:
+  - NEW: `previewPurgeBeforeDate(dateString, batchSize)` and `purgeBeforeDate(dateString, batchSize)` — accept any 'YYYY-MM-DD' string
+  - DELETED: previewPurgeArticlesBeforeApril2026, purgeArticlesBeforeApril2026, previewPurgeBeforeApr15, purgeBeforeApr15 (4 hardcoded-date wrappers)
+  - KEPT: hardPurgeDeletedArticles (no date), trimArticlesToCapacity (rolling cap), previewDuplicateArticles, dryRunPurgeGenericRedditShellArticles + purgeGenericRedditShellArticles (Reddit shell-row cleanup)
+- AI slop removed (verified via grep that nothing called these):
+  - `mapTORArticleToSchema()` — only caller was test function `testTORDryRun`; redirected to `mapTORArticleBasic_` and removed the wrapper
+  - `hasDuplicateCandidate_()` — zero callers, leftover from earlier dedup approach
+  - `runEmail()` — one-line wrapper to runEmailSummaryCleanup, no apparent callers
+  - `SKIP_ENRICHMENT_SOURCES_` var — only referenced inside the already-commented-out block in enrichTORArticle_
+- Code clarification: enrichTORArticle_ no longer carries the dead-code block referencing the disabled enrichArticleFromUrl path. Function now plainly builds the record from RSS data; comment notes that Gmail still uses enrichArticleFromUrl independently.
+- Kept (still used by Gmail tier — verified via grep):
+  - `enrichArticleFromUrl()` — used by processNewsletterTier
+  - `isDuplicateBySourceId()` — used by Gmail Tier 2 inbox processing
+- Files touched: Ingestion/Code.js (v2.41), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+
 ### 2026-05-08 - Claude Code (v2.40)
 - Request: First v2.38 run completed cleanly but crashed at retention with "Limit Exceeded: URLFetch URL Length." DB had 14,294 rows (not the 800 user thought) — leftover from before v2.36 fixed the timeout-creates-dups feedback loop.
 - Root cause: trimArticlesToCapacity built `?id=in.(id1,id2,...,id11294)` for the PATCH. Apps Script's UrlFetchApp has a URL length limit. Url with 11K UUIDs comma-joined was way over.
