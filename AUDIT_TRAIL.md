@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-08 - Claude Code (v2.39)
+- Request: Ingestion still doesn't finish 500 articles in one run. Feedly/Inoreader much faster.
+- Three real bottlenecks identified and fixed:
+  1. **Candidate features recomputed per-article**: scorePossibleDuplicateMatch_ was running cleanUrl + normalizeTitleForDedupe + dedupeTokens_ ×2 + cleanSummaryForDedupe_ + simhashText_ for every candidate, on every article. With 2000 candidates and 5-10ms simhash each, that was ~80 seconds of CPU per article that reached fuzzy dedup. Now warmDedupCache_ precomputes _url, _titleNorm, _titleTokens, _topicTokens, _simhash on each row at warm time — once. scorePossibleDuplicateMatch_ uses the precomputed values when available (falls back for non-ingestion callers).
+  2. **MAX_CANDIDATES 2000 → 500**: bumped to 2000 in v2.35 while mark-read was broken and backlog was huge. Now that mark-read works (v2.35-v2.36 fix), backlog drains, 500 is plenty.
+  3. **Logger.log spam in hot path**: per-article logs in isFastExactDuplicate_, isFastTickerFiltered_, and the TOR loop's exact-duplicate path. Each Logger.log is ~5-20ms in Apps Script. With 500 articles producing 1000+ log lines, pure logging overhead was 5-30s. Replaced with end-of-loop summary: `TOR skip summary: source=N fastDup=N ticker=N noisy=N supabaseDup=N | inserted=N`.
+- Files touched: Ingestion/Code.js (v2.39), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+
 ### 2026-05-08 - Claude Code (v2.38)
 - Request: Cap article storage at 3000 rows. Always preserve kept=true and all Drive artifacts.
 - Implementation: trimArticlesToCapacity(targetOverride) — counts non-kept/non-deleted rows using Supabase Content-Range header (HEAD-style with Prefer:count=exact). If over cap, fetches oldest excess by date_added asc and soft-deletes via PATCH with id=in.(...) filter. kept=eq.false safety filter included on PATCH so kept=true rows are double-protected.
