@@ -17,6 +17,16 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-08 - Claude Code (v2.40)
+- Request: First v2.38 run completed cleanly but crashed at retention with "Limit Exceeded: URLFetch URL Length." DB had 14,294 rows (not the 800 user thought) — leftover from before v2.36 fixed the timeout-creates-dups feedback loop.
+- Root cause: trimArticlesToCapacity built `?id=in.(id1,id2,...,id11294)` for the PATCH. Apps Script's UrlFetchApp has a URL length limit. Url with 11K UUIDs comma-joined was way over.
+- Fix: rewrote retention to use date-based PATCH. (1) Query for the date_added of the (trimCount)-th oldest row using `limit=1&offset=trimCount-1`. (2) Single PATCH with `date_added=lte.{cutoff}&kept=eq.false&status=neq.deleted` setting status='deleted'. URL is constant-length regardless of how many rows match.
+- Bonus: Prefer:return=representation now reports actual trimmed count.
+- Run timing observation from the failed run: 412 articles in 154s = 0.37s/article. v2.39 (precomputed features + log spam removal) wasn't deployed yet at run time, so further speedup expected.
+- Files touched: Ingestion/Code.js (v2.40), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+- Follow-up: Next run will trim the 11K excess rows. After that, run hardPurgeDeletedArticles() once to permanently remove them. Then retention will steady-state at 3000.
+
 ### 2026-05-08 - Claude Code (v2.39)
 - Request: Ingestion still doesn't finish 500 articles in one run. Feedly/Inoreader much faster.
 - Three real bottlenecks identified and fixed:

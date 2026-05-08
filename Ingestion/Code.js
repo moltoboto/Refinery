@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.39
+ * Version: 2.40
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -353,32 +353,36 @@ function trimArticlesToCapacity(targetOverride) {
       return { total: total, target: target, trimmed: 0 };
     }
 
-    // 2. Fetch IDs of the oldest (total - target) rows
+    // 2. Find the date_added cutoff: the (trimCount)-th oldest row's date.
+    //    Anything at-or-before this date_added gets soft-deleted.
+    //    Using a date filter (instead of id=in.(huge-list)) avoids URL length limits.
     var trimCount = total - target;
-    var idsResp = UrlFetchApp.fetch(
-      CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id'
+    var cutoffResp = UrlFetchApp.fetch(
+      CONFIG.SUPABASE_URL + '/rest/v1/articles?select=date_added'
         + '&kept=eq.false&status=neq.deleted'
         + '&order=date_added.asc'
-        + '&limit=' + encodeURIComponent(trimCount),
+        + '&limit=1'
+        + '&offset=' + encodeURIComponent(trimCount - 1),
       { method: 'get',
         headers: { 'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY },
         muteHttpExceptions: true }
     );
-    var rows = JSON.parse(idsResp.getContentText()) || [];
-    if (!rows.length) {
-      Logger.log("RETENTION: no candidate rows returned");
-      return { total: total, target: target, trimmed: 0 };
+    var cutoffRows = JSON.parse(cutoffResp.getContentText()) || [];
+    if (!cutoffRows.length || !cutoffRows[0].date_added) {
+      Logger.log("RETENTION: could not determine cutoff date");
+      return { total: total, target: target, trimmed: 0, error: 'no_cutoff' };
     }
+    var cutoffDate = cutoffRows[0].date_added;
 
-    var ids = rows.map(function(r) { return r.id; }).filter(function(id) { return id != null; });
-    if (!ids.length) return { total: total, target: target, trimmed: 0 };
-
-    // 3. Soft-delete via PATCH with id=in.(...) filter
-    var patchUrl = CONFIG.SUPABASE_URL + '/rest/v1/articles?id=in.(' + ids.join(',') + ')&kept=eq.false';
+    // 3. Soft-delete by date filter — one short PATCH regardless of row count
+    var patchUrl = CONFIG.SUPABASE_URL + '/rest/v1/articles'
+      + '?date_added=lte.' + encodeURIComponent(cutoffDate)
+      + '&kept=eq.false'
+      + '&status=neq.deleted';
     var patchResp = UrlFetchApp.fetch(patchUrl, {
       method: 'patch',
       contentType: 'application/json',
-      headers: { 'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY, 'Prefer': 'return=minimal' },
+      headers: { 'apikey': CONFIG.SUPABASE_API_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_API_KEY, 'Prefer': 'return=representation' },
       payload: JSON.stringify({ status: 'deleted' }),
       muteHttpExceptions: true
     });
@@ -387,9 +391,10 @@ function trimArticlesToCapacity(targetOverride) {
       Logger.log("RETENTION: PATCH error " + code + " — " + patchResp.getContentText().substring(0, 200));
       return { total: total, target: target, trimmed: 0, error: 'patch_failed', code: code };
     }
-
-    Logger.log("RETENTION: soft-deleted " + ids.length + " oldest rows (run hardPurgeDeletedArticles() to permanently remove)");
-    return { total: total, target: target, trimmed: ids.length };
+    var patched = JSON.parse(patchResp.getContentText() || '[]') || [];
+    Logger.log("RETENTION: soft-deleted " + patched.length + " rows older than " + cutoffDate
+             + " (run hardPurgeDeletedArticles() to permanently remove)");
+    return { total: total, target: target, trimmed: patched.length, cutoffDate: cutoffDate };
 
   } catch(e) {
     Logger.log("RETENTION: error — " + e);
