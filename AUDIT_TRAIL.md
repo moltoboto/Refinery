@@ -17,6 +17,20 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-08 - Claude Code (v2.37)
+- Request: Too many articles from MotleyFool (and previously Seeking Alpha). User wants stock info but ONLY for portfolio tickers, not the broad market chatter MotleyFool floods with.
+- Why the old finance filter (v2.28-v2.34) was the wrong tool: the allowlist included macro/sector keywords (`earnings`, `market`, `fed`, `wall street`, `nasdaq`, `dividend`, `pharma`) which match basically every MotleyFool article. The result was that the filter let everything through, so we disabled it.
+- Fix: replaced FINANCE_FILTER_DOMAINS / FINANCE_ALLOW_PATTERNS / isFinanceFiltered_ / isFastFinanceFiltered_ / isFinanceSourceFiltered_ / passesFinanceAllowlist_ with a narrower set:
+  - TICKER_FILTER_DOMAINS = ['fool.com', 'seekingalpha.com'] — only the noisy feeds
+  - TICKER_ALLOW_PATTERNS — Mag 7 + AMD + ORCL + CMCSA + Coatue, nothing else. No macro, no sector, no market verbs.
+  - isFastTickerFiltered_(article) — checks title + raw RSS summary (MotleyFool often teases ticker in body but not title)
+  - Wired as a pre-map filter in TOR loop after isFastExactDuplicate_()
+- Other finance feeds (Yahoo Finance, MarketWatch, CNBC Mad Money, Fox Business) pass through unfiltered for now. If any prove too noisy, add their domain to TICKER_FILTER_DOMAINS.
+- General news / Reuters / top-level CNBC are NOT in TICKER_FILTER_DOMAINS — those are broad-market coverage and should pass.
+- Files touched: Ingestion/Code.js (v2.37), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion only.
+- Follow-up: After a few runs, audit what made it through from fool.com / seekingalpha.com to confirm the patterns are tight enough. Add tickers as portfolio changes.
+
 ### 2026-05-08 - Claude Code (v2.36)
 - Request: Ingestion super slow, creating MORE duplicates not fewer, timing out frequently. When timeouts occur, articles already reviewed end up in the DB and become duplicates.
 - Root cause of duplicates-on-timeout: markTORArticlesAsRead was only called AFTER the for-loop completed (line 451). When the loop bailed early on timeout, articles already inserted into Supabase had NOT been marked read in TOR. Next run, TOR returned them again, dedup might miss them under load (Supabase queries failing on quota / transient errors), so they were inserted as new rows. Feedback loop: timeouts → more rows → slower dedup queries → more timeouts → more dups.

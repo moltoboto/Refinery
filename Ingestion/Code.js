@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.36
+ * Version: 2.37
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -193,81 +193,66 @@ function isTORArticleFromSkippedSource_(article) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── FINANCE SOURCE ALLOWLIST FILTER ─────────────────────────────────────────
-// High-volume dedicated finance feeds are filtered to portfolio/sector topics.
-// General news finance (Reuters, top-level CNBC) is NOT in this list — those
-// pass through unfiltered as Top Story / broad market coverage.
-// Add tickers or companies to FINANCE_ALLOW_PATTERNS as the portfolio grows.
-var FINANCE_FILTER_DOMAINS = [
-  'seekingalpha.com',
+// ─── TICKER-ONLY FILTER FOR HIGH-VOLUME FINANCE FEEDS ────────────────────────
+// MotleyFool and Seeking Alpha publish dozens of stock articles per day, most
+// off-portfolio. Strict allowlist: only let through articles that explicitly
+// name a portfolio ticker or company in the title/summary. NO macro/sector
+// keywords (those are too permissive — "earnings", "market", "fed" match
+// everything MotleyFool writes).
+//
+// To add a new ticker: append a regex to TICKER_ALLOW_PATTERNS.
+// To filter a different noisy feed: add its domain to TICKER_FILTER_DOMAINS.
+var TICKER_FILTER_DOMAINS = [
   'fool.com',
-  'finance.yahoo.com',
-  'marketwatch.com',
-  'foxbusiness.com'
-  // cnbc.com Mad Money feed also uses cnbc.com — leave out to keep broad CNBC coverage
+  'seekingalpha.com'
 ];
 
-var FINANCE_ALLOW_PATTERNS = [
-  // ── Sectors ──────────────────────────────────────────────────────────────
-  /\bdividend/i,
-  /\bcrypto\b|bitcoin|ethereum|\bbtc\b|\beth\b|blockchain/i,
-  /\bpharma\b|pharmaceutical|biotech|drug approval|\bfda\b|clinical trial/i,
-  /\bsemiconductor\b|chip maker|chip stock/i,
-  // ── Macro / broad market (always keep) ───────────────────────────────────
-  /\bfed\b|federal reserve|interest rate|inflation|\bgdp\b|recession/i,
-  /\bearnings\b|\bipo\b|\bmarket\b|nasdaq|s&p 500|\bdow\b|wall street/i,
-  /\brate cut\b|rate hike|bond yield|treasury/i,
-  /\bmerger\b|acquisition|\bbuyout\b|\bbreaking\b/i,
-  // ── Magnificent 7 ────────────────────────────────────────────────────────
-  /\bapple\b|\baapl\b/i,
-  /\bmicrosoft\b|\bmsft\b/i,
-  /\bgoogle\b|\balphabet\b|\bgoogl\b|\bgoog\b/i,
-  /\bamazon\b|\bamzn\b/i,
-  /\bnvidia\b|\bnvda\b/i,
-  /\btesla\b|\btsla\b/i,
+var TICKER_ALLOW_PATTERNS = [
+  // Magnificent 7
+  /\baapl\b|\bapple\b/i,
+  /\bmsft\b|\bmicrosoft\b/i,
+  /\bgoogl?\b|\bgoogle\b|\balphabet\b/i,
+  /\bamzn\b|\bamazon\b/i,
+  /\bnvda\b|\bnvidia\b/i,
+  /\btsla\b|\btesla\b/i,
   /\bmeta\b|\bfacebook\b/i,
-  // ── Portfolio holdings ───────────────────────────────────────────────────
+  // Other portfolio holdings
   /\bamd\b/i,
-  /\bcoatue\b/i,
-  /\boracle\b|\borcl\b/i,
-  /\bcomcast\b|\bcmcsa\b/i,
-  // ── AI (tech sector crossover) ───────────────────────────────────────────
-  /\bartificial intelligence\b|\bai stock\b|\bai invest/i
+  /\borcl\b|\boracle\b/i,
+  /\bcmcsa\b|\bcomcast\b/i,
+  /\bcoatue\b/i
 ];
 
-function isFinanceSourceFiltered_(url) {
+function isTickerSourceFiltered_(url) {
   var lower = String(url || '').toLowerCase();
-  for (var i = 0; i < FINANCE_FILTER_DOMAINS.length; i++) {
-    if (lower.indexOf(FINANCE_FILTER_DOMAINS[i]) !== -1) return true;
+  for (var i = 0; i < TICKER_FILTER_DOMAINS.length; i++) {
+    if (lower.indexOf(TICKER_FILTER_DOMAINS[i]) !== -1) return true;
   }
   return false;
 }
 
-function passesFinanceAllowlist_(record) {
-  var haystack = (String(record.title || '') + ' ' + String(record.summary || '')).toLowerCase();
-  for (var i = 0; i < FINANCE_ALLOW_PATTERNS.length; i++) {
-    if (FINANCE_ALLOW_PATTERNS[i].test(haystack)) return true;
+function mentionsPortfolioTicker_(text) {
+  var haystack = String(text || '');
+  for (var i = 0; i < TICKER_ALLOW_PATTERNS.length; i++) {
+    if (TICKER_ALLOW_PATTERNS[i].test(haystack)) return true;
   }
   return false;
 }
 
-// Returns true if the article should be skipped (finance source but off-topic).
-function isFinanceFiltered_(record) {
-  if (!isFinanceSourceFiltered_(record.url)) return false;
-  if (passesFinanceAllowlist_(record)) return false;
-  Logger.log('FINANCE FILTER: skipping off-portfolio — ' + record.title);
-  return true;
-}
-
-// PRE-MAP finance filter: uses only the raw TOR article fields (no HTTP fetch).
-// Catches finance noise BEFORE mapTORArticleToSchema() runs.
-function isFastFinanceFiltered_(article) {
+// PRE-MAP ticker filter: uses only the raw TOR article fields (no HTTP fetch).
+// Catches MotleyFool/SeekingAlpha noise BEFORE mapTORArticleBasic_() runs.
+function isFastTickerFiltered_(article) {
   var rawUrl = String((article.canonical && article.canonical[0] && article.canonical[0].href) ||
                       (article.alternate  && article.alternate[0]  && article.alternate[0].href) || '');
-  if (!isFinanceSourceFiltered_(rawUrl)) return false;
+  if (!isTickerSourceFiltered_(rawUrl)) return false;
   var rawTitle = String(article.title || '');
-  if (passesFinanceAllowlist_({ title: rawTitle, summary: '' })) return false;
-  Logger.log('FINANCE FILTER (pre-map): skipping — ' + rawTitle);
+  // Also peek at the RSS summary for ticker mentions, since MotleyFool often
+  // teases the ticker in the body but not the title.
+  var rawSummary = '';
+  if (typeof article.summary === 'string') rawSummary = article.summary;
+  else if (article.summary && typeof article.summary.content === 'string') rawSummary = article.summary.content;
+  if (mentionsPortfolioTicker_(rawTitle + ' ' + rawSummary)) return false;
+  Logger.log('TICKER FILTER: skipping off-portfolio — ' + rawTitle);
   return true;
 }
 
@@ -398,6 +383,13 @@ function ingestFromTheOldReader() {
           continue;
         }
         if (isFastExactDuplicate_(articles[i])) {
+          stats.duplicatesSkipped++;
+          ingestedIds.push(articles[i].id);
+          continue;
+        }
+        // Ticker-only filter for MotleyFool / SeekingAlpha. Off-portfolio
+        // articles are marked-read in TOR and never reach Supabase.
+        if (isFastTickerFiltered_(articles[i])) {
           stats.duplicatesSkipped++;
           ingestedIds.push(articles[i].id);
           continue;
