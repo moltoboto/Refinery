@@ -17,6 +17,20 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-09 - HOLD (session close)
+Current state: Ingestion v2.44, Viewer v2.12. Both pushed. Viewer NOT yet redeployed — the new toggles won't be live at the URL until pencil → New version → Deploy in Viewer Apps Script project.
+
+User feedback on Viewer v2.12, parked for next session:
+1. Nav-icons mode shows nothing — `.nav-icon` spans in index.html are empty. Fix: populate with first letter of label OR keep short labels visible in narrow column.
+2. Compact density should be the default — flip LAYOUT_PREFS_ default for compact-density, OR pre-add the body class.
+3. "How to see the full article? Double-click?" — current Viewer has Enter keyboard shortcut to open the article URL but no touch path. Add an explicit "Open original" button to the reading pane / card, or wire double-tap on the card to open URL.
+4. "Also about keep." — user trailed off; clarification needed before action. Could mean: keep button placement, kept view, keyboard shortcut, or something else.
+
+Pending user actions (not Claude actions):
+- Redeploy Viewer in Apps Script (pencil → New version → Deploy) so v2.12 toggles go live at the URL.
+- Run applySourceCategoryBackfill() in Ingestion editor to retag existing rows to the renamed 10-category set (News, AI, Finance, Learning, Tech, Watches, YouTube, Reddit, Email, Duplicate).
+- Run previewPurgeBeforeDate('YYYY-MM-DD') → purgeBeforeDate(...) → hardPurgeDeletedArticles() to clear the 14K duplicate backlog. Or wait for trimArticlesToCapacity() to run at end of next ingestion (v2.40 fix is in place — uses date-based PATCH so it won't crash on URL length anymore).
+
 ### 2026-05-08 - Claude Code (Viewer v2.12 — layout toggles + category sync)
 - Request: iPad landscape ergonomics — let user toggle the reading pane off (cards already contain same content), collapse the left nav, and pick comfortable vs compact density. Also sync category nav to Ingestion v2.44.
 - Implementation:
