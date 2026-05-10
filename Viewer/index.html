@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.24</title>
+<title>Refinery V2.25</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -472,10 +472,16 @@ aside {
    - body.compact-density → tighter padding/line-height for more cards on screen
    Active toggles get an .active class on the button via JS. */
 body.no-reading-pane .reading-pane { display: none; }
-/* Right-side gutter equal to sidebar width — keeps the list at a comfortable
-   line length instead of stretching edge-to-edge. Symmetric with the left nav
-   so the cards stay near the center of vision. */
-body.no-reading-pane .list-pane    { width: auto; flex: 1; border-right: none; margin-right: var(--sidebar-w); }
+/* Cap list pane at a comfortable reading width when reading pane is off.
+   Whatever flex space remains stays empty on the right (and on the left
+   too if Nav is off). Eyes don't have to traverse the full screen width. */
+body.no-reading-pane .list-pane {
+  width: 400px;
+  flex: 0 0 400px;
+  border-right: none;
+  margin-left: auto;
+  margin-right: auto;
+}
 
 /* Nav toggle = hide left rail entirely. The original "collapse to icons"
    never had real icons populated, so a 60px empty stub was just dead space.
@@ -923,7 +929,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.24
+    Refinery V2.25
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -939,7 +945,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.24
+      Refinery V2.25
     </div>
     <div class="search-box">
       <span class="search-icon"></span>

@@ -66,6 +66,14 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.25 — list pane capped at 400px)
+- Request: After v2.23/v2.24 (right gutter equal to sidebar width), text still too horizontal/wide on iPad. User wants 400.
+- Cause: with sidebar=200 and right-gutter=200, list pane was flex:1 filling whatever was left. On iPad landscape (~1180px) that's ~780px of card width. Lines too long.
+- Fix: body.no-reading-pane .list-pane now `width: 400px; flex: 0 0 400px` with `margin-left/right: auto`. List is exactly 400px wide and centered in the flex space remaining after the sidebar. Empty space splits evenly on either side. Replaces the previous margin-right: var(--sidebar-w) approach.
+- On phone (≤720px viewport): the @media block doesn't override list-pane width, so it'd try to be 400 but flex space is much less — flex shrinks to fit. Effectively same behavior as v2.24 on phone.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy required.
+
 ### 2026-05-09 - Claude Code (Viewer v2.24 — mobile uses the same pattern)
 - Request: Apply the v2.23 gutter pattern to mobile too rather than building a separate mobile-only format.
 - Implementation: extended the existing @media (max-width: 720px) block to also override --sidebar-w (200 → 110) and --list-w (360 → 240). The body.no-reading-pane right-gutter rule from v2.23 already uses `margin-right: var(--sidebar-w)`, so it scales automatically with the new variable values. No CSS-rule duplication.
