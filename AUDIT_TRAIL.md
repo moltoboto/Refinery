@@ -66,6 +66,13 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.18 — drop URL-source cleanup helper)
+- Request: User fixed the Motley Fool source label in TOR directly. Asked to remove the v2.17 prettifySource helper rather than keep it as a safety net.
+- Removed: SOURCE_LABEL_OVERRIDES_ const, prettifySource() function, calls to it in sourceNav render and card-source-label.
+- Kept: sidebar width 196px from v2.17.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy still required (combines v2.16/v2.17/v2.18).
+
 ### 2026-05-09 - Claude Code (Viewer v2.17 — sidebar shrink + URL source cleanup)
 - Request: User screenshot shows V2.15 (hadn't redeployed v2.16 yet). Reported (a) "wasted space on the left" — sidebar 248px is way too wide for the new short category names, (b) raw URL appearing as a source name (Motley Fool feed: `https://www.fool.com/a/feeds/feed?apikey=foolwatch-feed`).
 - Fixes:

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.17</title>
+<title>Refinery V2.18</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -914,7 +914,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.17
+    Refinery V2.18
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -930,7 +930,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.17
+      Refinery V2.18
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1223,11 +1223,10 @@ function buildSidebar() {
 
   document.getElementById('sourceNav').innerHTML = sources.map(function(src) {
     var cnt = VIEWER_STATS.sourceCounts[src] || 0;
-    var label = prettifySource(src);
     return `
-      <div class="nav-item ${view === 'src:' + src ? 'active' : ''}" onclick="setView('src:${esc(src)}')" title="${escapeHtml(src)}">
+      <div class="nav-item ${view === 'src:' + src ? 'active' : ''}" onclick="setView('src:${esc(src)}')">
         <span class="nav-icon"></span>
-        <span class="nav-label">${escapeHtml(label)}</span>
+        <span class="nav-label">${src}</span>
         ${cnt > 0 ? `<span class="nav-count">${cnt}</span>` : `<span class="nav-count zero">0</span>`}
       </div>`;
   }).join('');
@@ -1687,7 +1686,7 @@ function renderList() {
         ${a.status !== 'read' ? '<div class="unread-indicator"></div>' : ''}
         ${a.url ? `<a class="card-open-link" href="${a.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open original in new tab">↗</a>` : ''}
         <div class="card-eyebrow">
-          <span class="card-source-label">${escapeHtml(prettifySource(a.source || ''))}</span>
+          <span class="card-source-label">${a.source || ''}</span>
           <span></span><span>${normCat}</span>
         </div>
         <div class="card-title">${a.title || ''}</div>
@@ -1899,46 +1898,6 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-// Source label cleanup. If the source name was stored as a URL (e.g. The Old
-// Reader feed title was never set and TOR fell back to the feed URL), extract
-// a readable label from the domain. Otherwise return the source unchanged.
-var SOURCE_LABEL_OVERRIDES_ = {
-  'fool.com': 'Motley Fool',
-  'foolwatch-feed': 'Motley Fool',
-  'seekingalpha.com': 'Seeking Alpha',
-  'finance.yahoo.com': 'Yahoo Finance',
-  'marketwatch.com': 'MarketWatch',
-  'foxbusiness.com': 'Fox Business',
-  'cnbc.com': 'CNBC',
-  'bbci.co.uk': 'BBC',
-  'nytimes.com': 'NYT',
-  'reuters.com': 'Reuters',
-  'theverge.com': 'The Verge',
-  'arstechnica.com': 'Ars Technica',
-  'techcrunch.com': 'TechCrunch',
-  'engadget.com': 'Engadget',
-  'macrumors.com': 'MacRumors',
-  'ycombinator.com': 'Hacker News',
-  'news.ycombinator.com': 'Hacker News'
-};
-
-function prettifySource(src) {
-  if (!src) return '';
-  var raw = String(src).trim();
-  if (!/^https?:\/\//i.test(raw)) return raw;
-  var m = raw.match(/^https?:\/\/(?:www\.)?([^\/?#]+)/i);
-  if (!m) return raw;
-  var host = m[1].toLowerCase();
-  if (SOURCE_LABEL_OVERRIDES_[host]) return SOURCE_LABEL_OVERRIDES_[host];
-  // Fallback: title-case the second-level domain
-  var parts = host.split('.');
-  var slug = parts.length >= 2 ? parts[parts.length - 2] : host;
-  // Check if the URL contains a recognizable token (e.g. "foolwatch-feed")
-  for (var key in SOURCE_LABEL_OVERRIDES_) {
-    if (raw.toLowerCase().indexOf(key) !== -1) return SOURCE_LABEL_OVERRIDES_[key];
-  }
-  return slug.charAt(0).toUpperCase() + slug.slice(1);
-}
 
 // ── Layout toggles ─────────────────────────────────────────────────────────
 // Three independent body-class toggles, each persisted in localStorage so the

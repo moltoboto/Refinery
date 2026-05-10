@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.45 | Viewer: v2.17
+Ingestion: v2.45 | Viewer: v2.18
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.18 | 2026-05-09 | Claude Code | Removed prettifySource and SOURCE_LABEL_OVERRIDES_ — user fixed the Motley Fool source name in TOR directly so the display-side cleanup is no longer needed. Reverted sourceNav and card-source-label to use raw `src` value. Sidebar width 196px from v2.17 retained |
 | Viewer v2.17 | 2026-05-09 | Claude Code | (1) Sidebar width 248 → 196px — short category names ('AI', 'Tech', 'News') were leaving lots of dead space. (2) prettifySource(src) display helper: if source name was stored as a URL (TOR fell back to feed URL because feed title wasn't set), extract host and map to a friendly label via SOURCE_LABEL_OVERRIDES_ (Motley Fool / Seeking Alpha / Yahoo Finance / etc.) — falls back to title-cased domain slug. Applied to source nav AND card source labels. Original raw value kept in title attr for hover |
 | Viewer v2.16 | 2026-05-09 | Claude Code | Fix category counts not summing to total. Viewer's normalizeCategory_ (Code.js) and normalizeCategory (index.html) were still mapping to old long-form names (`'ai' → 'AI & LLMs'`, `'tech' → 'Tech & Trends'`, default `'Tech & Trends'`). After Ingestion v2.42-44 renamed categories to short forms in DB, the Viewer's normalizer was UN-renaming them to legacy values not in CATEGORY_KEYS — invisible in the sidebar. Updated both normalizer functions to fold to the current 10 short names (News/AI/Finance/Learning/Tech/Watches/YouTube/Reddit/Email/Duplicate). CATEGORY_KEYS and CATEGORY_MAP rewritten to match. Default fallback now 'Tech' |
 | Viewer v2.15 | 2026-05-09 | Claude Code | Header chips wrap on narrow screens. .header-right got flex-wrap + row-gap so chips wrap onto multiple rows instead of overflowing. Added @media (max-width: 720px) block: header becomes vertical stack (logo/status, search full-width, chips full-width with horizontal scroll), chip padding/font shrunk slightly. Body layout still desktop-only — proper mobile breakpoint (sidebar hamburger, slide-over reading) deferred pending design review |
