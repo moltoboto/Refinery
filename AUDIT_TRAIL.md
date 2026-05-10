@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-09 - Claude Code (Viewer v2.14 — font cycle + per-card open link)
+- Request: User wants larger fonts. When reading pane is hidden (their iPad workflow: Reading off, keep Nav on, Compact on), there's no way to open the full article — the "Read full article" button only lives inside the reading pane.
+- Fix 1 — per-card open link: small ↗ link in the upper-right of every card. Anchor with target="_blank" and onclick="event.stopPropagation()" so it opens the URL in a new tab without also triggering card selection. Visible in all reading-pane states. Replaces the dependence on the reading pane's "Read full article" button.
+- Fix 2 — font-size cycle: new "Aa" chip in header. Cycles normal → large → xlarge. Stored in localStorage as 'refinery.fontSize' (0/1/2). Body classes `font-large` and `font-xlarge` target the major reading text directly: card-title, card-snippet, reading-title, reading-body, nav-item, summary-prompt. (Existing CSS uses px values — body font-size cascade alone wouldn't propagate.)
+- Confirmed user's iPad workflow (Reading off + Nav on + Compact on) and made it work end-to-end with a clean way to open originals.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy required (pencil → New version → Deploy).
+- Still parked from earlier hold: nav-icons mode rendering (when collapsed it shows nothing), Compact-as-default. User's iPad workflow keeps Nav on so the icons issue isn't blocking — leaving it parked unless they ask.
+
 ### 2026-05-09 - Claude Code (Viewer v2.13 — drop redundant search-scope chips)
 - Request: User doesn't see use for the 'Current view' / 'All loaded' chips. The Unread chip alone provides the filtering they want — Unread on = filter to unread, Unread off = show all.
 - Removed: both chips from header. searchScope hardcoded to 'all' (default and after every setView). Header is cleaner — 4 chips (Unread, Nav, Reading, Compact) plus Refresh, instead of 6.
