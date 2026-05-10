@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.45 | Viewer: v2.26
+Ingestion: v2.45 | Viewer: v2.27
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.27 | 2026-05-09 | Claude Code | List pane width now scales with viewport: `clamp(300px, calc(100vw - 600px), 1000px)`. On 1440 → 840px list with 300px gutter each side (matches user spec). On 1920 → 1000 capped. On smaller viewports shrinks down to 300 floor. Auto margins center it within the flex space remaining after the sidebar |
 | Viewer v2.26 | 2026-05-09 | Claude Code | (1) Fixed Compact toggle that was a no-op since v2.12 — CSS targeted classes that don't exist (.article-card, .list-item, .article-summary). Real classes are .card, .card-snippet, etc. Compact now actually shrinks card padding, font sizes, and reading-pane padding when the toggle is on. (2) Bumped no-reading-pane list-pane width 400 → 500px |
 | Viewer v2.25 | 2026-05-09 | Claude Code | List pane capped at 400px when Reading is off (was flex-grown filling everything except a sidebar-width right gutter). User reported summary text still too wide after v2.23. body.no-reading-pane .list-pane now `width: 400px; flex: 0 0 400px` with `margin-left/right: auto` so it centers in available flex space. Empty space falls equally to the left and right of the list (after the sidebar) |
 | Viewer v2.24 | 2026-05-09 | Claude Code | Mobile reuses the same layout pattern instead of getting a separate format. @media (max-width: 720px) sets --sidebar-w 200 → 110 and --list-w 360 → 240. The `body.no-reading-pane` right-gutter automatically scales because it uses var(--sidebar-w). On phone with Reading off + Nav on: sidebar 110 + list 170+ + right gutter 110 = symmetric layout that fits a 390px viewport |

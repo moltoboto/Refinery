@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.26</title>
+<title>Refinery V2.27</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -472,11 +472,14 @@ aside {
    - body.compact-density → tighter padding/line-height for more cards on screen
    Active toggles get an .active class on the button via JS. */
 body.no-reading-pane .reading-pane { display: none; }
-/* Cap list pane at a comfortable reading width when reading pane is off.
-   Centered in the remaining flex space — empty space splits evenly on each side. */
+/* Reading pane off → center the list pane and reserve ~600px total for gutters.
+   Width scales with viewport: on 1440 you get ~840px list with 300px gutter
+   each side; on 1920 it caps at 1000px; on smaller screens it shrinks but
+   never goes below 300px. Auto margins center within whatever flex space
+   remains after the sidebar (if Nav is on) or the full viewport (if Nav off). */
 body.no-reading-pane .list-pane {
-  width: 500px;
-  flex: 0 0 500px;
+  width: clamp(300px, calc(100vw - 600px), 1000px);
+  flex: 0 0 auto;
   border-right: none;
   margin-left: auto;
   margin-right: auto;
@@ -933,7 +936,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.26
+    Refinery V2.27
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -949,7 +952,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.26
+      Refinery V2.27
     </div>
     <div class="search-box">
       <span class="search-icon"></span>

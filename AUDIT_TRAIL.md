@@ -66,6 +66,13 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.27 — viewport-scaled list width)
+- Request: "if it is 1440 -- then 300 | 840 | 300". User wants list to scale with viewport, not be a fixed 500px.
+- Implementation: body.no-reading-pane .list-pane width changed to `clamp(300px, calc(100vw - 600px), 1000px)`. Reserves 600px total for gutters; list takes the rest, capped at 1000 and floored at 300. Auto margins center in the flex space remaining after the sidebar (Nav on) or whole viewport (Nav off).
+- Math at common widths: 1440 → 840 list with 300 gutters each side ✓ (matches spec). 1920 → 1000 list with 460 each side. 1180 (iPad land) → 580 list with 100 each side after sidebar=200, or 300 each side if Nav off. 720 → 300 list with 210 each side.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy required.
+
 ### 2026-05-09 - Claude Code (Viewer v2.26 — fix compact bug + list 500)
 - Two issues:
   1. **Compact toggle was a no-op** since v2.12. CSS targeted .article-card / .list-item / .article-summary / .summary-text — none of those classes exist in the rendered DOM. Real classes are .card, .card-title, .card-snippet, .card-eyebrow, .reading-content, .reading-title, .reading-body. Rewrote the body.compact-density block to target actual classes. Compact now genuinely shrinks card padding (10/14), card title (13.5px / 1.35), card snippet (11.5px / 1.4), reading-title (22px), reading-body (13.5px / 1.55).
