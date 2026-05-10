@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend - Viewer v2.15
+// REFINERY - Google Apps Script Backend - Viewer v2.16
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.15')
+    .setTitle('Refinery V2.16')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -914,41 +914,53 @@ function normalizeArticleForViewer_(row) {
   row.source = normalizeSourceLabel_(row.source, row.url);
   return row;
 }
+// Folds any DB category (current short name, legacy long name, or retired
+// category) into one of the 10 current sidebar categories. Default 'Tech'.
+// Must stay in sync with index.html CATEGORY_MAP.
 function normalizeCategory_(raw) {
-  if (!raw) return 'Tech & Trends';
+  if (!raw) return 'Tech';
   var clean = String(raw).replace(/^[^\w]+/, '').trim().toLowerCase();
   var map = {
-    'top story': 'Top Story',
-    'top stories': 'Top Story',
-    'ai & llms': 'AI & LLMs',
-    'ai': 'AI & LLMs',
+    // Current short names
+    'news': 'News',
+    'ai': 'AI',
     'finance': 'Finance',
-    'resources': 'Resources',
-    'framework': 'Resources',
-    'insight': 'Resources',
-    'learning': 'Resources',
-    'tech & trends': 'Tech & Trends',
-    'technology': 'Tech & Trends',
-    'tech': 'Tech & Trends',
-    'quick hit': 'Tech & Trends',
-    'general': 'Tech & Trends',
-    'news': 'Tech & Trends',
-    'policy & society': 'Policy & Society',
-    'policy': 'Policy & Society',
-    'dev tools': 'Dev Tools',
-    'research': 'Research',
-    'strategy': 'Strategy',
+    'learning': 'Learning',
+    'tech': 'Tech',
     'watches': 'Watches',
-    'watch': 'Watches',
     'youtube': 'YouTube',
-    'video': 'YouTube',
     'reddit': 'Reddit',
     'email': 'Email',
     'duplicate': 'Duplicate',
     'duplicates': 'Duplicate',
+    // Legacy long names
+    'top story': 'News',
+    'top stories': 'News',
+    'ai & llms': 'AI',
+    'ai llms': 'AI',
+    'tech & trends': 'Tech',
+    'tech trends': 'Tech',
+    'technology': 'Tech',
+    'resources': 'Learning',
+    'resource': 'Learning',
+    'learning & skills': 'Learning',
+    'learning skills': 'Learning',
+    // Retired categories
+    'policy & society': 'News',
+    'policy society': 'News',
+    'policy': 'News',
+    'dev tools': 'Tech',
+    'research': 'Tech',
+    'strategy': 'Learning',
+    'framework': 'Learning',
+    'insight': 'Learning',
+    'quick hit': 'Tech',
+    'general': 'Tech',
+    'watch': 'Watches',
+    'video': 'YouTube',
     'artifacts': 'Artifacts'
   };
-  return map[clean] || 'Tech & Trends';
+  return map[clean] || 'Tech';
 }
 
 function unique_(list) {

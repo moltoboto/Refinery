@@ -66,6 +66,14 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.16 — fix category total mismatch)
+- Request: User ran backfill, category counts still don't sum to "All Unread" total.
+- Root cause: Viewer had its OWN normalizeCategory functions (Code.js line 917 `normalizeCategory_`, index.html line 2074 `normalizeCategory`) that were never updated when Ingestion went from 14 long-form categories to 10 short-form. They were mapping `'ai' → 'AI & LLMs'`, `'tech' → 'Tech & Trends'`, default `'Tech & Trends'`. So even after backfill wrote 'AI'/'Tech'/'News' to DB, the Viewer normalizer turned them BACK into legacy long names that aren't in the new CATEGORY_KEYS sidebar list — those rows counted toward unreadArticles (line 718 of Code.js) but didn't appear in any sidebar bucket.
+- Fix: rewrote both normalizer functions and CATEGORY_KEYS / CATEGORY_MAP in index.html to use the 10 current short names. Folds: current short names → themselves; legacy long names ('AI & LLMs', 'Top Story', 'Tech & Trends', 'Resources') → current; retired categories ('Policy & Society', 'Dev Tools', 'Research', 'Strategy') → closest current. Default fallback now 'Tech'.
+- After redeploy: category counts in sidebar should sum (modulo Duplicate, which is excluded from unreadArticles by query at Code.js line 702).
+- Files touched: Viewer/index.html (CATEGORY_KEYS, CATEGORY_MAP, normalizeCategory, version), Viewer/Code.js (normalizeCategory_, version), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. **User must redeploy Viewer in Apps Script.**
+
 ### 2026-05-09 - Claude Code (v2.45 — better dedup recall on topic clusters)
 - Request: User reports duplicates not catching multiple articles on same identical watch/topic when headlines differ. Examples: 3 sources covering same Rolex GMT release with different headlines.
 - Two complementary fixes:
