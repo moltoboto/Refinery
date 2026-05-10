@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.45 | Viewer: v2.22
+Ingestion: v2.45 | Viewer: v2.23
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.23 | 2026-05-09 | Claude Code | Right-side gutter when Reading is off. body.no-reading-pane .list-pane gets `margin-right: var(--sidebar-w)` so the list is symmetric with the left nav and stays at a comfortable line length instead of stretching edge-to-edge — eyes don't have to traverse the full screen width |
 | Viewer v2.22 | 2026-05-09 | Claude Code | Sidebar width 160 → 200px. Was over-shrunk in v2.19 chasing the wasted-space complaint that v2.20 actually fixed (the gap was inside the row, not the column width). 200px gives source labels room to wrap less |
 | Viewer v2.21 | 2026-05-09 | Claude Code | Nav toggle now fully hides the sidebar instead of collapsing to a 60px empty stub. The original "icons-only" mode was useless because the .nav-icon spans were never populated with glyphs. body.nav-icons aside { display: none } reclaims the full sidebar width for the list pane. Button title attr updated to "Hide left nav" |
 | Viewer v2.20 | 2026-05-09 | Claude Code | Eliminated the gap between nav-item label and count badge. Was caused by `.nav-label { flex: 1 }` which spread label across all available space and pushed the count to the right edge — visible as empty middle when label was short ("AI", "Tech"). Changed to `flex: 0 0 auto` so label takes natural width and badge sits right next to it. Also hid empty `.nav-icon` spans (display: none) since they were never populated and were eating ~20px on the left of every nav row |
