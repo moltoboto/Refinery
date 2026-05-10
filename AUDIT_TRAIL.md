@@ -66,6 +66,13 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.26 — fix compact bug + list 500)
+- Two issues:
+  1. **Compact toggle was a no-op** since v2.12. CSS targeted .article-card / .list-item / .article-summary / .summary-text — none of those classes exist in the rendered DOM. Real classes are .card, .card-title, .card-snippet, .card-eyebrow, .reading-content, .reading-title, .reading-body. Rewrote the body.compact-density block to target actual classes. Compact now genuinely shrinks card padding (10/14), card title (13.5px / 1.35), card snippet (11.5px / 1.4), reading-title (22px), reading-body (13.5px / 1.55).
+  2. **List pane width** 400 → 500 in body.no-reading-pane. User found 400 too narrow.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy required.
+
 ### 2026-05-09 - Claude Code (Viewer v2.25 — list pane capped at 400px)
 - Request: After v2.23/v2.24 (right gutter equal to sidebar width), text still too horizontal/wide on iPad. User wants 400.
 - Cause: with sidebar=200 and right-gutter=200, list pane was flex:1 filling whatever was left. On iPad landscape (~1180px) that's ~780px of card width. Lines too long.

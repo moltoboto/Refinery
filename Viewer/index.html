@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.25</title>
+<title>Refinery V2.26</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -473,11 +473,10 @@ aside {
    Active toggles get an .active class on the button via JS. */
 body.no-reading-pane .reading-pane { display: none; }
 /* Cap list pane at a comfortable reading width when reading pane is off.
-   Whatever flex space remains stays empty on the right (and on the left
-   too if Nav is off). Eyes don't have to traverse the full screen width. */
+   Centered in the remaining flex space — empty space splits evenly on each side. */
 body.no-reading-pane .list-pane {
-  width: 400px;
-  flex: 0 0 400px;
+  width: 500px;
+  flex: 0 0 500px;
   border-right: none;
   margin-left: auto;
   margin-right: auto;
@@ -488,12 +487,17 @@ body.no-reading-pane .list-pane {
    Hiding the aside reclaims the full sidebar width for the list pane. */
 body.nav-icons aside { display: none; }
 
-body.compact-density .nav-item            { padding: 5px 16px; font-size: 12.5px; }
-body.compact-density .article-card,
-body.compact-density .list-item           { padding: 8px 14px; }
-body.compact-density .reading-content     { padding: 14px 24px; }
-body.compact-density .article-summary,
-body.compact-density .summary-text        { line-height: 1.4; font-size: 12.5px; }
+/* Compact density — actual class names this time. Card class is `.card`,
+   summary is `.card-snippet`, etc. The previous v2.12 rules targeted classes
+   that don't exist (.article-card, .list-item, .article-summary). */
+body.compact-density .nav-item        { padding: 3px 12px; font-size: 12.5px; }
+body.compact-density .card            { padding: 10px 14px; }
+body.compact-density .card-title      { font-size: 13.5px; line-height: 1.35; }
+body.compact-density .card-snippet    { font-size: 11.5px; line-height: 1.4; }
+body.compact-density .card-eyebrow    { font-size: 10px; }
+body.compact-density .reading-content { padding: 14px 24px; }
+body.compact-density .reading-title   { font-size: 22px; }
+body.compact-density .reading-body    { font-size: 13.5px; line-height: 1.55; }
 
 /* Per-card "open original" escape hatch — visible always, even when reading
    pane is hidden. Uses event.stopPropagation so it doesn't trigger card select. */
@@ -929,7 +933,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.25
+    Refinery V2.26
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -945,7 +949,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.25
+      Refinery V2.26
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
