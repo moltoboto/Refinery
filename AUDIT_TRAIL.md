@@ -66,6 +66,15 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.21 — Nav toggle hides sidebar fully)
+- Request: When user toggled Nav in v2.19 screenshot (still pre-redeploy of v2.20), the column went blank — empty 60px stub. User said: if it's empty, don't show it at all.
+- Why it was empty: original v2.12 plan had `body.nav-icons` collapse aside to 60px and show icons only. But .nav-icon spans were never populated with actual glyph content (they're empty `<span class="nav-icon"></span>`). So collapsing showed nothing.
+- Fix: replaced the icons-mode CSS block with a simple `body.nav-icons aside { display: none }`. Toggle now means "Hide left nav entirely" — full sidebar width returns to the list/reading area.
+- Updated chip title attribute "Collapse left nav" → "Hide left nav".
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy required (combines v2.16 through v2.21).
+- Closes the parked "nav-icons rendering" item from the 2026-05-09 hold marker.
+
 ### 2026-05-09 - Claude Code (Viewer v2.20 — kill gap between label and count)
 - Request: User screenshot circled the empty space BETWEEN nav-item labels (News, AI, Tech) and their count badges. Previous v2.17/v2.19 attempts shrank sidebar width but didn't address the inner gap.
 - Root cause: .nav-label had `flex: 1` so it expanded to fill available space, pushing the count badge to the right edge of the nav-item. Visible as a wide empty middle when labels are short.
