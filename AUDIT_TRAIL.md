@@ -66,6 +66,18 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.28 — draggable resize handles)
+- Request: User tired of asking for specific widths. Build draggable resize handles on each side of the list pane. Cream color, nice icon.
+- Implementation:
+  - Added two `.resize-handle` divs (handle-left, handle-right) inside #listPane. Each contains an SVG with a 6-dot grip pattern (two columns of three dots).
+  - CSS: handles are `display: none` by default, `display: flex` when `body.no-reading-pane`. Width 14px, cream background (#f5ebd7), darker cream on hover/dragging (#ecdcb8), color goes from muted to accent on hover. position:absolute pinned to the edges of the now position:relative list-pane. `touch-action: none` so iPad drag gestures aren't hijacked by browser scroll. Hidden entirely below 720px.
+  - JS: pointerdown handler computes startX/startW/startLeft from getBoundingClientRect, attaches mousemove+mouseup AND touchmove+touchend. Right handle changes width only. Left handle adjusts BOTH width and left margin so the right edge stays anchored. CSS variables `--list-w-px` and `--list-left-px` updated live during drag, persisted to localStorage on release.
+  - Double-click any handle → clears localStorage and removes inline vars, restoring the v2.27 clamp default.
+  - applySavedListGeometry_() runs at page load to hydrate.
+  - Width is clamped between 280–1400px during drag.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy required.
+
 ### 2026-05-09 - Claude Code (Viewer v2.27 — viewport-scaled list width)
 - Request: "if it is 1440 -- then 300 | 840 | 300". User wants list to scale with viewport, not be a fixed 500px.
 - Implementation: body.no-reading-pane .list-pane width changed to `clamp(300px, calc(100vw - 600px), 1000px)`. Reserves 600px total for gutters; list takes the rest, capped at 1000 and floored at 300. Auto margins center in the flex space remaining after the sidebar (Nav on) or whole viewport (Nav off).

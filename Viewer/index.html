@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.27</title>
+<title>Refinery V2.28</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -472,18 +472,49 @@ aside {
    - body.compact-density → tighter padding/line-height for more cards on screen
    Active toggles get an .active class on the button via JS. */
 body.no-reading-pane .reading-pane { display: none; }
-/* Reading pane off → center the list pane and reserve ~600px total for gutters.
-   Width scales with viewport: on 1440 you get ~840px list with 300px gutter
-   each side; on 1920 it caps at 1000px; on smaller screens it shrinks but
-   never goes below 300px. Auto margins center within whatever flex space
-   remains after the sidebar (if Nav is on) or the full viewport (if Nav off). */
+/* Reading pane off → list pane gets a centered, viewport-scaled width AND
+   draggable resize handles on each side. Width and left margin are driven
+   by CSS variables so JS drag handlers can update them live; localStorage
+   persists the chosen size across sessions.
+     --list-w-px:    list pane width in pixels
+     --list-left-px: distance from the left edge of the flex parent
+   Defaults from clamp(): on 1440 → 840 list with auto margins (centered). */
 body.no-reading-pane .list-pane {
-  width: clamp(300px, calc(100vw - 600px), 1000px);
+  width: var(--list-w-px, clamp(300px, calc(100vw - 600px), 1000px));
   flex: 0 0 auto;
   border-right: none;
-  margin-left: auto;
+  margin-left: var(--list-left-px, auto);
   margin-right: auto;
+  position: relative;  /* anchor for the absolute-positioned resize handles */
 }
+
+/* Cream-colored grip handles, hidden by default. Show only when Reading pane
+   is off (no need for splitters when the 3-column layout is intact). */
+.resize-handle {
+  display: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  cursor: col-resize;
+  background: #f5ebd7;            /* cream */
+  border-radius: 0;
+  z-index: 5;
+  align-items: center;
+  justify-content: center;
+  color: #b8a888;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: background 0.15s, color 0.15s;
+}
+.resize-handle:hover,
+.resize-handle.dragging { background: #ecdcb8; color: var(--accent); }
+.resize-handle svg { width: 6px; height: 28px; fill: currentColor; pointer-events: none; }
+.handle-left  { left: 0; }
+.handle-right { right: 0; }
+body.no-reading-pane .resize-handle { display: flex; }
+@media (max-width: 720px) { .resize-handle { display: none !important; } }
 
 /* Nav toggle = hide left rail entirely. The original "collapse to icons"
    never had real icons populated, so a 60px empty stub was just dead space.
@@ -936,7 +967,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.27
+    Refinery V2.28
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -952,7 +983,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.27
+      Refinery V2.28
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1010,6 +1041,12 @@ kbd {
 
       <!-- Article List -->
       <div class="list-pane" id="listPane">
+        <div class="resize-handle handle-left"  id="resizeLeft"  aria-label="Resize from left"  data-side="left">
+          <svg viewBox="0 0 6 28" aria-hidden="true"><circle cx="2" cy="6" r="1.2"/><circle cx="2" cy="14" r="1.2"/><circle cx="2" cy="22" r="1.2"/><circle cx="5" cy="6" r="1.2"/><circle cx="5" cy="14" r="1.2"/><circle cx="5" cy="22" r="1.2"/></svg>
+        </div>
+        <div class="resize-handle handle-right" id="resizeRight" aria-label="Resize from right" data-side="right">
+          <svg viewBox="0 0 6 28" aria-hidden="true"><circle cx="2" cy="6" r="1.2"/><circle cx="2" cy="14" r="1.2"/><circle cx="2" cy="22" r="1.2"/><circle cx="5" cy="6" r="1.2"/><circle cx="5" cy="14" r="1.2"/><circle cx="5" cy="22" r="1.2"/></svg>
+        </div>
         <div class="list-header">
           <div class="list-title" id="listTitle">All Unread</div>
           <div class="list-meta">
@@ -1967,9 +2004,102 @@ function cycleFontSize() {
   applyFontSize_();
 }
 
+// ── List-pane resize handles ───────────────────────────────────────────────
+// Drag the cream handles on either side to resize the list pane (visible only
+// when Reading is off). Persisted to localStorage. On page load, hydrate from
+// saved values; if none, the CSS clamp() default applies.
+var LIST_W_KEY_    = 'refinery.listWidthPx';
+var LIST_LEFT_KEY_ = 'refinery.listLeftPx';
+var LIST_MIN_W_    = 280;
+var LIST_MAX_W_    = 1400;
+
+function applySavedListGeometry_() {
+  var w    = parseInt(localStorage.getItem(LIST_W_KEY_)    || '0', 10);
+  var left = parseInt(localStorage.getItem(LIST_LEFT_KEY_) || '0', 10);
+  if (w >= LIST_MIN_W_ && w <= LIST_MAX_W_) {
+    document.documentElement.style.setProperty('--list-w-px', w + 'px');
+  } else {
+    document.documentElement.style.removeProperty('--list-w-px');
+  }
+  if (left > 0) {
+    document.documentElement.style.setProperty('--list-left-px', left + 'px');
+  } else {
+    document.documentElement.style.removeProperty('--list-left-px');
+  }
+}
+
+function initResizeHandles_() {
+  ['resizeLeft', 'resizeRight'].forEach(function(id) {
+    var handle = document.getElementById(id);
+    if (!handle) return;
+    var side = handle.getAttribute('data-side'); // 'left' or 'right'
+
+    function onPointerDown(e) {
+      var pane = document.getElementById('listPane');
+      if (!pane) return;
+      var rect = pane.getBoundingClientRect();
+      var startX     = e.touches ? e.touches[0].clientX : e.clientX;
+      var startW     = rect.width;
+      var startLeft  = rect.left;
+      handle.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+
+      function onMove(ev) {
+        var clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+        var dx = clientX - startX;
+        var newW, newLeft;
+        if (side === 'right') {
+          // Drag right: grow width. Drag left: shrink.
+          newW    = Math.max(LIST_MIN_W_, Math.min(LIST_MAX_W_, startW + dx));
+          newLeft = startLeft;
+        } else {
+          // Drag left: grow width AND move left edge left. Drag right: shrink AND move right.
+          newW    = Math.max(LIST_MIN_W_, Math.min(LIST_MAX_W_, startW - dx));
+          newLeft = startLeft + (startW - newW); // keep right edge fixed
+          if (newLeft < 0) { newLeft = 0; newW = startW + startLeft; }
+        }
+        document.documentElement.style.setProperty('--list-w-px', newW + 'px');
+        document.documentElement.style.setProperty('--list-left-px', newLeft + 'px');
+        if (ev.cancelable) ev.preventDefault();
+      }
+
+      function onUp() {
+        handle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        var widthStr = getComputedStyle(document.documentElement).getPropertyValue('--list-w-px').trim();
+        var leftStr  = getComputedStyle(document.documentElement).getPropertyValue('--list-left-px').trim();
+        if (widthStr) localStorage.setItem(LIST_W_KEY_, parseInt(widthStr, 10));
+        if (leftStr)  localStorage.setItem(LIST_LEFT_KEY_, parseInt(leftStr, 10));
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup',   onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend',  onUp);
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onUp);
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend',  onUp);
+      if (e.cancelable) e.preventDefault();
+    }
+
+    handle.addEventListener('mousedown',  onPointerDown);
+    handle.addEventListener('touchstart', onPointerDown, { passive: false });
+
+    // Double-click handle = reset to default (CSS clamp)
+    handle.addEventListener('dblclick', function() {
+      localStorage.removeItem(LIST_W_KEY_);
+      localStorage.removeItem(LIST_LEFT_KEY_);
+      applySavedListGeometry_();
+    });
+  });
+}
+
 // Apply saved prefs on first paint
 LAYOUT_PREFS_.forEach(applyLayoutPref_);
 applyFontSize_();
+applySavedListGeometry_();
+initResizeHandles_();
 
 let navBusy = false;
 document.addEventListener('keydown', function(e) {
