@@ -66,6 +66,13 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.24 — mobile uses the same pattern)
+- Request: Apply the v2.23 gutter pattern to mobile too rather than building a separate mobile-only format.
+- Implementation: extended the existing @media (max-width: 720px) block to also override --sidebar-w (200 → 110) and --list-w (360 → 240). The body.no-reading-pane right-gutter rule from v2.23 already uses `margin-right: var(--sidebar-w)`, so it scales automatically with the new variable values. No CSS-rule duplication.
+- Result on phone (390px viewport, Reading off + Nav on): sidebar 110 + list ~170 + right gutter 110 = roughly centered list with symmetric breathing room. With Reading off + Nav off: list ~280 + right gutter 110.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy required.
+
 ### 2026-05-09 - Claude Code (Viewer v2.23 — right gutter when reading off)
 - Request: When Reading pane is off (user's iPad workflow), list pane stretches edge-to-edge — eye has to travel the full screen width to scan. User wants a blank region on the right equal to nav width, so the layout is symmetric and the list stays within comfortable reading distance.
 - Fix: body.no-reading-pane .list-pane now has `margin-right: var(--sidebar-w)`. List pane keeps flex:1 (fills available) but the right margin reserves sidebar-width of empty space. Effect: list is centered between left nav (200px) and matching empty 200px on the right. Same width for content regardless of reading-pane state.

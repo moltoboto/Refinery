@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.45 | Viewer: v2.23
+Ingestion: v2.45 | Viewer: v2.24
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.24 | 2026-05-09 | Claude Code | Mobile reuses the same layout pattern instead of getting a separate format. @media (max-width: 720px) sets --sidebar-w 200 → 110 and --list-w 360 → 240. The `body.no-reading-pane` right-gutter automatically scales because it uses var(--sidebar-w). On phone with Reading off + Nav on: sidebar 110 + list 170+ + right gutter 110 = symmetric layout that fits a 390px viewport |
 | Viewer v2.23 | 2026-05-09 | Claude Code | Right-side gutter when Reading is off. body.no-reading-pane .list-pane gets `margin-right: var(--sidebar-w)` so the list is symmetric with the left nav and stays at a comfortable line length instead of stretching edge-to-edge — eyes don't have to traverse the full screen width |
 | Viewer v2.22 | 2026-05-09 | Claude Code | Sidebar width 160 → 200px. Was over-shrunk in v2.19 chasing the wasted-space complaint that v2.20 actually fixed (the gap was inside the row, not the column width). 200px gives source labels room to wrap less |
 | Viewer v2.21 | 2026-05-09 | Claude Code | Nav toggle now fully hides the sidebar instead of collapsing to a 60px empty stub. The original "icons-only" mode was useless because the .nav-icon spans were never populated with glyphs. body.nav-icons aside { display: none } reclaims the full sidebar width for the list pane. Button title attr updated to "Hide left nav" |

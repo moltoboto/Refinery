@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.23</title>
+<title>Refinery V2.24</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -128,10 +128,11 @@ header {
   row-gap: 6px;
 }
 
-/* Narrow screens (phones): header is a vertical stack so chips reach. Logo and
-   search shrink; chips wrap onto multiple rows; the header grows in height as
-   needed instead of pushing chips off-screen. */
+/* Narrow screens (phones): same layout, just tuned. Header reflows to vertical
+   stack so chips reach. Sidebar and the reading-off right gutter both shrink
+   automatically because the gutter uses var(--sidebar-w). */
 @media (max-width: 720px) {
+  :root { --sidebar-w: 110px; --list-w: 240px; }
   header {
     height: auto;
     flex-wrap: wrap;
@@ -922,7 +923,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.23
+    Refinery V2.24
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -938,7 +939,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.23
+      Refinery V2.24
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
