@@ -66,6 +66,15 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.17 — sidebar shrink + URL source cleanup)
+- Request: User screenshot shows V2.15 (hadn't redeployed v2.16 yet). Reported (a) "wasted space on the left" — sidebar 248px is way too wide for the new short category names, (b) raw URL appearing as a source name (Motley Fool feed: `https://www.fool.com/a/feeds/feed?apikey=foolwatch-feed`).
+- Fixes:
+  1. --sidebar-w 248 → 196px. Categories like 'AI', 'Tech', 'News' fit comfortably in much less space; sidebar feels less empty. Source names with longer text wrap inside the narrower column.
+  2. New display helper prettifySource(src): if source string starts with http(s)://, extract host. SOURCE_LABEL_OVERRIDES_ maps known domains (fool.com → Motley Fool, seekingalpha.com → Seeking Alpha, yahoo finance, marketwatch, fox business, cnbc, bbc, nyt, reuters, the verge, ars, techcrunch, engadget, macrumors, hacker news). Falls back to title-cased SLD. Also scans full URL for known tokens (foolwatch-feed → Motley Fool). Applied to sourceNav rendering AND .card-source-label. Original value preserved in title attribute for tooltip.
+- Bundles with v2.16's category-count fix — single redeploy gets both.
+- Files touched: Viewer/index.html (sidebar var, prettifySource fn, sourceNav render, card render, version), Viewer/Code.js (version), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. **User must redeploy Viewer in Apps Script.**
+
 ### 2026-05-09 - Claude Code (Viewer v2.16 — fix category total mismatch)
 - Request: User ran backfill, category counts still don't sum to "All Unread" total.
 - Root cause: Viewer had its OWN normalizeCategory functions (Code.js line 917 `normalizeCategory_`, index.html line 2074 `normalizeCategory`) that were never updated when Ingestion went from 14 long-form categories to 10 short-form. They were mapping `'ai' → 'AI & LLMs'`, `'tech' → 'Tech & Trends'`, default `'Tech & Trends'`. So even after backfill wrote 'AI'/'Tech'/'News' to DB, the Viewer normalizer turned them BACK into legacy long names that aren't in the new CATEGORY_KEYS sidebar list — those rows counted toward unreadArticles (line 718 of Code.js) but didn't appear in any sidebar bucket.
