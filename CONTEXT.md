@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.45 | Viewer: v2.19
+Ingestion: v2.45 | Viewer: v2.20
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.20 | 2026-05-09 | Claude Code | Eliminated the gap between nav-item label and count badge. Was caused by `.nav-label { flex: 1 }` which spread label across all available space and pushed the count to the right edge — visible as empty middle when label was short ("AI", "Tech"). Changed to `flex: 0 0 auto` so label takes natural width and badge sits right next to it. Also hid empty `.nav-icon` spans (display: none) since they were never populated and were eating ~20px on the left of every nav row |
 | Viewer v2.19 | 2026-05-09 | Claude Code | Sidebar tightened further: --sidebar-w 196 → 160px, .nav-item padding 8/16 → 5/12 with gap 9 → 6, .sidebar-section padding 16/16/4 → 10/12/2. Reclaims significant horizontal space; more vertical density in nav |
 | Viewer v2.18 | 2026-05-09 | Claude Code | Removed prettifySource and SOURCE_LABEL_OVERRIDES_ — user fixed the Motley Fool source name in TOR directly so the display-side cleanup is no longer needed. Reverted sourceNav and card-source-label to use raw `src` value. Sidebar width 196px from v2.17 retained |
 | Viewer v2.17 | 2026-05-09 | Claude Code | (1) Sidebar width 248 → 196px — short category names ('AI', 'Tech', 'News') were leaving lots of dead space. (2) prettifySource(src) display helper: if source name was stored as a URL (TOR fell back to feed URL because feed title wasn't set), extract host and map to a friendly label via SOURCE_LABEL_OVERRIDES_ (Motley Fool / Seeking Alpha / Yahoo Finance / etc.) — falls back to title-cased domain slug. Applied to source nav AND card source labels. Original raw value kept in title attr for hover |

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.19</title>
+<title>Refinery V2.20</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -234,9 +234,16 @@ aside {
   border-left-color: var(--accent);
 }
 
-.nav-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+/* Hidden — nav-icon spans are empty (no glyph content) so they were just
+   eating ~20px on the left of every nav row. Re-enable with content if we
+   ever add real icons. */
+.nav-icon { display: none; }
 
-.nav-label { flex: 1; }
+/* No flex:1 — let label take its natural width so the count badge sits
+   right next to it instead of being pushed to the far right edge. The space
+   to the right of the count is fine; the gap BETWEEN label and count was
+   the visual problem. */
+.nav-label { flex: 0 0 auto; }
 
 .nav-count {
   font-size: 11px;
@@ -914,7 +921,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.19
+    Refinery V2.20
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -930,7 +937,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.19
+      Refinery V2.20
     </div>
     <div class="search-box">
       <span class="search-icon"></span>

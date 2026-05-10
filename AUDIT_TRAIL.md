@@ -66,6 +66,14 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.20 — kill gap between label and count)
+- Request: User screenshot circled the empty space BETWEEN nav-item labels (News, AI, Tech) and their count badges. Previous v2.17/v2.19 attempts shrank sidebar width but didn't address the inner gap.
+- Root cause: .nav-label had `flex: 1` so it expanded to fill available space, pushing the count badge to the right edge of the nav-item. Visible as a wide empty middle when labels are short.
+- Fix: .nav-label `flex: 0 0 auto` — natural width, badge sits immediately after label with gap:6 spacing. Empty space (if any) now sits to the right of the badge instead of between label and badge.
+- Bonus: .nav-icon `display: none` since the spans are empty (icons were never populated). Saves ~20px on left of every nav row. Re-enable with content if real icons get added.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy required.
+
 ### 2026-05-09 - Claude Code (Viewer v2.19 — sidebar much tighter)
 - Request: 196px in v2.17 wasn't enough; user reports "wasted space" still there.
 - Three CSS changes in concert:
