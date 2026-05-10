@@ -66,6 +66,17 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.19 — sidebar much tighter)
+- Request: 196px in v2.17 wasn't enough; user reports "wasted space" still there.
+- Three CSS changes in concert:
+  1. --sidebar-w 196 → 160px (reclaims 36px more for the list pane)
+  2. .nav-item padding 8/16 → 5/12; gap 9 → 6 (vertical density up, horizontal padding down)
+  3. .sidebar-section padding 16/16/4 → 10/12/2 (section dividers take less space)
+- Net effect: more compact left rail, more room for the list/reading panes.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy required (combines v2.16/17/18/19).
+- IMPORTANT: User screenshot at v2.15 showed sidebar at 248px. They may not have redeployed yet — if changes aren't visible, that's why. Each redeploy serves the latest pushed code at the existing URL.
+
 ### 2026-05-09 - Claude Code (Viewer v2.18 — drop URL-source cleanup helper)
 - Request: User fixed the Motley Fool source label in TOR directly. Asked to remove the v2.17 prettifySource helper rather than keep it as a safety net.
 - Removed: SOURCE_LABEL_OVERRIDES_ const, prettifySource() function, calls to it in sourceNav render and card-source-label.
