@@ -17,6 +17,13 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-09 - Claude Code (Viewer v2.15 — header reflow on narrow screens)
+- Request: Couldn't reach header menu items on phone without zooming out. Quick fix only — full mobile responsive layout deferred pending Claude Design review (user will run design review separately on claude.ai web with screenshots).
+- Fix: .header-right now has flex-wrap+row-gap so chips wrap onto a second row when there isn't horizontal space. Added @media (max-width: 720px) block that turns the entire header into a vertical stack: logo + status badge on row 1, search full-width on row 2, chips full-width with horizontal scroll on row 3. Chip padding/font shrunk slightly on narrow screens.
+- Body layout (sidebar/list/reading 3-column) still desktop-only and will overflow on phone — that's the bigger work parked until design review comes back with direction.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy required.
+
 ### 2026-05-09 - Claude Code (Viewer v2.14 — font cycle + per-card open link)
 - Request: User wants larger fonts. When reading pane is hidden (their iPad workflow: Reading off, keep Nav on, Compact on), there's no way to open the full article — the "Read full article" button only lives inside the reading pane.
 - Fix 1 — per-card open link: small ↗ link in the upper-right of every card. Anchor with target="_blank" and onclick="event.stopPropagation()" so it opens the URL in a new tab without also triggering card selection. Visible in all reading-pane states. Replaces the dependence on the reading pane's "Read full article" button.

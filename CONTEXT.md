@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.44 | Viewer: v2.14
+Ingestion: v2.44 | Viewer: v2.15
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.15 | 2026-05-09 | Claude Code | Header chips wrap on narrow screens. .header-right got flex-wrap + row-gap so chips wrap onto multiple rows instead of overflowing. Added @media (max-width: 720px) block: header becomes vertical stack (logo/status, search full-width, chips full-width with horizontal scroll), chip padding/font shrunk slightly. Body layout still desktop-only — proper mobile breakpoint (sidebar hamburger, slide-over reading) deferred pending design review |
 | Viewer v2.14 | 2026-05-09 | Claude Code | (1) Per-card "↗" open-original link in upper-right of every card — works regardless of reading-pane state, opens article URL in new tab. event.stopPropagation prevents triggering card select. (2) Font-size cycle chip "Aa" in header — cycles normal → large → xlarge via body class, persists in localStorage. Targets card-title, card-snippet, reading-title, reading-body, nav-item, summary-prompt directly (CSS doesn't use rem-relative sizing) |
 | Viewer v2.13 | 2026-05-09 | Claude Code | Removed the 'Current view' / 'All loaded' search scope chips from the header — redundant with Unread filtering. Search now always spans all loaded articles (searchScope hardcoded to 'all'). updateSearchScopeChips kept as no-op so existing call sites remain safe. Header is cleaner: 4 chips instead of 6 (Unread / Nav / Reading / Compact + Refresh) |
 | Viewer v2.12 | 2026-05-08 | Claude Code | Three header toggles (Reading / Nav / Compact) — each flips a body class and persists in localStorage. body.no-reading-pane hides reading pane and lets list-pane fill the space. body.nav-icons collapses left nav to icons (~190px recovered). body.compact-density tightens padding/line-height. CATEGORIES list updated to match Ingestion v2.44 (10 entries: News, AI, Finance, Learning, Tech, Watches, YouTube, Reddit, Email, Duplicate). Bumped version strings in 5 places (3 in index.html, 2 in Code.js). Requires Apps Script redeploy |
