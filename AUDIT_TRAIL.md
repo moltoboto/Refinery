@@ -66,6 +66,13 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.29 — handles fixed-positioned, more visible)
+- Request: User screenshot at v2.28 didn't show any handles — invisible.
+- Two problems with v2.28: (a) cream background blended with page bg, (b) handles inside list-pane scrolled with content.
+- Fix: handles now position:fixed with z-index 30. Background bumped to darker cream (#ecdcb8) with #d9c79e borders. Width 14 → 20px. SVG grip 6×28 → 8×36. positionResizeHandles_() reads list-pane bounding rect and sets handle .left in pixels. Called on init, layout toggle (in setTimeout 0 to await reflow), window resize, and during drag.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy required.
+
 ### 2026-05-09 - Claude Code (Viewer v2.28 — draggable resize handles)
 - Request: User tired of asking for specific widths. Build draggable resize handles on each side of the list pane. Cream color, nice icon.
 - Implementation:

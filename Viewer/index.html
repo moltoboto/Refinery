@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.28</title>
+<title>Refinery V2.29</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -488,31 +488,31 @@ body.no-reading-pane .list-pane {
   position: relative;  /* anchor for the absolute-positioned resize handles */
 }
 
-/* Cream-colored grip handles, hidden by default. Show only when Reading pane
-   is off (no need for splitters when the 3-column layout is intact). */
+/* Cream grip handles, visible only when Reading is off. Position:fixed so
+   they stay in view regardless of list scroll position. JS positions them
+   horizontally to align with the list-pane edges. */
 .resize-handle {
   display: none;
-  position: absolute;
-  top: 0;
+  position: fixed;
+  top: var(--header-h);
   bottom: 0;
-  width: 14px;
+  width: 20px;
   cursor: col-resize;
-  background: #f5ebd7;            /* cream */
-  border-radius: 0;
-  z-index: 5;
+  background: #ecdcb8;             /* visible cream */
+  border-left:  1px solid #d9c79e;
+  border-right: 1px solid #d9c79e;
+  z-index: 30;
   align-items: center;
   justify-content: center;
-  color: #b8a888;
+  color: var(--accent);
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s;
 }
 .resize-handle:hover,
-.resize-handle.dragging { background: #ecdcb8; color: var(--accent); }
-.resize-handle svg { width: 6px; height: 28px; fill: currentColor; pointer-events: none; }
-.handle-left  { left: 0; }
-.handle-right { right: 0; }
+.resize-handle.dragging { background: #e0caa0; }
+.resize-handle svg { width: 8px; height: 36px; fill: currentColor; pointer-events: none; }
 body.no-reading-pane .resize-handle { display: flex; }
 @media (max-width: 720px) { .resize-handle { display: none !important; } }
 
@@ -967,7 +967,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.28
+    Refinery V2.29
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -983,7 +983,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.28
+      Refinery V2.29
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1978,6 +1978,9 @@ function toggleLayoutPref_(pref) {
   var next = localStorage.getItem(pref.storageKey) !== '1';
   localStorage.setItem(pref.storageKey, next ? '1' : '0');
   applyLayoutPref_(pref);
+  // Layout may have changed list-pane edges; reposition handles after the
+  // browser commits the new layout.
+  setTimeout(function() { if (typeof positionResizeHandles_ === 'function') positionResizeHandles_(); }, 0);
 }
 
 function toggleReading() { toggleLayoutPref_(LAYOUT_PREFS_[0]); }
@@ -2026,7 +2029,22 @@ function applySavedListGeometry_() {
   } else {
     document.documentElement.style.removeProperty('--list-left-px');
   }
+  positionResizeHandles_();
 }
+
+// Position the fixed-position resize handles to align with the list-pane edges.
+// Called on first paint, after each toggle, on window resize, and during drag.
+function positionResizeHandles_() {
+  var pane = document.getElementById('listPane');
+  var lh = document.getElementById('resizeLeft');
+  var rh = document.getElementById('resizeRight');
+  if (!pane || !lh || !rh) return;
+  if (!document.body.classList.contains('no-reading-pane')) return;
+  var rect = pane.getBoundingClientRect();
+  lh.style.left  = (rect.left  - 20) + 'px';
+  rh.style.left  = (rect.right) + 'px';
+}
+window.addEventListener('resize', positionResizeHandles_);
 
 function initResizeHandles_() {
   ['resizeLeft', 'resizeRight'].forEach(function(id) {
@@ -2060,6 +2078,7 @@ function initResizeHandles_() {
         }
         document.documentElement.style.setProperty('--list-w-px', newW + 'px');
         document.documentElement.style.setProperty('--list-left-px', newLeft + 'px');
+        positionResizeHandles_();
         if (ev.cancelable) ev.preventDefault();
       }
 

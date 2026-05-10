@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.45 | Viewer: v2.28
+Ingestion: v2.45 | Viewer: v2.29
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.29 | 2026-05-09 | Claude Code | Resize handle visibility/scroll fix. v2.28 used position:absolute inside list-pane → handles scrolled with content (and were too pale to see). Switched to position:fixed with darker cream (#ecdcb8) + light borders. positionResizeHandles_() aligns left/right of fixed handles to current list-pane bounding rect; called on init, layout toggle, window resize, and during drag |
 | Viewer v2.28 | 2026-05-09 | Claude Code | Draggable resize handles on each side of the list pane (when Reading is off). Cream-colored vertical strips with a 6-dot grip SVG icon. Drag right handle = grow/shrink width; drag left handle = move left edge while keeping right edge fixed. Width and left margin saved to localStorage (refinery.listWidthPx / refinery.listLeftPx). Mouse + touch events, touch-action:none for iPad. Double-click any handle = reset to clamp default. Hidden on phone (<720px). Replaces the "tell me a number, I'll edit CSS" iteration loop |
 | Viewer v2.27 | 2026-05-09 | Claude Code | List pane width now scales with viewport: `clamp(300px, calc(100vw - 600px), 1000px)`. On 1440 → 840px list with 300px gutter each side (matches user spec). On 1920 → 1000 capped. On smaller viewports shrinks down to 300 floor. Auto margins center it within the flex space remaining after the sidebar |
 | Viewer v2.26 | 2026-05-09 | Claude Code | (1) Fixed Compact toggle that was a no-op since v2.12 — CSS targeted classes that don't exist (.article-card, .list-item, .article-summary). Real classes are .card, .card-snippet, etc. Compact now actually shrinks card padding, font sizes, and reading-pane padding when the toggle is on. (2) Bumped no-reading-pane list-pane width 400 → 500px |
