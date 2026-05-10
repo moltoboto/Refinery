@@ -17,6 +17,14 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-09 - Claude Code (Viewer v2.13 — drop redundant search-scope chips)
+- Request: User doesn't see use for the 'Current view' / 'All loaded' chips. The Unread chip alone provides the filtering they want — Unread on = filter to unread, Unread off = show all.
+- Removed: both chips from header. searchScope hardcoded to 'all' (default and after every setView). Header is cleaner — 4 chips (Unread, Nav, Reading, Compact) plus Refresh, instead of 6.
+- updateSearchScopeChips() kept as a no-op since it's still called from window.onload and setSearchScope; if called with the missing buttons, the existing `if (chip)` guards make it a safe no-op. setSearchScope() also kept (no callers in the live UI now, but harmless).
+- Side effect: searches now span ALL loaded articles regardless of which category is active. This is what the user described — when Unread is on, list filters to unread; when off, list shows all.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live.
+
 ### 2026-05-09 - HOLD (session close)
 Current state: Ingestion v2.44, Viewer v2.12. Both pushed. Viewer NOT yet redeployed — the new toggles won't be live at the URL until pencil → New version → Deploy in Viewer Apps Script project.
 

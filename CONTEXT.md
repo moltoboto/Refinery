@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.44 | Viewer: v2.12
+Ingestion: v2.44 | Viewer: v2.13
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.13 | 2026-05-09 | Claude Code | Removed the 'Current view' / 'All loaded' search scope chips from the header — redundant with Unread filtering. Search now always spans all loaded articles (searchScope hardcoded to 'all'). updateSearchScopeChips kept as no-op so existing call sites remain safe. Header is cleaner: 4 chips instead of 6 (Unread / Nav / Reading / Compact + Refresh) |
 | Viewer v2.12 | 2026-05-08 | Claude Code | Three header toggles (Reading / Nav / Compact) — each flips a body class and persists in localStorage. body.no-reading-pane hides reading pane and lets list-pane fill the space. body.nav-icons collapses left nav to icons (~190px recovered). body.compact-density tightens padding/line-height. CATEGORIES list updated to match Ingestion v2.44 (10 entries: News, AI, Finance, Learning, Tech, Watches, YouTube, Reddit, Email, Duplicate). Bumped version strings in 5 places (3 in index.html, 2 in Code.js). Requires Apps Script redeploy |
 | v2.44 | 2026-05-08 | Claude Code | Renamed remaining long category names: 'Top Story' → 'News', 'Resources' → 'Learning'. canonicalCategoryName_ legacy folds added so existing rows display correctly until backfill (top story/top stories → News, resources/resource → Learning, learning skills/learning & skills → Learning). Run applySourceCategoryBackfill() to retag |
 | v2.43 | 2026-05-08 | Claude Code | Renamed long category names to match TOR folders: 'AI & LLMs' → 'AI', 'Tech & Trends' → 'Tech'. Updated CATEGORY_OPTIONS, CATEGORY_SOURCE_MAP, TOR_FOLDER_CATEGORY_MAP, isKnownCategory_, detectCategory return values. canonicalCategoryName_ keeps legacy mappings ('ai llms'/'ai & llms' → 'AI', 'tech trends'/'tech & trends' → 'Tech') so existing DB rows fold correctly when backfill runs. Run applySourceCategoryBackfill() to retag |

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.12</title>
+<title>Refinery V2.13</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -853,7 +853,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.12
+    Refinery V2.13
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -869,7 +869,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.12
+      Refinery V2.13
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -880,8 +880,6 @@ kbd {
         <div class="live-dot" id="liveDot"></div>
         <span id="statusText"></span>
       </div>
-      <button class="chip active" id="searchScopeView" onclick="setSearchScope('view')">Current view</button>
-      <button class="chip" id="searchScopeAll" onclick="setSearchScope('all')">All loaded</button>
       <button class="chip" id="unreadChip" onclick="toggleUnread()">Unread only</button>
       <button class="chip" id="toggleNavBtn"     onclick="toggleNav()"     title="Collapse left nav">Nav</button>
       <button class="chip" id="toggleReadingBtn" onclick="toggleReading()" title="Hide reading pane">Reading</button>
@@ -976,7 +974,9 @@ let selectedArtifact = null;
 let view = 'all';
 let unreadOnly = true;
 let artView = false;
-let searchScope = 'view';
+// Search always spans all loaded articles — the Current view / All loaded chips
+// were removed in v2.13 as redundant with Unread filtering.
+let searchScope = 'all';
 let loadingMore = false;
 let moreAvailable = 0;
 let artifactTotal = 0;
@@ -1183,8 +1183,7 @@ function setCount(id, n) {
 function setView(v) {
   view = v;
   artView = v === 'artifacts';
-  searchScope = 'view';
-  updateSearchScopeChips();
+  searchScope = 'all';
   PRESERVED_READ_IDS = {};
 
   document.querySelectorAll('.nav-item').forEach(function(el) {
