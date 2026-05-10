@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.44
+ * Version: 2.45
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -53,7 +53,7 @@ var CONFIG = {
   DEDUPE_REVIEW: {
     WINDOW_DAYS: 30,    // 30-day window for the in-memory dedup cache
     MAX_CANDIDATES: 500, // 500 is enough now that mark-read works (v2.35); was 2000 during backlog
-    MIN_SCORE: 0.66,
+    MIN_SCORE: 0.55,    // Lowered from 0.66 in v2.45 — better recall on same-topic articles with different headlines
     MIN_SHARED_TOKENS: 3
   },
 
@@ -1819,7 +1819,8 @@ function findPossibleDuplicateCandidate_(record, headers) {
     titleNorm: normalizeTitleForDedupe(record && record.title || ''),
     titleTokens: dedupeTokens_(record && record.title || '', true),
     topicTokens: dedupeTokens_(incomingFullText, false),
-    simhash: simhashText_(incomingFullText)
+    simhash: simhashText_(incomingFullText),
+    properNouns: extractProperNouns_(record && record.title || '')
   };
 
   var matches = rows.map(function(candidate) {
@@ -1853,7 +1854,8 @@ function scorePossibleDuplicateMatch_(record, candidate, incoming) {
       titleNorm: normalizeTitleForDedupe(record && record.title || ''),
       titleTokens: dedupeTokens_(record && record.title || '', true),
       topicTokens: dedupeTokens_(incomingFullText_, false),
-      simhash: simhashText_(incomingFullText_)
+      simhash: simhashText_(incomingFullText_),
+      properNouns: extractProperNouns_(record && record.title || '')
     };
   }
 
@@ -1888,6 +1890,17 @@ function scorePossibleDuplicateMatch_(record, candidate, incoming) {
     score = Math.max(score, 0.80);
   }
 
+  // Proper-noun overlap: count shared title entities (Rolex, GMT-Master, etc.).
+  // Catches same-topic articles whose headlines diverge in word choice but
+  // still share the key entity names.
+  var candidateNouns = candidate._properNouns || extractProperNouns_(candidate && candidate.title || '');
+  var sharedNouns = 0;
+  if (incoming.properNouns && incoming.properNouns.length && candidateNouns.length) {
+    var nounSet = {};
+    candidateNouns.forEach(function(n) { nounSet[n] = true; });
+    incoming.properNouns.forEach(function(n) { if (nounSet[n]) sharedNouns++; });
+  }
+
   var reason = '';
   if (hdist <= 4) {
     reason = 'simhash near-identical (hamming=' + hdist + ')';
@@ -1902,17 +1915,63 @@ function scorePossibleDuplicateMatch_(record, candidate, incoming) {
   } else if (topicStats.shared.length >= (minShared + 2) && containment >= 0.45) {
     reason = 'same company/topic among active unread articles';
     score = Math.max(score, 0.68);
+  } else if (sharedNouns >= 3) {
+    // NEW in v2.45: catches same-watch / same-event articles with divergent headlines
+    reason = sharedNouns + ' shared title entities';
+    score = Math.max(score, 0.66);
   } else {
     return null;
   }
 
-  if (score < (CONFIG.DEDUPE_REVIEW.MIN_SCORE || 0.66)) return null;
+  if (score < (CONFIG.DEDUPE_REVIEW.MIN_SCORE || 0.55)) return null;
 
   return {
     score: score,
     reason: reason,
     primary: candidate
   };
+}
+
+// Headline-context stopwords — words that often appear capitalized in titles
+// but aren't real proper nouns (verbs, articles, common adjectives). Used by
+// extractProperNouns_ to ignore them when looking for real entity overlap.
+var HEADLINE_STOPWORDS_ = {
+  the:1, a:1, an:1, and:1, or:1, but:1, for:1, from:1, with:1, in:1, on:1, at:1,
+  of:1, to:1, is:1, are:1, was:1, were:1, be:1, been:1, by:1, as:1, it:1, its:1,
+  new:1, why:1, how:1, what:1, when:1, where:1, will:1, has:1, have:1, had:1,
+  this:1, that:1, these:1, those:1, all:1, one:1, two:1, three:1,
+  just:1, now:1, more:1, most:1, less:1, best:1, top:1, big:1, small:1,
+  unveils:1, launches:1, announces:1, releases:1, says:1, said:1, reveals:1,
+  reports:1, adds:1, gets:1, goes:1, still:1, after:1, before:1,
+  first:1, last:1, next:1, great:1, good:1, bad:1,
+  review:1, video:1, podcast:1, feature:1, analysis:1, opinion:1,
+  introducing:1, meet:1, see:1, watch:1, check:1, find:1, hands:1
+};
+
+// Extract likely proper-noun tokens from a title. Heuristic: words starting
+// with a capital, length 3+, not in the headline stopword list. Returns
+// lowercased deduped list so comparison is case-insensitive.
+//
+// Used by scorePossibleDuplicateMatch_ to detect "same entity in two titles
+// with different word choice" — e.g. two different write-ups of the same
+// Rolex GMT release will both contain 'rolex' and 'gmt'.
+function extractProperNouns_(title) {
+  var out = [];
+  var seen = {};
+  var tokens = String(title || '')
+    .replace(/[''""]/g, '')
+    .split(/[^A-Za-z0-9-]+/);
+  for (var i = 0; i < tokens.length; i++) {
+    var t = tokens[i];
+    if (!t || t.length < 3) continue;
+    if (!/^[A-Z]/.test(t)) continue;
+    var key = t.toLowerCase();
+    if (HEADLINE_STOPWORDS_[key]) continue;
+    if (seen[key]) continue;
+    seen[key] = true;
+    out.push(key);
+  }
+  return out;
 }
 
 // Module-level so it isn't reallocated on every call (was reallocating thousands
@@ -2142,11 +2201,12 @@ function warmDedupCache_(headers) {
       if (row.title) DEDUP_TITLE_MAP_[normalizeTitleForDedupe(row.title).toLowerCase()] = true;
       // Precompute features used by scorePossibleDuplicateMatch_
       var fullText = (row.title || '') + ' ' + cleanSummaryForDedupe_(row.summary || '');
-      row._url         = cleanUrl(row.url || '');
-      row._titleNorm   = normalizeTitleForDedupe(row.title || '');
-      row._titleTokens = dedupeTokens_(row.title || '', true);
-      row._topicTokens = dedupeTokens_(fullText, false);
-      row._simhash     = simhashText_(fullText);
+      row._url           = cleanUrl(row.url || '');
+      row._titleNorm     = normalizeTitleForDedupe(row.title || '');
+      row._titleTokens   = dedupeTokens_(row.title || '', true);
+      row._topicTokens   = dedupeTokens_(fullText, false);
+      row._simhash       = simhashText_(fullText);
+      row._properNouns   = extractProperNouns_(row.title || '');
     });
     Logger.log('DEDUP CACHE: warmed with ' + INGESTION_DEDUP_CACHE_.length + ' candidates (' +
                Object.keys(DEDUP_URL_MAP_).length + ' URLs, ' +

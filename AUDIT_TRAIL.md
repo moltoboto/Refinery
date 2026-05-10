@@ -66,6 +66,17 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (v2.45 — better dedup recall on topic clusters)
+- Request: User reports duplicates not catching multiple articles on same identical watch/topic when headlines differ. Examples: 3 sources covering same Rolex GMT release with different headlines.
+- Two complementary fixes:
+  1. Lowered DEDUPE_REVIEW.MIN_SCORE 0.66 → 0.55. More fuzzy matches survive scoring. Risk: more false positives in Duplicate review.
+  2. Added proper-noun overlap detection. extractProperNouns_(title) pulls capitalized 3+ char tokens (Rolex, GMT-Master, Anthropic, etc.) and drops a headline stopword list (HEADLINE_STOPWORDS_ — the/a/and/unveils/launches/announces/etc.). Lowercased deduped list per article.
+  3. Proper nouns precomputed at warmDedupCache_ time as `row._properNouns`, and on incoming records in findPossibleDuplicateCandidate_. scorePossibleDuplicateMatch_ has a new branch: when sharedNouns >= 3 between incoming and candidate titles, fires with reason "N shared title entities" and boosts score to 0.66.
+- Net: catches "Rolex Unveils GMT" + "Hands-On the New Rolex GMT-Master" + "Rolex Reference 126710 First Look" — all share Rolex+GMT+Master and now flag as duplicates.
+- Watch carefully for false positives in Duplicate review. If common entities like "AI" or "Apple" cause noise, can add weighting (rare nouns count more) in a follow-up.
+- Files touched: Ingestion/Code.js (v2.45), CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE.
+
 ### 2026-05-08 - Claude Code (v2.44 — second rename pass)
 - Request: Also shorten 'Top Story' → 'News' and 'Resources' → 'Learning' to match TOR folder names exactly.
 - Bulk-replaced both throughout. Added legacy fold rows in canonicalCategoryName_: 'top story', 'top stories' → 'News'; 'resources', 'resource', 'learning skills', 'learning & skills' → 'Learning'. Pre-existing 'strategy' → 'Resources' fold flipped to 'Learning'.
