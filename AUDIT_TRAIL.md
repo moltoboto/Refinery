@@ -66,6 +66,13 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-09 - Claude Code (Viewer v2.22 — sidebar width restored)
+- Request: Sidebar feels too small now in full view.
+- Cause: I over-shrank in v2.19 (196 → 160px) trying to fix the user's "wasted space" complaint. Turned out the real fix was inside the row (v2.20: removed flex:1 on label, hid empty icon column), not the column width. Combined effect: sidebar both narrower AND tighter — felt cramped.
+- Fix: --sidebar-w back up to 200px. Inner-padding/label-flex fixes from v2.20 stay. End result is a sidebar that's noticeably narrower than the original 248px but still has reasonable breathing room and lets long source labels wrap less.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push DONE. Apps Script redeploy required.
+
 ### 2026-05-09 - Claude Code (Viewer v2.21 — Nav toggle hides sidebar fully)
 - Request: When user toggled Nav in v2.19 screenshot (still pre-redeploy of v2.20), the column went blank — empty 60px stub. User said: if it's empty, don't show it at all.
 - Why it was empty: original v2.12 plan had `body.nav-icons` collapse aside to 60px and show icons only. But .nav-icon spans were never populated with actual glyph content (they're empty `<span class="nav-icon"></span>`). So collapsing showed nothing.
