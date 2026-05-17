@@ -17,6 +17,12 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-17 - Claude Code (Viewer v2.32 — list flush-left, fixed right gutter)
+- Request: List was centered (wrong). User wants it flush against nav, growing large, with stable blank area on right.
+- Fix: body.no-reading-pane .list-pane now flex:1/width:auto/margin-left:0/margin-right:280px. List fills all space left of a fixed 280px right gutter. body.nav-icons.no-reading-pane inherits same margin-right.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push + Apps Script redeploy required.
+
 ### 2026-05-17 - Claude Code (Viewer v2.31 — list pane fixed width + blank right)
 - Request: Reading off showed no difference; list was filling full screen. Want blank area on right.
 - Fix: Replaced clamp/localStorage-variable width with fixed 600px centered (margin auto both sides). Nav+Reading both off: 700px. Removes --list-w-px/--list-left-px dependency entirely — layout is predictable regardless of any saved drag state.

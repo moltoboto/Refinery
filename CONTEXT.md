@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.46 | Viewer: v2.31
+Ingestion: v2.46 | Viewer: v2.32
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.32 | 2026-05-17 | Claude Code | List pane flush-left against nav, flex:1 minus 280px fixed right gutter — grows to fill available width with stable blank area on the right |
 | Viewer v2.31 | 2026-05-17 | Claude Code | List pane fixed 600px centered (700px when Nav also off) — removes localStorage drag variable dependency; blank space on right regardless of nav state |
 | Viewer v2.30 | 2026-05-17 | Claude Code | When Nav+Reading both off: list fills viewport with 20px margin each side (flex:1, no clamp math, resize handles hidden). Fixes off-center layout on iPad when both panes are dismissed |
 | v2.46 | 2026-05-17 | Claude Code | hardPurgeDeletedArticles() now runs automatically at end of runDailyIngestion(), after trimArticlesToCapacity() — no more manual purge needed to clear soft-deleted rows |
