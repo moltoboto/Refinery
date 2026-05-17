@@ -17,6 +17,13 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-10 - Claude Code (skill — refinery-sop onboarding)
+- Request: Drop a skill that teaches a future Claude Code session the Refinery GitHub setup, audit-trail discipline, and end-to-end SOP loop.
+- Fix: Added `.claude/skills/refinery-sop/SKILL.md`. Skill references CONTEXT/AUDIT_TRAIL/PROCESS as source of truth rather than duplicating; documents the v2.8/stale-master tripwire, version-bump locations (Ingestion 1 / Viewer 5), the push-vs-redeploy split (Ingestion push-only, Viewer push+redeploy), audit-trail top-insert rule, and the Do-Not-Touch list. Will trigger on `/refinery-sop` or when a session starts Refinery work.
+- Files touched: .claude/skills/refinery-sop/SKILL.md (new), AUDIT_TRAIL.md
+- Deployment: docs/skill only — no app code changed, no clasp push. git commit + push only.
+- Activation: Project-level skill — Claude Code loads it when started with the Refinery directory as cwd. Other machines pick it up automatically after `git pull`.
+
 ### 2026-05-10 - Claude Code (process docs + ship script + branch cleanup)
 - Context: migrated to a second machine (C:\Users\ThomasCala). Discovered GitHub default branch was `master` (13 months stale, ~v2.8); all real work is on `main`. Resolved: new machine `git checkout main`; GitHub default branch changed master→main via gh api; stale `master` branch deleted from origin; local tracking ref pruned. No work was ever lost — `main` always had everything.
 - Rewrote PROCESS.md from scratch — old version described a stale multi-tool/.json-export era (Codex/Copilot/Gemini, clasp pull-from-Drive). New version documents the actual workflow: the edit→bump→docs→push→commit loop, version-bump locations (Ingestion 1 / Viewer 5), deploy rules (Ingestion push-only, Viewer push+redeploy), cross-machine handoff, branch gotcha, the never-touch list.
