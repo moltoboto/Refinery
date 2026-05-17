@@ -10,7 +10,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `PROCESS.md` - workflow for pull/edit/push/deploy
 
 ## Current Version
-Ingestion: v2.45 | Viewer: v2.29
+Ingestion: v2.46 | Viewer: v2.30
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -130,6 +130,8 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.30 | 2026-05-17 | Claude Code | When Nav+Reading both off: list fills viewport with 20px margin each side (flex:1, no clamp math, resize handles hidden). Fixes off-center layout on iPad when both panes are dismissed |
+| v2.46 | 2026-05-17 | Claude Code | hardPurgeDeletedArticles() now runs automatically at end of runDailyIngestion(), after trimArticlesToCapacity() — no more manual purge needed to clear soft-deleted rows |
 | Viewer v2.29 | 2026-05-09 | Claude Code | Resize handle visibility/scroll fix. v2.28 used position:absolute inside list-pane → handles scrolled with content (and were too pale to see). Switched to position:fixed with darker cream (#ecdcb8) + light borders. positionResizeHandles_() aligns left/right of fixed handles to current list-pane bounding rect; called on init, layout toggle, window resize, and during drag |
 | Viewer v2.28 | 2026-05-09 | Claude Code | Draggable resize handles on each side of the list pane (when Reading is off). Cream-colored vertical strips with a 6-dot grip SVG icon. Drag right handle = grow/shrink width; drag left handle = move left edge while keeping right edge fixed. Width and left margin saved to localStorage (refinery.listWidthPx / refinery.listLeftPx). Mouse + touch events, touch-action:none for iPad. Double-click any handle = reset to clamp default. Hidden on phone (<720px). Replaces the "tell me a number, I'll edit CSS" iteration loop |
 | Viewer v2.27 | 2026-05-09 | Claude Code | List pane width now scales with viewport: `clamp(300px, calc(100vw - 600px), 1000px)`. On 1440 → 840px list with 300px gutter each side (matches user spec). On 1920 → 1000 capped. On smaller viewports shrinks down to 300 floor. Auto margins center it within the flex space remaining after the sidebar |

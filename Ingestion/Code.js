@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.45
+ * Version: 2.46
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -315,6 +315,8 @@ function runDailyIngestion() {
     report.phase3_gmail = ingestGmailTwoTier();
     Logger.log("\n--- RETENTION TRIM ---");
     report.retention = trimArticlesToCapacity();
+    Logger.log("\n--- HARD PURGE ---");
+    report.hardPurge = hardPurgeDeletedArticles();
   } catch (e) {
     Logger.log("FATAL ERROR: " + e);
     report.error = e.toString();

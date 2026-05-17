@@ -17,6 +17,13 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-17 - Claude Code (Ingestion v2.46 + Viewer v2.30)
+- Request: (1) Auto-run hard purge after trim so soft-deleted rows don't accumulate. (2) Fix iPad layout when both Nav and Reading are off — list pane was offset/narrow instead of filling the screen.
+- Fix 1 — Ingestion v2.46: added `hardPurgeDeletedArticles()` call in `runDailyIngestion()` immediately after `trimArticlesToCapacity()`. Logs as `--- HARD PURGE ---`. No more manual purge needed after each ingestion cycle.
+- Fix 2 — Viewer v2.30: added `body.nav-icons.no-reading-pane .list-pane` CSS rule — `flex:1; width:auto; max-width:none; margin:0 20px`. Overrides the clamp-based width from the base `no-reading-pane` rule. When both panes are off, the list is the only flex child so `flex:1` fills the full viewport minus 20px borders. Also hides resize handles in that mode (full-screen width; handles at screen edges would be pointless).
+- Files touched: Ingestion/Code.js, Viewer/Code.js, Viewer/index.html, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push both apps. Viewer also needs Apps Script redeploy (pencil → New version → Deploy).
+
 ### 2026-05-10 - Claude Code (skill — refinery-sop onboarding)
 - Request: Drop a skill that teaches a future Claude Code session the Refinery GitHub setup, audit-trail discipline, and end-to-end SOP loop.
 - Fix: Added `.claude/skills/refinery-sop/SKILL.md`. Skill references CONTEXT/AUDIT_TRAIL/PROCESS as source of truth rather than duplicating; documents the v2.8/stale-master tripwire, version-bump locations (Ingestion 1 / Viewer 5), the push-vs-redeploy split (Ingestion push-only, Viewer push+redeploy), audit-trail top-insert rule, and the Do-Not-Touch list. Will trigger on `/refinery-sop` or when a session starts Refinery work.
