@@ -17,6 +17,12 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-17 - Claude Code (Viewer v2.31 — list pane fixed width + blank right)
+- Request: Reading off showed no difference; list was filling full screen. Want blank area on right.
+- Fix: Replaced clamp/localStorage-variable width with fixed 600px centered (margin auto both sides). Nav+Reading both off: 700px. Removes --list-w-px/--list-left-px dependency entirely — layout is predictable regardless of any saved drag state.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push + Apps Script redeploy required.
+
 ### 2026-05-17 - Claude Code (Ingestion v2.46 + Viewer v2.30)
 - Request: (1) Auto-run hard purge after trim so soft-deleted rows don't accumulate. (2) Fix iPad layout when both Nav and Reading are off — list pane was offset/narrow instead of filling the screen.
 - Fix 1 — Ingestion v2.46: added `hardPurgeDeletedArticles()` call in `runDailyIngestion()` immediately after `trimArticlesToCapacity()`. Logs as `--- HARD PURGE ---`. No more manual purge needed after each ingestion cycle.

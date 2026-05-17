@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.30</title>
+<title>Refinery V2.31</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -480,12 +480,12 @@ body.no-reading-pane .reading-pane { display: none; }
      --list-left-px: distance from the left edge of the flex parent
    Defaults from clamp(): on 1440 → 840 list with auto margins (centered). */
 body.no-reading-pane .list-pane {
-  width: var(--list-w-px, clamp(300px, calc(100vw - 600px), 1000px));
-  flex: 0 0 auto;
+  width: 600px;
+  flex: 0 0 600px;
   border-right: none;
-  margin-left: var(--list-left-px, auto);
+  margin-left: auto;
   margin-right: auto;
-  position: relative;  /* anchor for the absolute-positioned resize handles */
+  position: relative;
 }
 
 /* Cream grip handles, visible only when Reading is off. Position:fixed so
@@ -525,13 +525,9 @@ body.nav-icons aside { display: none; }
    a narrow margin on each side. Overrides the clamp/variable width from the
    base no-reading-pane rule — no sidebar math needed when aside is gone. */
 body.nav-icons.no-reading-pane .list-pane {
-  flex: 1;
-  width: auto;
-  max-width: none;
-  margin-left: 20px;
-  margin-right: 20px;
+  width: 700px;
+  flex: 0 0 700px;
 }
-body.nav-icons.no-reading-pane .resize-handle { display: none; }
 
 /* Compact density — actual class names this time. Card class is `.card`,
    summary is `.card-snippet`, etc. The previous v2.12 rules targeted classes
@@ -979,7 +975,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.30
+    Refinery V2.31
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -995,7 +991,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.30
+      Refinery V2.31
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
