@@ -21,7 +21,7 @@ Ingestion: v2.45 | Viewer: v2.29
 
 ## Local File Structure
 ```
-C:\Users\exact\Refinery\          ← git repo, tracked on origin/main
+C:\Users\ThomasCala\Refinery\          ← git repo, tracked on origin/main
   ├── Viewer\          (Code.js, index.html, appsscript.json, .clasp.json)
   ├── Ingestion\       (Code.js, appsscript.json, .clasp.json)
   ├── CONTEXT.md
@@ -100,8 +100,8 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 - Finance filter (`isFastFinanceFiltered_`, `isFinanceFiltered_`) is disabled — checks commented out in TOR loop. Re-enable by uncommenting both lines. See v2.34 in changelog.
 - UrlFetchApp daily quota: ~20,000 calls/day. Exhausted 2026-05-03 due to markTORArticlesAsRead batch bug (v2.35 fixed). Resets at midnight Pacific. Do not run ingestion multiple times/hour.
 - Kagi feeds in TOR use `allorigins.win` as a CORS proxy (e.g. `api.allorigins.win/raw?url=https://news.kagi.com/...`). This 3rd-party proxy can go down silently — if Kagi content disappears from the Viewer, check allorigins.win first
-- Source files live locally at `C:\Users\exact\Refinery\`; deployed to Apps Script via clasp
-- All working docs consolidated to `C:\Users\exact\Refinery\` (previously split across OneDrive\Refinery and two separate clasp folders)
+- Source files live locally at `C:\Users\ThomasCala\Refinery\`; deployed to Apps Script via clasp
+- All working docs consolidated to `C:\Users\ThomasCala\Refinery\` (previously split across OneDrive\Refinery and two separate clasp folders)
 
 ## Current Disabled Features (intentional, easy to re-enable)
 - **enrichArticleFromUrl()** — HTTP fetch commented out in enrichTORArticle_(). Any slow destination URL could hang UrlFetchApp indefinitely. RSS title/summary/image is sufficient. Re-enable selectively if richer summaries are needed.
@@ -185,7 +185,7 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 | v2.10 | 2026-04-20 | Codex | Added safe article-only purge helpers for rows before a cutoff date while preserving Drive artifacts, plus TOR subscription listing helpers including a Kagi-specific filter to support feed replacement cleanup |
 | v2.9 | 2026-04-19 | Codex | Added a TOR source-category review sheet (`rss_source_map`) with category dropdowns and first-pass suggestions based on feed/source patterns plus recent TOR article titles; source overrides now apply during ingestion and category backfill, and generic uses of the word "watch" no longer auto-map articles to Watches |
 | v2.8 | 2026-04-19 | Codex | Added ingestion-time duplicate review: exact duplicates and possible duplicates now route into a Duplicate category for manual review in the Viewer, using the earliest matching article as the original reference and preserving review context in the summary |
-| v2.7 | 2026-04-13 | Claude Code | Date format changed to yyyy-MM-dd for sortability; artifact metadata line removed from list; Archive removed from sidebar; open-in-window opens popup (1000x800); email date used for artifact date label (not file creation date); double-date stripped from display title; Drive scope upgraded from readonly to full; renameArtifactsToDateTitle() added; MAX_EMAILS_PER_RUN bumped to 100; all files consolidated to C:\Users\exact\Refinery\ |
+| v2.7 | 2026-04-13 | Claude Code | Date format changed to yyyy-MM-dd for sortability; artifact metadata line removed from list; Archive removed from sidebar; open-in-window opens popup (1000x800); email date used for artifact date label (not file creation date); double-date stripped from display title; Drive scope upgraded from readonly to full; renameArtifactsToDateTitle() added; MAX_EMAILS_PER_RUN bumped to 100; all files consolidated to C:\Users\ThomasCala\Refinery\ |
 | v2.6 | 2026-04-12 | Codex | Removed Archive button from article right-pane; removed Artifacts from category nav; artifact list titles formatted as Date -- Title; added pop-out and delete buttons on artifact header; backend artifact deletion; stronger mime normalization for TXT/MD/JSON/CSV |
 | v2.5 | 2026-04-11 | Codex | Email injection improvements; artifacts changed from text to HTML; fixed artifact viewer for PNG and TXT; cleaned up artifact naming; removed Keep and Open in Drive buttons |
 | v2.4 | - | - | Baseline version when CONTEXT.md was created |

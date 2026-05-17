@@ -17,6 +17,14 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-17 - Claude Code (docs — machine migration + branch cleanup)
+- Request: New machine. Update docs paths and document the recent branch cleanup so future sessions don't trip on it.
+- Context: Local working copy moved from `C:\Users\exact\Refinery\` (old machine, P16) to `C:\Users\ThomasCala\Refinery\` (new machine). Separately, the repo had a stale `master` branch hanging around alongside `main`. Earlier in this session I read CONTEXT/AUDIT_TRAIL from `master`, which showed v2.8/v2.8 and no HOLD marker, and got out of sync with reality. User resolved that by switching the GitHub default branch from `master` to `main` and deleting `master`; this working tree is now on `main` with v2.45 / v2.29 and the 2026-05-09 HOLD marker visible at the top of the audit trail.
+- Fix: Find-and-replaced `C:\Users\exact\Refinery` → `C:\Users\ThomasCala\Refinery` in CONTEXT.md and HANDOFF_PROMPT.md (replace_all). PROCESS.md had no matches. AUDIT_TRAIL.md historical entries left untouched on purpose — they describe state at the time and shouldn't be retroactively rewritten.
+- Files touched: CONTEXT.md, HANDOFF_PROMPT.md, AUDIT_TRAIL.md
+- Deployment: No clasp push, no version bump — docs-only change. Git commit + push to origin/main.
+- Follow-up: Before any clasp push from this machine: `npx --yes @google/clasp login` (moltoboto@gmail.com). gh CLI must be authenticated as moltoboto for git push. No code touched, so the pending items from the 2026-05-09 HOLD (run applySourceCategoryBackfill, purge backlog, redeploy Viewer) all remain open.
+
 ### 2026-05-09 - Claude Code (Viewer v2.15 — header reflow on narrow screens)
 - Request: Couldn't reach header menu items on phone without zooming out. Quick fix only — full mobile responsive layout deferred pending Claude Design review (user will run design review separately on claude.ai web with screenshots).
 - Fix: .header-right now has flex-wrap+row-gap so chips wrap onto a second row when there isn't horizontal space. Added @media (max-width: 720px) block that turns the entire header into a vertical stack: logo + status badge on row 1, search full-width on row 2, chips full-width with horizontal scroll on row 3. Chip padding/font shrunk slightly on narrow screens.

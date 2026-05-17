@@ -6,9 +6,9 @@ Use this at the start of any session with any LLM (Claude Code, Codex, Copilot, 
 
 ## WHERE EVERYTHING LIVES
 
-### Local files (P16 — C:\Users\exact\Refinery\)
+### Local files (P16 — C:\Users\ThomasCala\Refinery\)
 ```
-C:\Users\exact\Refinery\
+C:\Users\ThomasCala\Refinery\
   ├── Viewer\          → Apps Script Viewer app (Code.js, index.html, appsscript.json, .clasp.json)
   ├── Ingestion\       → Apps Script Ingestion app (Code.js, appsscript.json, .clasp.json)
   ├── CONTEXT.md       → Project brain — read first every session
@@ -37,8 +37,8 @@ C:\Users\exact\Refinery\
 
 ### Push commands
 ```bash
-cd C:\Users\exact\Refinery\Ingestion && npx --yes @google/clasp push
-cd C:\Users\exact\Refinery\Viewer    && npx --yes @google/clasp push
+cd C:\Users\ThomasCala\Refinery\Ingestion && npx --yes @google/clasp push
+cd C:\Users\ThomasCala\Refinery\Viewer    && npx --yes @google/clasp push
 ```
 Viewer changes also need an Apps Script redeploy (pencil → New version → Deploy).
 Ingestion is push-only, no redeploy needed.
@@ -62,10 +62,10 @@ Claude Code (this tool) pushes via clasp. Working docs must be manually uploaded
 ```
 You are working on Refinery, a personal news reader built on Google Apps Script + Supabase.
 
-Source files at C:\Users\exact\Refinery\
-- Viewer app:    C:\Users\exact\Refinery\Viewer\
-- Ingestion app: C:\Users\exact\Refinery\Ingestion\
-- Working docs:  C:\Users\exact\Refinery\
+Source files at C:\Users\ThomasCala\Refinery\
+- Viewer app:    C:\Users\ThomasCala\Refinery\Viewer\
+- Ingestion app: C:\Users\ThomasCala\Refinery\Ingestion\
+- Working docs:  C:\Users\ThomasCala\Refinery\
 
 Before doing anything:
   1. Read CONTEXT.md (current version + change log)
@@ -75,8 +75,8 @@ Before doing anything:
   3. Read the relevant Code.js section before editing
 
 Push commands:
-  cd C:\Users\exact\Refinery\Ingestion && npx --yes @google/clasp push
-  cd C:\Users\exact\Refinery\Viewer    && npx --yes @google/clasp push
+  cd C:\Users\ThomasCala\Refinery\Ingestion && npx --yes @google/clasp push
+  cd C:\Users\ThomasCala\Refinery\Viewer    && npx --yes @google/clasp push
   Viewer ALSO needs Apps Script redeploy (pencil → New version → Deploy).
   Ingestion is push-only, no deploy step.
 
@@ -137,7 +137,7 @@ last writer wins and the other account won't know its read was stale.
 - [ ] Deploy → Manage Deployments → pencil icon → **New version** → Deploy (keeps same URL, no bookmark change)
 
 ### Switching tools:
-- **Codex → Claude Code:** make sure Codex pushed to GitHub, then `git pull` in `C:\Users\exact\Refinery\`
+- **Codex → Claude Code:** make sure Codex pushed to GitHub, then `git pull` in `C:\Users\ThomasCala\Refinery\`
 - **Claude Code → Codex:** Claude Code pushes to GitHub; download latest files from GitHub in Codex
 
 ---
