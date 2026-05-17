@@ -66,6 +66,14 @@ Pending user actions (not Claude actions):
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
 
+### 2026-05-10 - Claude Code (process docs + ship script + branch cleanup)
+- Context: migrated to a second machine (C:\Users\ThomasCala). Discovered GitHub default branch was `master` (13 months stale, ~v2.8); all real work is on `main`. Resolved: new machine `git checkout main`; GitHub default branch changed master→main via gh api; stale `master` branch deleted from origin; local tracking ref pruned. No work was ever lost — `main` always had everything.
+- Rewrote PROCESS.md from scratch — old version described a stale multi-tool/.json-export era (Codex/Copilot/Gemini, clasp pull-from-Drive). New version documents the actual workflow: the edit→bump→docs→push→commit loop, version-bump locations (Ingestion 1 / Viewer 5), deploy rules (Ingestion push-only, Viewer push+redeploy), cross-machine handoff, branch gotcha, the never-touch list.
+- Added ship.ps1 — PowerShell helper automating clasp push + git add/commit/push for ingestion|viewer|both. Deliberately does NOT bump versions or edit docs (those need judgment). Reminds to redeploy Viewer.
+- Files touched: PROCESS.md (rewrite), ship.ps1 (new), AUDIT_TRAIL.md
+- Deployment: docs/script only — no app code changed, no clasp push needed. git commit + push only.
+- Note: docs still contain C:\Users\exact paths; the ThomasCala machine session is handling the path find-replace separately on its clone.
+
 ### 2026-05-09 - Claude Code (Viewer v2.29 — handles fixed-positioned, more visible)
 - Request: User screenshot at v2.28 didn't show any handles — invisible.
 - Two problems with v2.28: (a) cream background blended with page bg, (b) handles inside list-pane scrolled with content.

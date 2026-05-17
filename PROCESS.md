@@ -1,179 +1,111 @@
-# Refinery - Development Process
+# Refinery — Development Process
 
-## The Core Files You Always Need
-| File | Where it lives | Purpose |
-|------|---------------|---------|
-| `CONTEXT.md` | Google Drive / Claude Project | Project brain - read before every session |
-| `AUDIT_TRAIL.md` | Google Drive / Claude Project | Session log - read recent entries before every session |
-| `RefineryV2 Ingestion.json` | Google Drive | Current ingestion app (clasp export) |
-| `RefineryV2 Viewer.json` | Google Drive | Current viewer app (clasp export) |
-
-**Rule: Always work from the latest exported .json files. Never edit from memory.**
+This is the actual workflow as practiced. Claude Code does everything end to end:
+edit → version bump → docs → clasp push → git commit/push → (Viewer only) redeploy.
+The **audit trail is the memory** — the chat is disposable.
 
 ---
 
-## Before You Start Any Session
+## 1. Architecture (what you're working on)
 
-1. Export current code from Apps Script to Drive via clasp:
-   ```
-   clasp pull   (run in each app folder)
-   ```
-2. Open CONTEXT.md - read On the Horizon and Change Log
-3. Open AUDIT_TRAIL.md - read the most recent entries
-4. Know exactly what you are changing and in which app before opening any LLM
+| Piece | Where | Notes |
+|-------|-------|-------|
+| **Ingestion** app | `Ingestion/Code.js` (Apps Script) | Pulls The Old Reader RSS + Gmail → Supabase. Runs on time triggers. **Push-only, no deploy step.** |
+| **Viewer** app | `Viewer/Code.js` + `Viewer/index.html` (Apps Script web app) | Reads Supabase, renders the reader UI. **Push AND redeploy.** |
+| Supabase | cloud Postgres + REST | `articles` table. Anon key is in the code (RLS-gated). |
+| The Old Reader | cloud RSS | Auth token in the code. Folders → categories. |
+| Google Drive | cloud | Email artifacts. Untouched by article purges. |
+| GitHub | `github.com/moltoboto/Refinery` | Branch: **`main`** (default). `master` deleted 2026-05-10. |
 
----
-
-## Process by Platform
-
----
-
-### Claude Code (CLI) - Full local editing + git push
-**Best for:** Multi-file changes, git operations, reading/writing local files directly
-
-1. Open Claude Code in `C:\Users\exact\Refinery\`
-2. Claude reads CONTEXT.md and AUDIT_TRAIL.md automatically from the working directory
-3. State the task — Claude reads the relevant files before changing anything
-4. Review changes in the terminal diff before committing
-5. Claude commits and pushes to `origin/main` via `gh`-authenticated git
-6. On version bump: Claude updates CONTEXT.md and AUDIT_TRAIL.md before the commit
-
-**Git quick reference (run from `C:\Users\exact\Refinery\`):**
-```bash
-git status                    # what changed
-git diff                      # see changes
-git pull                      # sync from GitHub before starting
-git add -p                    # stage selectively
-git commit -m "v2.X - summary"
-git push                      # push to origin/main
-```
-
-**Switching from Codex to Claude Code:**
-- Make sure Codex pushed to GitHub first
-- Run `git pull` in `C:\Users\exact\Refinery\` to get latest
-- Then start your Claude Code session
-
-**Switching from Claude Code to Codex:**
-- Claude Code will commit and push before closing
-- In Codex, download the latest files from GitHub before starting
+Everything except the local working copy is cloud-side. Moving machines = `git clone` + re-auth clasp/gh. Nothing else.
 
 ---
 
-### Claude (claude.ai) - Planning, Architecture, Debugging Logic
-**Best for:** Designing changes, debugging tricky logic, updating CONTEXT.md
+## 2. The Loop (every change)
 
-1. Open the Personal Knowledge-base Project from the sidebar
-2. Upload the relevant .json file (Ingestion or Viewer - not both unless needed)
-3. State the task clearly: "I want to fix X in the Ingestion app"
-4. Review the proposed change before accepting it
-5. Download the updated file
-6. On version bump: update CONTEXT.md change log here before closing
-7. Append an AUDIT_TRAIL.md entry before closing any substantive session
+1. **Read first.** CONTEXT.md (current versions + change log), then the most recent AUDIT_TRAIL.md entries (why decisions were made). Then the relevant Code.js section before editing.
+2. **Edit** the code.
+3. **Bump the version** (see §3 — Viewer needs it in 5 places, Ingestion 1).
+4. **Update CONTEXT.md** — add a row to the top of the Change Log table.
+5. **Append AUDIT_TRAIL.md** — new entry at the TOP, matching the format of recent entries: Request / Root cause / Fix / Files touched / Deployment / Follow-up. Be specific; future sessions read this to avoid re-discovering solved problems.
+6. **clasp push** the app(s) touched.
+7. **git commit + push.**
+8. **Viewer only:** redeploy in Apps Script (pencil → New version → Deploy). Ingestion has no deploy step — push is live on next trigger.
 
----
-
-### Codex (chatgpt.com) - Code Changes
-**Best for:** Writing and editing .gs and .html code
-
-1. Start a new Codex session
-2. Upload `CONTEXT.md` first - always
-3. Upload `AUDIT_TRAIL.md`
-4. Upload only the specific .json file you are changing
-5. Paste this at the top:
-   > "You are working on Refinery. Read CONTEXT.md and AUDIT_TRAIL.md before touching anything.
-   > Do not modify anything in the Do Not Touch section.
-   > Today's task: [YOUR TASK HERE]"
-6. Review every change before accepting - check the diff
-7. Ask Codex: "What exactly did you change?" before downloading
-8. Download the updated file
-
-**Codex-specific rules:**
-- Never let Codex push directly to Apps Script
-- Always download, review, then push manually via clasp
-- If Codex makes unexpected changes, reject and start over with a narrower prompt
-- Append an AUDIT_TRAIL.md entry after every substantive session
+Order matters: docs before commit so the commit captures them.
 
 ---
 
-### GitHub Copilot (VS Code) - Inline Editing
-**Best for:** Small targeted edits when you have the code open locally
+## 3. Version Bump Locations
 
-1. Save `CONTEXT.md` as `.github/copilot-instructions.md` in the repo - Copilot reads it automatically
-2. Open only the file you are editing
-3. Use Copilot Edits panel (not Chat) for multi-line changes
-4. Use `#file` to scope context: "Looking at #Code.gs, fix the dedup logic"
-5. Review the diff before accepting
-6. Push via clasp after accepting
-7. Append an AUDIT_TRAIL.md entry before closing any substantive session
+**Ingestion** — 1 place:
+- `Ingestion/Code.js` header: ` * Version: 2.XX`
 
----
+**Viewer** — 5 places (all must match or the UI shows the wrong version):
+- `Viewer/Code.js` header comment: `Viewer v2.XX`
+- `Viewer/Code.js` `setTitle('Refinery V2.XX')`
+- `Viewer/index.html` `<title>Refinery V2.XX</title>`
+- `Viewer/index.html` logo text (×2 occurrences of `Refinery V2.XX`)
 
-### Gemini - Review and Cross-App Analysis
-**Best for:** Reviewing logic across both apps, spotting inconsistencies
-
-1. Upload both .json files + CONTEXT.md + AUDIT_TRAIL.md
-2. Good for: "Does the category logic in the ingestion app match what the viewer expects?"
-3. Do not use for direct code edits - use for review only, then hand off to Codex or Claude
+Bulk replace `V2.XX` in index.html catches all three there.
 
 ---
 
-## After Making Changes
+## 4. Deploy Rules
 
-### If it is a minor fix (no version bump):
-- Push via clasp
-- Test in Apps Script editor (run the relevant function, check logs)
-- Append an entry to AUDIT_TRAIL.md
-- No CONTEXT.md version update needed
+- **Ingestion:** `clasp push` only. It runs via time triggers, not as a web app. No deploy step. Ever.
+- **Viewer:** `clasp push` **then** Apps Script → pencil icon on the active deployment → **New version** → Deploy. Same URL is preserved (no bookmark change). Until you redeploy, the live URL serves the OLD version even though clasp pushed.
 
-### If it is a real change (version bump):
-1. Bump version number in **three places** — all must match:
-   - `Ingestion/Code.js` header comment: `Version: 2.X`
-   - `Viewer/Code.js` header comment and `setTitle('Refinery V2.X')` on line 26
-   - `Viewer/index.html`: `<title>`, and two instances of `Refinery V2.X` in the sidebar/header
-2. Export via clasp: `clasp push` -> verify in Apps Script editor
-3. Deploy:
-   - **If existing deployment works:** Deploy -> Manage -> pencil -> New version -> Deploy
-   - **If deployment is broken:** Deploy -> New Deployment -> Web App -> copy new URL -> update bookmark
-4. Test the live URL
-5. Update CONTEXT.md change log: version, date, tool, one-line summary
-6. Append an entry to AUDIT_TRAIL.md with files touched, validation, and deployment status
-7. Save updated CONTEXT.md and AUDIT_TRAIL.md to Drive
+Quota note: Apps Script UrlFetchApp ≈ 20,000 calls/day. Resets midnight Pacific. Don't run ingestion many times/hour.
 
 ---
 
-## Deployment Decision Tree
+## 5. Cross-Machine / Session Handoff
+
+The audit trail makes the conversation disposable. To continue on any machine:
 
 ```
-Did the change break the live URL?
-|- No -> Add new version to existing deployment
-\- Yes -> Create New Deployment -> update bookmark -> note new URL in CONTEXT.md
+git clone https://github.com/moltoboto/Refinery.git
+cd Refinery
+npx --yes @google/clasp login    # sign in as moltoboto@gmail.com
+gh auth login                    # as moltoboto
 ```
+
+Then launch Claude Code in the folder and paste the block from HANDOFF_PROMPT.md.
+It reads CONTEXT.md + AUDIT_TRAIL.md and is fully oriented — same as the previous session.
+
+**Branch gotcha (resolved 2026-05-10):** GitHub default was `master` (13 months stale). All work is on `main`, now the default. `master` deleted. If a clone ever looks ancient, check `git branch` — you want `main`.
+
+**Two machines rule:** never edit the same file from two machines/accounts at once. Last writer wins; the other's read goes stale silently. Commit + push before switching.
 
 ---
 
-## Clasp Quick Reference
+## 6. Session-Start Prompt
 
-```bash
-# Pull latest from Apps Script to local
-clasp pull
-
-# Push local changes to Apps Script
-clasp push
-
-# Open the script in browser
-clasp open
-```
-
-Each app needs its own folder with its own `.clasp.json` pointing to the correct Script ID.
-Never run clasp commands from the wrong folder.
+Canonical copy lives at the top of `HANDOFF_PROMPT.md`. Paste it into a fresh Claude Code session. It instructs: read CONTEXT.md, read recent AUDIT_TRAIL.md, read code before editing, the push/deploy commands, and the doc-update order.
 
 ---
 
-## What Never Changes
-- Supabase credentials
-- `normalizeCategory()` logic
+## 7. The Ship Script
+
+`ship.ps1` automates steps 6–7 of the loop (clasp push + git add/commit/push) so they're one command instead of many. It does NOT bump versions or write docs — that's deliberate, those require judgment. Usage:
+
+```powershell
+.\ship.ps1 -App ingestion -Message "v2.46: <summary>"
+.\ship.ps1 -App viewer    -Message "Viewer v2.30: <summary>"
+.\ship.ps1 -App both      -Message "<summary>"
+```
+
+After `ship.ps1` for the Viewer, you still must redeploy in Apps Script manually.
+
+---
+
+## 8. What Never Changes Without Explicit Instruction
+
+- Supabase / TOR credentials
+- `normalizeCategory()` precedence (Duplicate guard → sheet override → source map → TOR folder → URL → keyword)
 - `cleanUrl()` logic
-- `sanitizeRecord()` field limits
-- The article schema column order
+- `sanitizeRecord()` field limits / article schema column order
+- The dedup pipeline order in the TOR loop
 
-If any LLM touches these without being asked, reject the change.
+If a change touches these and wasn't asked for, stop and confirm.
