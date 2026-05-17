@@ -17,6 +17,12 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-17 - Claude Code (Viewer v2.33 — stable list position when Nav toggles)
+- Request: When Nav is hidden, list pane shouldn't reclaim that space — same left start point and width whether Nav is on or off.
+- Fix: body.nav-icons.no-reading-pane .list-pane gets margin-left: var(--sidebar-w) so the list stays at the 200px offset even when aside is display:none.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push + Apps Script redeploy required.
+
 ### 2026-05-17 - Claude Code (Viewer v2.32 — list flush-left, fixed right gutter)
 - Request: List was centered (wrong). User wants it flush against nav, growing large, with stable blank area on right.
 - Fix: body.no-reading-pane .list-pane now flex:1/width:auto/margin-left:0/margin-right:280px. List fills all space left of a fixed 280px right gutter. body.nav-icons.no-reading-pane inherits same margin-right.
