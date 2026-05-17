@@ -17,7 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
-### 2026-05-17 - Claude Code (docs — machine migration + branch cleanup)
+### 2026-05-10 - Claude Code (process docs + ship script + branch cleanup)
+- Context: migrated to a second machine (C:\Users\ThomasCala). Discovered GitHub default branch was `master` (13 months stale, ~v2.8); all real work is on `main`. Resolved: new machine `git checkout main`; GitHub default branch changed master→main via gh api; stale `master` branch deleted from origin; local tracking ref pruned. No work was ever lost — `main` always had everything.
+- Rewrote PROCESS.md from scratch — old version described a stale multi-tool/.json-export era (Codex/Copilot/Gemini, clasp pull-from-Drive). New version documents the actual workflow: the edit→bump→docs→push→commit loop, version-bump locations (Ingestion 1 / Viewer 5), deploy rules (Ingestion push-only, Viewer push+redeploy), cross-machine handoff, branch gotcha, the never-touch list.
+- Added ship.ps1 — PowerShell helper automating clasp push + git add/commit/push for ingestion|viewer|both. Deliberately does NOT bump versions or edit docs (those need judgment). Reminds to redeploy Viewer.
+- Files touched: PROCESS.md (rewrite), ship.ps1 (new), AUDIT_TRAIL.md
+- Deployment: docs/script only — no app code changed, no clasp push needed. git commit + push only.
+- Note: docs still contain C:\Users\exact paths; the ThomasCala machine session is handling the path find-replace separately on its clone.
+
+### 2026-05-10 - Claude Code (docs — machine migration + branch cleanup)
 - Request: New machine. Update docs paths and document the recent branch cleanup so future sessions don't trip on it.
 - Context: Local working copy moved from `C:\Users\exact\Refinery\` (old machine, P16) to `C:\Users\ThomasCala\Refinery\` (new machine). Separately, the repo had a stale `master` branch hanging around alongside `main`. Earlier in this session I read CONTEXT/AUDIT_TRAIL from `master`, which showed v2.8/v2.8 and no HOLD marker, and got out of sync with reality. User resolved that by switching the GitHub default branch from `master` to `main` and deleting `master`; this working tree is now on `main` with v2.45 / v2.29 and the 2026-05-09 HOLD marker visible at the top of the audit trail.
 - Fix: Find-and-replaced `C:\Users\exact\Refinery` → `C:\Users\ThomasCala\Refinery` in CONTEXT.md and HANDOFF_PROMPT.md (replace_all). PROCESS.md had no matches. AUDIT_TRAIL.md historical entries left untouched on purpose — they describe state at the time and shouldn't be retroactively rewritten.
@@ -73,14 +81,6 @@ Pending user actions (not Claude actions):
 - Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md
 - Deployment: clasp push DONE. **User must redeploy in Apps Script** (pencil → New version → Deploy) for the change to go live at the existing URL.
 - Follow-up: After running applySourceCategoryBackfill() in Ingestion to retag, the Viewer category nav will populate cleanly under the new short names.
-
-### 2026-05-10 - Claude Code (process docs + ship script + branch cleanup)
-- Context: migrated to a second machine (C:\Users\ThomasCala). Discovered GitHub default branch was `master` (13 months stale, ~v2.8); all real work is on `main`. Resolved: new machine `git checkout main`; GitHub default branch changed master→main via gh api; stale `master` branch deleted from origin; local tracking ref pruned. No work was ever lost — `main` always had everything.
-- Rewrote PROCESS.md from scratch — old version described a stale multi-tool/.json-export era (Codex/Copilot/Gemini, clasp pull-from-Drive). New version documents the actual workflow: the edit→bump→docs→push→commit loop, version-bump locations (Ingestion 1 / Viewer 5), deploy rules (Ingestion push-only, Viewer push+redeploy), cross-machine handoff, branch gotcha, the never-touch list.
-- Added ship.ps1 — PowerShell helper automating clasp push + git add/commit/push for ingestion|viewer|both. Deliberately does NOT bump versions or edit docs (those need judgment). Reminds to redeploy Viewer.
-- Files touched: PROCESS.md (rewrite), ship.ps1 (new), AUDIT_TRAIL.md
-- Deployment: docs/script only — no app code changed, no clasp push needed. git commit + push only.
-- Note: docs still contain C:\Users\exact paths; the ThomasCala machine session is handling the path find-replace separately on its clone.
 
 ### 2026-05-09 - Claude Code (Viewer v2.29 — handles fixed-positioned, more visible)
 - Request: User screenshot at v2.28 didn't show any handles — invisible.
