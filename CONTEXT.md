@@ -8,6 +8,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `CONTEXT.md` - durable project state, rules, gotchas, and change log
 - `AUDIT_TRAIL.md` - session-by-session work log, validation notes, deployment status, and follow-up items
 - `PROCESS.md` - workflow for pull/edit/push/deploy
+- `BACKLOG.md` - operational queue of unscheduled work, held items, and horizon ideas
 
 ## Current Version
 Ingestion: v2.46 | Viewer: v2.33

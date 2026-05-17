@@ -17,6 +17,12 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-17 - Claude Code (docs — BACKLOG.md created)
+- Request: Consolidate everything raised this session that's not yet done into a durable operational queue.
+- Fix: New `BACKLOG.md` at repo root, sectioned Active / Held / Horizon / Done-recent. Captures session asks (full article in reading pane, GitHub Models for Summarize, iPad test, resize-handle cleanup, feed curation, backfill, OPML re-import, mark-read verification), dedup work held pending diagnostic data, and CONTEXT.md horizon items consolidated here.
+- Files touched: BACKLOG.md (new), CONTEXT.md (added BACKLOG.md to Operating Documents), AUDIT_TRAIL.md
+- Deployment: docs only — no clasp push, no version bump. git commit + push only.
+
 ### 2026-05-17 - Claude Code (Viewer v2.33 — stable list position when Nav toggles)
 - Request: When Nav is hidden, list pane shouldn't reclaim that space — same left start point and width whether Nav is on or off.
 - Fix: body.nav-icons.no-reading-pane .list-pane gets margin-left: var(--sidebar-w) so the list stays at the 200px offset even when aside is display:none.
