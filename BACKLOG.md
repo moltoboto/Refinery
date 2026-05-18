@@ -38,6 +38,7 @@ Operational queue of work not yet scheduled. Promote items to a session by movin
 | 9 | **Dedup diagnostic — manual cluster review** | User screenshots of "search by entity" results to identify dedup misses. Approach: search known recurring topics in Viewer, screenshot the result list, evaluate whether dedup should have collapsed any of them. |
 | 10 | **Dedup Phase 1 — Levenshtein + two-tier auto-suppress** | Diagnostic data from #9. Without data we're guessing. Per Claude's recommendation, hold off on adding more matching techniques until we know what's actually being missed. |
 | 11 | **Dedup Phase 2 — standardized reason codes, override metrics** | Phase 1 outcome. |
+| 12 | **Dedup improvements — apostrophe / multi-word entities / verb stems / topic synonyms / tiered scoring** | Ground-truth requirements doc at [design/dedup-requirements.md](design/dedup-requirements.md). Captures 3 observed miss clusters (Spencer Pratt, Musk v. OpenAI, Trump Iran strike) with failure-mode analysis (F1–F7) and 7 numbered requirements (R1–R7). Implementation order: R1+R2+R3 (token fixes) → R4 (synonyms) → R5 (tiered scoring) → R6 (time windows). Spans v2.47 → v2.50. Test corpus inline — every implementation must regression-pass it. This subsumes #10 and #11. |
 
 ## Horizon (directional, no near-term plan)
 
