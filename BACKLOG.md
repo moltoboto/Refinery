@@ -24,6 +24,7 @@ Operational queue of work not yet scheduled. Promote items to a session by movin
 | 5 | **Finance feed curation in `subscriptions.opml`** | <1 hour | Decide which Finance feeds to keep: Yahoo Finance, MarketWatch, CNBC Mad Money, Seeking Alpha, Motley Fool, Fox Business. Remove unwanted ones, re-import OPML into TOR. |
 | 7 | **Verify v2.35 mark-read fixes** | observation | First post-quota-reset run should log `DEDUP CACHE: warmed ~2000` and `TOR: marked X/500 as read (10 batches)`. Subsequent run should return far fewer articles. |
 | 8 | **Re-import OPML into TOR** | user action | Google News removed from subscriptions.opml but TOR still has it. Import to drop. |
+| 9 | **N/P keyboard nav in artifact view** | ~20 min | N/P already navigate articles in the list pane but explicitly bail when `artView === true` (Viewer/index.html line ~2162). Fix: branch in `navigate(dir)` — when in artifact view, walk the ARTIFACTS array and call `selectArtifact(id)` instead. Infrastructure (ARTIFACTS list, selectedArtifact, selectArtifact) all already exists. |
 
 ## Held (waiting on data or decisions)
 

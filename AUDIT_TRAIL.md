@@ -17,6 +17,13 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-18 - Claude Code (docs — backlog: N/P in artifact view)
+- Request: User wants N/P keyboard navigation in the artifact reading view, matching the existing N/P nav in the article list pane.
+- Findings: N/P keyboard handler already exists at Viewer/index.html line ~2132, dispatches to `navigate(dir)`. That function explicitly bails when `artView === true` at line ~2162. ARTIFACTS array, selectedArtifact variable, and selectArtifact(id) function all exist — only the branch in navigate() is missing.
+- Logged as backlog #9, ~20 min when picked up. Not done in this session per user request.
+- Files touched: BACKLOG.md, AUDIT_TRAIL.md
+- Deployment: docs only.
+
 ### 2026-05-18 - Claude Code (docs — backlog: clarify 3c, mark #6 done)
 - Request: User pointed out backlog entry 3c was framed as zoom-only but the same fix solves the regular NAV toggle UX (today it just hides the sidebar entirely instead of collapsing to icons). Also #6 (applySourceCategoryBackfill) completed by user.
 - Fix: Rewrote 3c to call out both cases (toggle UX + zoom) explicitly. Removed #6 from Active, added to Done.
