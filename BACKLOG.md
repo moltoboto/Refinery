@@ -28,7 +28,8 @@ Operational queue of work not yet scheduled. Promote items to a session by movin
 
 | # | Item | Trigger |
 |---|------|---------|
-| H1 | **Claude Design review of header + nav rail** | After v2.34 iconized header ships and you've tested on iPad. Brief is ready at [design/ipad-header-redesign-brief.md](design/ipad-header-redesign-brief.md) — paste into Claude.ai with iPad screenshots. Goal: polish icon set, get UX recommendations, identify anything you'd want to redo. |
+| H1 | **Claude Design review of header + nav rail** | DONE 2026-05-18 — Claude Design delivered the v3.0 redesign package (see H2). Original brief at [design/ipad-header-redesign-brief.md](design/ipad-header-redesign-brief.md). |
+| H2 | **v3.0 visual rewrite (Claude Design package)** | After v2.34 has been tested on iPad and we're confident the chip system / iconized nav approach works. Package delivered at [design/claude-design-v3/](design/claude-design-v3/) with 1024-line styles.css (drop-in mostly unchanged), all 11 chip icons + 10 category SVGs in icons.jsx, detailed Apps Script implementation notes in README.md. **Phase 1 (visual only):** ~3 sessions / 15–20 hrs — paste CSS, inline SVG icons, rewrite header/rail/list/reading-pane HTML, add bottom keyboard-hint footer, single state object with localStorage, add IBM Plex Mono via Google Fonts. Use placeholder data for fields not in schema (author, image_url, read_progress). **Phase 2 (backend gaps):** ~1–2 sessions — new Supabase columns (author, image_url, read_later, read_progress), Ingestion captures from RSS, Viewer endpoints to toggle. **Phase 3 (defer):** Kept view grid, mobile patterns, add-source buttons, multi-tag display. Risk: uses `oklch()` colors — use the README's sRGB hex fallbacks as primary values for safety on older Safari. |
 
 ## Held (waiting on data or decisions)
 

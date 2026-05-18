@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-18 - Claude Code (docs — v3.0 design package received, held for iPad test)
+- Request: User ran the design brief through Claude Design and shared the resulting package (Refinery.zip). Asked for complexity assessment.
+- Findings: Major visual overhaul, not a tweak. Package includes 1024-line styles.css (drop-in mostly unchanged), 65-line icons.jsx (11 chip icons + 10 category SVGs), README with detailed Apps Script implementation notes. v3.0 introduces: new brand cell, mono subtitle, tri-state nav (full/icons/hidden), tri-state focus (normal/list-only/reading-only), reading progress bars on cards, author bylines with avatars, sticky article toolbar, drop-cap first paragraph, IBM Plex Mono for counts, bottom keyboard-hint footer, Today/Read-later filters.
+- Backend gaps identified: schema needs author, image_url, read_later, read_progress columns; ingestion needs to extract `<author>` and first image URL from RSS.
+- Estimated effort: Phase 1 visual ~3 sessions (15–20 hrs); Phase 2 backend ~1–2 sessions. Phase 3 (Kept view, mobile patterns, multi-tag) deferred.
+- Decision: hold v3.0 until v2.34 is tested on iPad. Logged as BACKLOG #H2, marked H1 done.
+- Files touched: design/claude-design-v3/ (unzipped package), BACKLOG.md, AUDIT_TRAIL.md
+- Deployment: docs only.
+
 ### 2026-05-18 - Claude Code (Viewer v2.34 — iconized header + ICON + LIST chips)
 - Request: Rework menuing to minimize space with icons; add a toggle to iconize the nav (vs hide it entirely); add a toggle to hide the list pane (focus mode); make iconized nav butt up to list pane.
 - Implementation:
