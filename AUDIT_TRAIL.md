@@ -17,6 +17,12 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-18 - Claude Code (docs — backlog: clarify 3c, mark #6 done)
+- Request: User pointed out backlog entry 3c was framed as zoom-only but the same fix solves the regular NAV toggle UX (today it just hides the sidebar entirely instead of collapsing to icons). Also #6 (applySourceCategoryBackfill) completed by user.
+- Fix: Rewrote 3c to call out both cases (toggle UX + zoom) explicitly. Removed #6 from Active, added to Done.
+- Files touched: BACKLOG.md, AUDIT_TRAIL.md
+- Deployment: docs only.
+
 ### 2026-05-18 - Claude Code (docs — backlog additions from iPad 11" testing)
 - Request: User tested v2.33 on 11" iPad; logged four issues to capture before context fades.
 - Findings (now in BACKLOG.md Active section):

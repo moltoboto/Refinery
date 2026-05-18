@@ -19,10 +19,9 @@ Operational queue of work not yet scheduled. Promote items to a session by movin
 | 3 | **iPad 11" — tune right gutter** | <30 min | Tested 2026-05-18 on 11" iPad. 280px right gutter felt off. Need to test on 12.9" iPad (user has one at current location) then settle on viewport-relative sizing — possibly `clamp()` or different value for narrow vs wide iPad. |
 | 3a | **iPad — "trapped" when opening original article** | 1–2 hrs | Per-card ↗ link (from v2.14) takes user out to the article URL. On iPad there's no clear way back to Refinery. Likely fix: explicit "Back to Refinery" UI in-app, OR ensure `target="_blank"` actually opens a new tab the user can dismiss. Investigate whether the Apps Script iframe sandbox is interfering with window.open. |
 | 3b | **iPad — "focus mode" (reading pane only)** | 1 session | No current toggle hides BOTH Nav AND List, leaving only the Reading pane. Equivalent to Feedly/Inoreader "reader view." Either add a third state to the Reading toggle, or a new "Focus" chip. Should restore on toggle off. |
-| 3c | **iPad zoom — iconized always-visible nav** | 1 session | When user pinch-zooms on iPad, the fixed top bar + chips drift off-screen. Proposal: real iconized nav (resurrect `body.nav-icons` mode from v2.21, but populate `.nav-icon` spans with actual glyphs — first-letter, single emoji, or SVG) so the nav stays visible at any zoom level and butts up against the list. Header chips also need a compact mode (icon-only) or the chip row needs to live inside the iconized nav rail. |
+| 3c | **NAV toggle → iconized nav (not full hide)** | 1 session | Two cases, same fix: (a) Today the NAV chip just hides the sidebar entirely — there's no compact mode. (b) When user pinch-zooms on iPad, the fixed top bar + chips drift off-screen and the iconized nav would let the user still navigate at zoom. Fix: resurrect `body.nav-icons` mode from v2.21 (was deprecated because `.nav-icon` spans were empty), populate them with real glyphs (first-letter, single emoji, or SVG), restore the 60px collapsed width, butt against the list pane. Header chips also need a compact icon-only mode for the zoom case, OR move them into the iconized rail. |
 | 4 | **Resize-handle cleanup** | <30 min | Drag handles from v2.28 still show when Reading is off. They conflict with the fixed-gutter layout from v2.32–33. Likely just remove them. |
 | 5 | **Finance feed curation in `subscriptions.opml`** | <1 hour | Decide which Finance feeds to keep: Yahoo Finance, MarketWatch, CNBC Mad Money, Seeking Alpha, Motley Fool, Fox Business. Remove unwanted ones, re-import OPML into TOR. |
-| 6 | **Run `applySourceCategoryBackfill()`** | user action | Retag existing rows to current 10-category set (News/AI/Finance/Learning/Tech/Watches/YouTube/Reddit/Email/Duplicate). Run from Ingestion Apps Script editor. |
 | 7 | **Verify v2.35 mark-read fixes** | observation | First post-quota-reset run should log `DEDUP CACHE: warmed ~2000` and `TOR: marked X/500 as read (10 batches)`. Subsequent run should return far fewer articles. |
 | 8 | **Re-import OPML into TOR** | user action | Google News removed from subscriptions.opml but TOR still has it. Import to drop. |
 
@@ -49,6 +48,6 @@ Operational queue of work not yet scheduled. Promote items to a session by movin
 
 ## Done — recent (last 3 entries, then prune)
 
+- 2026-05-18 — `applySourceCategoryBackfill()` run (user) — existing rows retagged to 10-category set
 - 2026-05-17 — Auto hard-purge wired into `runDailyIngestion` (Ingestion v2.46)
 - 2026-05-17 — iPad layout stability when Nav toggles (Viewer v2.30→v2.33 series)
-- 2026-05-10 — Process docs rewrite, ship.ps1, branch cleanup, machine migration
