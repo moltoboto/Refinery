@@ -26,6 +26,12 @@ Operational queue of work not yet scheduled. Promote items to a session by movin
 | 8 | **Re-import OPML into TOR** | user action | Google News removed from subscriptions.opml but TOR still has it. Import to drop. |
 | 9 | **N/P keyboard nav in artifact view** | ~20 min | N/P already navigate articles in the list pane but explicitly bail when `artView === true` (Viewer/index.html line ~2162). Fix: branch in `navigate(dir)` — when in artifact view, walk the ARTIFACTS array and call `selectArtifact(id)` instead. Infrastructure (ARTIFACTS list, selectedArtifact, selectArtifact) all already exists. |
 
+## Deferred (planned, but waiting on a follow-up)
+
+| # | Item | Trigger |
+|---|------|---------|
+| H1 | **Claude Design review of header + nav rail** | After v2.34 iconized header ships and you've tested on iPad. Brief is ready at [design/ipad-header-redesign-brief.md](design/ipad-header-redesign-brief.md) — paste into Claude.ai with iPad screenshots. Goal: polish icon set, get UX recommendations, identify anything you'd want to redo. |
+
 ## Held (waiting on data or decisions)
 
 | # | Item | Waiting on |

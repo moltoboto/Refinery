@@ -17,6 +17,12 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-18 - Claude Code (docs — design brief for Claude Design)
+- Request: User wants a self-contained brief they can paste into Claude.ai later for a design review of the iPad header + iconized nav redesign. Deferred until after v2.34 ships and is tested on iPad.
+- Fix: Created `design/ipad-header-redesign-brief.md` — covers project context, current state, goals, constraints (Apps Script single-file + iPad iframe + no external libs), 6 specific design questions, scope-exclusions, and expected deliverables. Added to BACKLOG.md as deferred item H1.
+- Files touched: design/ipad-header-redesign-brief.md (new), BACKLOG.md, AUDIT_TRAIL.md
+- Deployment: docs only.
+
 ### 2026-05-18 - Claude Code (docs — backlog 3a clarified)
 - Request: User confirmed the "trapped" behavior is specifically: Windows opens a new window (fine), iPad replaces the current screen (bad). Diagnosis added to backlog 3a so future session has the root cause locked in.
 - Root cause: Apps Script serves the Viewer iframe-sandboxed; iPad Safari treats `target="_blank"` from inside an iframe as in-place navigation rather than spawning a new tab.
