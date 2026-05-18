@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.33</title>
+<title>Refinery V2.34</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -235,10 +235,18 @@ aside {
   border-left-color: var(--accent);
 }
 
-/* Hidden — nav-icon spans are empty (no glyph content) so they were just
-   eating ~20px on the left of every nav row. Re-enable with content if we
-   ever add real icons. */
+/* Icon glyph shown only in iconized nav mode (body.nav-iconic). Hidden in
+   full nav mode to preserve original look. v2.34 resurrects this with real
+   letter glyphs after v2.21 deprecated it for being empty. */
 .nav-icon { display: none; }
+body.nav-iconic .nav-icon {
+  display: inline-block;
+  width: 100%;
+  font-weight: 700;
+  font-size: 14px;
+  text-align: center;
+  color: var(--accent);
+}
 
 /* No flex:1 — let label take its natural width so the count badge sits
    right next to it instead of being pushed to the far right edge. The space
@@ -520,6 +528,19 @@ body.no-reading-pane .resize-handle { display: flex; }
    never had real icons populated, so a 60px empty stub was just dead space.
    Hiding the aside reclaims the full sidebar width for the list pane. */
 body.nav-icons aside { display: none; }
+
+/* Iconized nav mode — aside collapses to a 60px rail with letter glyphs only.
+   Labels, counts, section headers hidden. List pane butts up automatically
+   via flex layout (60px aside takes its own space in the row). */
+body.nav-iconic aside        { width: 60px; min-width: 60px; padding: 0; overflow: hidden; }
+body.nav-iconic .nav-label   { display: none; }
+body.nav-iconic .nav-count   { display: none; }
+body.nav-iconic .sidebar-section { display: none; }
+body.nav-iconic .nav-item    { justify-content: center; padding: 10px 0; gap: 0; }
+
+/* Hide-list toggle — focus on reading pane (or nothing, if reading is also off). */
+body.list-hidden .list-pane  { display: none; }
+body.list-hidden .resize-handle { display: none !important; }
 
 /* When BOTH nav and reading pane are off, list fills the full viewport with
    a narrow margin on each side. Overrides the clamp/variable width from the
@@ -975,7 +996,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.33
+    Refinery V2.34
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -991,7 +1012,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.33
+      Refinery V2.34
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1002,12 +1023,14 @@ kbd {
         <div class="live-dot" id="liveDot"></div>
         <span id="statusText"></span>
       </div>
-      <button class="chip" id="unreadChip" onclick="toggleUnread()">Unread only</button>
-      <button class="chip" id="toggleNavBtn"     onclick="toggleNav()"     title="Hide left nav">Nav</button>
-      <button class="chip" id="toggleReadingBtn" onclick="toggleReading()" title="Hide reading pane">Reading</button>
-      <button class="chip" id="toggleDensityBtn" onclick="toggleDensity()" title="Compact density">Compact</button>
-      <button class="chip" id="toggleFontBtn"    onclick="cycleFontSize()" title="Cycle font size (normal / large / extra large)">Aa</button>
-      <button class="chip" onclick="refreshAll()"> Refresh</button>
+      <button class="chip" id="unreadChip"       onclick="toggleUnread()"   title="Unread only">●</button>
+      <button class="chip" id="toggleNavBtn"     onclick="toggleNav()"      title="Hide left nav">☰</button>
+      <button class="chip" id="toggleIconNavBtn" onclick="toggleIconNav()"  title="Iconize nav (collapse to icon rail)">◫</button>
+      <button class="chip" id="toggleReadingBtn" onclick="toggleReading()"  title="Hide reading pane">📖</button>
+      <button class="chip" id="toggleListBtn"    onclick="toggleList()"     title="Hide list pane (focus mode)">📋</button>
+      <button class="chip" id="toggleDensityBtn" onclick="toggleDensity()"  title="Compact density">▤</button>
+      <button class="chip" id="toggleFontBtn"    onclick="cycleFontSize()"  title="Cycle font size (normal / large / extra large)">Aa</button>
+      <button class="chip"                       onclick="refreshAll()"     title="Refresh">↻</button>
     </div>
   </header>
 
@@ -1169,16 +1192,16 @@ const CATEGORY_MAP = {
 };
 
 const CATEGORIES = [
-  { key: 'News', emoji: '' },
-  { key: 'AI', emoji: '' },
-  { key: 'Finance', emoji: '' },
-  { key: 'Learning', emoji: '' },
-  { key: 'Tech', emoji: '' },
-  { key: 'Watches', emoji: '' },
-  { key: 'YouTube', emoji: '' },
-  { key: 'Reddit', emoji: '' },
-  { key: 'Email', emoji: '' },
-  { key: 'Duplicate', emoji: '' }
+  { key: 'News',      emoji: 'N' },
+  { key: 'AI',        emoji: 'A' },
+  { key: 'Finance',   emoji: 'F' },
+  { key: 'Learning',  emoji: 'L' },
+  { key: 'Tech',      emoji: 'T' },
+  { key: 'Watches',   emoji: 'W' },
+  { key: 'YouTube',   emoji: 'Y' },
+  { key: 'Reddit',    emoji: 'R' },
+  { key: 'Email',     emoji: 'E' },
+  { key: 'Duplicate', emoji: 'D' }
 ];
 
 window.addEventListener('load', function() {
@@ -1292,7 +1315,7 @@ function buildSidebar() {
     var cnt = VIEWER_STATS.sourceCounts[src] || 0;
     return `
       <div class="nav-item ${view === 'src:' + src ? 'active' : ''}" onclick="setView('src:${esc(src)}')">
-        <span class="nav-icon"></span>
+        <span class="nav-icon">${(src && src.charAt(0) || '').toUpperCase()}</span>
         <span class="nav-label">${src}</span>
         ${cnt > 0 ? `<span class="nav-count">${cnt}</span>` : `<span class="nav-count zero">0</span>`}
       </div>`;
@@ -1972,7 +1995,9 @@ function escapeHtml(str) {
 var LAYOUT_PREFS_ = [
   { key: 'no-reading-pane', storageKey: 'refinery.hideReadingPane', btnId: 'toggleReadingBtn' },
   { key: 'nav-icons',       storageKey: 'refinery.iconsNav',        btnId: 'toggleNavBtn' },
-  { key: 'compact-density', storageKey: 'refinery.compactDensity',  btnId: 'toggleDensityBtn' }
+  { key: 'compact-density', storageKey: 'refinery.compactDensity',  btnId: 'toggleDensityBtn' },
+  { key: 'nav-iconic',      storageKey: 'refinery.navIconic',       btnId: 'toggleIconNavBtn' },
+  { key: 'list-hidden',     storageKey: 'refinery.listHidden',      btnId: 'toggleListBtn' }
 ];
 
 function applyLayoutPref_(pref) {
@@ -1994,6 +2019,8 @@ function toggleLayoutPref_(pref) {
 function toggleReading() { toggleLayoutPref_(LAYOUT_PREFS_[0]); }
 function toggleNav()     { toggleLayoutPref_(LAYOUT_PREFS_[1]); }
 function toggleDensity() { toggleLayoutPref_(LAYOUT_PREFS_[2]); }
+function toggleIconNav() { toggleLayoutPref_(LAYOUT_PREFS_[3]); }
+function toggleList()    { toggleLayoutPref_(LAYOUT_PREFS_[4]); }
 
 // Font size cycle: normal → large → xlarge → normal. Persisted to localStorage.
 function applyFontSize_() {

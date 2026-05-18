@@ -1,0 +1,787 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><base target="_blank"><title>Your AI agent is rediscovering 85% of its context every run. Here's the architecture fix (+ Contract Spec, Failure…</title><style>:root{color-scheme:light;}html,body{margin:0;padding:0;background:#f6f2ea;color:#1f1b16;}body{font-family:Georgia,serif;line-height:1.65;}.shell{max-width:980px;margin:0 auto;padding:28px 20px 48px;}.header{margin-bottom:22px;padding:0 0 16px;border-bottom:1px solid #ddd4c6;}.eyebrow{font:600 11px/1.4 Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:#b5551c;margin-bottom:10px;}.title{font-size:34px;line-height:1.1;margin:0 0 8px;word-break:break-word;}.meta{font:500 13px/1.5 Arial,sans-serif;color:#665d52;display:flex;gap:16px;flex-wrap:wrap;}.links{margin-top:12px;font:500 13px/1.5 Arial,sans-serif;display:flex;gap:14px;flex-wrap:wrap;}.links a{color:#b5551c;text-decoration:none;}.content{background:#fff;border:1px solid #e3dbcf;border-radius:10px;padding:20px;overflow:auto;}.content img{max-width:100%;height:auto;}.content table{max-width:100% !important;height:auto !important;}.content a{color:#b5551c;word-break:break-word;}.content pre{white-space:pre-wrap;font-family:Arial,sans-serif;}@media (max-width: 720px){.shell{padding:16px 12px 28px;}.title{font-size:28px;}.content{padding:14px;}}</style></head><body><div class="shell"><header class="header"><div class="eyebrow">Email</div><h1 class="title">Your AI agent is rediscovering 85% of its context every run. Here's the architecture fix (+ Contract Spec, Failure…</h1><div class="meta"><span>Nate from Nate s Substack</span><span>May 13 2026</span></div><div class="links"><a href="https://mail.google.com/mail/u/0/#all/19e21ac024a6ccfb">Open in Gmail</a></div></header><main class="content"><html lang="en" dir="ltr" style="scrollbar-width: thin;scrollbar-color: rgb(219,219,219)rgb(255,255,255);"><head><meta charset="utf-8"><title>Your AI agent is rediscovering 85% of its context every run. Here's the architecture fix (+ Contract Spec, Failure Triage, and Stack ADR)</title><style>
+@media (max-width: 1024px) {
+  .typography .pullquote-align-left,
+  .typography.editor .pullquote-align-left,
+  .typography .pullquote-align-right,
+  .typography.editor .pullquote-align-right,
+  .typography .pullquote-align-wide,
+  .typography.editor .pullquote-align-wide,
+  .typography .pullquote-align-center,
+  .typography.editor .pullquote-align-center {
+    float: none;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+  .typography .markup table.image-wrapper img,
+  .typography.editor .markup table.image-wrapper img,
+  .typography .markup table.kindle-wrapper img,
+  .typography.editor .markup table.kindle-wrapper img {
+    max-width: 550px;
+  }
+}
+@media (min-width: 1024px) {
+  .typography:not(:has(#toc)) .captioned-image-container figure:has(> a.image2-offset-left),
+  .typography.editor:not(:has(#toc)) .captioned-image-container figure:has(> a.image2-offset-left) {
+    margin-left: var(--image-offset-margin);
+  }
+  .typography:not(:has(#toc)) .captioned-image-container figure:has(> a.image2-offset-right),
+  .typography.editor:not(:has(#toc)) .captioned-image-container figure:has(> a.image2-offset-right) {
+    margin-right: var(--image-offset-margin);
+  }
+}
+@media (min-width: 1300px) {
+  .typography .captioned-image-container figure:has(> a.image2-offset-left),
+  .typography.editor .captioned-image-container figure:has(> a.image2-offset-left) {
+    margin-left: var(--image-offset-margin);
+  }
+  .typography .captioned-image-container figure:has(> a.image2-offset-right),
+  .typography.editor .captioned-image-container figure:has(> a.image2-offset-right) {
+    margin-right: var(--image-offset-margin);
+  }
+}
+@media (max-width: 1024px) {
+  .typography,
+  .typography.editor {
+    /* Disable offset on mobile/tablet */
+  }
+  .typography .captioned-image-container figure:has(> a.image2-align-left),
+  .typography.editor .captioned-image-container figure:has(> a.image2-align-left),
+  .typography .captioned-image-container figure:has(> a.image2-align-right),
+  .typography.editor .captioned-image-container figure:has(> a.image2-align-right) {
+    float: none;
+    margin: 1em auto;
+    max-width: 100%;
+    width: auto;
+    padding: 0;
+  }
+  .typography .captioned-image-container figure:has(> a.image2-align-left.thefp),
+  .typography.editor .captioned-image-container figure:has(> a.image2-align-left.thefp),
+  .typography .captioned-image-container figure:has(> a.image2-align-right.thefp),
+  .typography.editor .captioned-image-container figure:has(> a.image2-align-right.thefp) {
+    margin: 1em auto;
+  }
+  .typography .captioned-image-container figure:has(> a.image2-offset-left),
+  .typography.editor .captioned-image-container figure:has(> a.image2-offset-left),
+  .typography .captioned-image-container figure:has(> a.image2-offset-right),
+  .typography.editor .captioned-image-container figure:has(> a.image2-offset-right) {
+    margin: 1em auto;
+  }
+  .typography .captioned-image-container figure:has(> a.image2-align-left) .image2-inset,
+  .typography.editor .captioned-image-container figure:has(> a.image2-align-left) .image2-inset,
+  .typography .captioned-image-container figure:has(> a.image2-align-right) .image2-inset,
+  .typography.editor .captioned-image-container figure:has(> a.image2-align-right) .image2-inset {
+    display: block;
+    justify-content: initial;
+  }
+}
+@media (max-width: 768px) {
+  .typography .markup div.sponsorship-campaign-embed,
+  .typography.editor .markup div.sponsorship-campaign-embed {
+    margin-top: 24px;
+    margin-bottom: 24px;
+  }
+  .typography .markup div.sponsorship-campaign-embed:first-child,
+  .typography.editor .markup div.sponsorship-campaign-embed:first-child {
+    margin-top: 0px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .typography .markup div.youtube-overlay,
+  .typography.editor .markup div.youtube-overlay,
+  .typography .markup div.vimeo-overlay,
+  .typography.editor .markup div.vimeo-overlay {
+    display: none !important;
+  }
+}
+@media screen and (max-width: 370px) {
+  .typography .markup div.tiktok-wrap,
+  .typography.editor .markup div.tiktok-wrap {
+    width: calc(95vw - 32px);
+    height: calc((95vw - 32px - 2px) / 0.485714);
+  }
+}
+@media screen and (max-width: 650px) {
+  .typography .markup div.embedded-publication-wrap .embedded-publication.show-subscribe,
+  .typography.editor .markup div.embedded-publication-wrap .embedded-publication.show-subscribe {
+    padding: 24px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .typography .markup div.subscription-widget-wrap .subscription-widget.show-subscribe,
+  .typography.editor .markup div.subscription-widget-wrap .subscription-widget.show-subscribe,
+  .typography .markup div.subscription-widget-wrap-editor .subscription-widget.show-subscribe,
+  .typography.editor .markup div.subscription-widget-wrap-editor .subscription-widget.show-subscribe,
+  .typography .markup div.captioned-button-wrap .subscription-widget.show-subscribe,
+  .typography.editor .markup div.captioned-button-wrap .subscription-widget.show-subscribe {
+    padding: 0px 24px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .typography .markup div.subscription-widget-wrap .subscription-widget.show-subscribe .subscription-widget-subscribe .button,
+  .typography.editor .markup div.subscription-widget-wrap .subscription-widget.show-subscribe .subscription-widget-subscribe .button,
+  .typography .markup div.subscription-widget-wrap-editor .subscription-widget.show-subscribe .subscription-widget-subscribe .button,
+  .typography.editor .markup div.subscription-widget-wrap-editor .subscription-widget.show-subscribe .subscription-widget-subscribe .button,
+  .typography .markup div.captioned-button-wrap .subscription-widget.show-subscribe .subscription-widget-subscribe .button,
+  .typography.editor .markup div.captioned-button-wrap .subscription-widget.show-subscribe .subscription-widget-subscribe .button {
+    padding: 10px 12px;
+    min-width: 110px;
+  }
+}
+@media (max-width: 650px) {
+  .typography .markup .twitter-embed,
+  .typography.editor .markup .twitter-embed,
+  .typography .markup .tweet,
+  .typography.editor .markup .tweet {
+    padding: 12px;
+  }
+}
+@media (max-width: 650px) {
+  .typography .markup .twitter-embed .tweet-text,
+  .typography.editor .markup .twitter-embed .tweet-text,
+  .typography .markup .tweet .tweet-text,
+  .typography.editor .markup .tweet .tweet-text {
+    font-size: 14px;
+    line-height: 20px;
+  }
+}
+@media (max-width: 650px) {
+  .typography .markup .twitter-embed .tweet-photos-container.two,
+  .typography.editor .markup .twitter-embed .tweet-photos-container.two,
+  .typography .markup .tweet .tweet-photos-container.two,
+  .typography.editor .markup .tweet .tweet-photos-container.two,
+  .typography .markup .twitter-embed .tweet-photos-container.three,
+  .typography.editor .markup .twitter-embed .tweet-photos-container.three,
+  .typography .markup .tweet .tweet-photos-container.three,
+  .typography.editor .markup .tweet .tweet-photos-container.three,
+  .typography .markup .twitter-embed .tweet-photos-container.four,
+  .typography.editor .markup .twitter-embed .tweet-photos-container.four,
+  .typography .markup .tweet .tweet-photos-container.four,
+  .typography.editor .markup .tweet .tweet-photos-container.four {
+    height: 200px;
+  }
+}
+@media (max-width: 650px) {
+  .typography .markup .twitter-embed a.expanded-link .expanded-link-img,
+  .typography.editor .markup .twitter-embed a.expanded-link .expanded-link-img,
+  .typography .markup .tweet a.expanded-link .expanded-link-img,
+  .typography.editor .markup .tweet a.expanded-link .expanded-link-img {
+    max-height: 180px;
+  }
+}
+@media (max-width: 650px) {
+  .typography .markup .twitter-embed a.expanded-link .expanded-link-description,
+  .typography.editor .markup .twitter-embed a.expanded-link .expanded-link-description,
+  .typography .markup .tweet a.expanded-link .expanded-link-description,
+  .typography.editor .markup .tweet a.expanded-link .expanded-link-description {
+    display: none;
+  }
+}
+@media screen and (max-width: 650px) {
+  .typography .markup .apple-podcast-container,
+  .typography.editor .markup .apple-podcast-container {
+    width: unset;
+  }
+}
+@media (max-width: 420px) {
+  .typography .markup .install-substack-app-embed img.install-substack-app-embed-img,
+  .typography.editor .markup .install-substack-app-embed img.install-substack-app-embed-img {
+    margin: 0 auto 16px auto;
+  }
+}
+@media (max-width: 420px) {
+  .typography .markup .install-substack-app-embed .install-substack-app-embed-text,
+  .typography.editor .markup .install-substack-app-embed .install-substack-app-embed-text {
+    margin: 0 0 12px 0;
+    max-width: 100%;
+    width: auto;
+    text-align: center;
+  }
+}
+@media (max-width: 420px) {
+  .typography .markup .install-substack-app-embed .install-substack-app-embed-link,
+  .typography.editor .markup .install-substack-app-embed .install-substack-app-embed-link {
+    display: flex;
+    justify-content: center;
+  }
+}
+@media screen and (min-width: 481px) {
+  .share-button-container {
+    height: 38px;
+  }
+}
+@media screen and (min-width: 481px) {
+  .share-button-container a.comment {
+    height: 38px;
+    line-height: 38px;
+    padding-right: 10px;
+  }
+}
+@media screen and (max-width: 480px) {
+  .share-button-container .separator {
+    display: block;
+    margin: 0;
+    height: 8px;
+    border-left: none;
+  }
+}
+@media screen and (max-width: 480px) {
+  .share-button-container a.share.first img {
+    padding-left: 0;
+  }
+}
+@media screen and (min-width: 481px) {
+  .share-button-container a.mobile {
+    display: none !important;
+  }
+}
+@media screen and (min-width: 541px) {
+  .settings-add-pub-modal-wrapper .container .add-recommending-pub-modal-container {
+    padding: 36px;
+    height: 680px;
+  }
+}
+@media screen and (min-width: 541px) {
+  .settings-add-pub-modal-wrapper .container .add-recommending-pub-modal-container .footer {
+    position: absolute;
+    bottom: 36px;
+    margin: 0px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .header-anchor-parent {
+    display: none;
+  }
+}
+@media screen and (max-width: 768px) {
+  .post {
+    padding: 16px 0 0 0;
+  }
+}
+@media screen and (max-width: 650px) {
+  .post .post-header .post-label {
+    margin-top: 8px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .post .post-header .meta-author-wrap.alternative-meta .meta-right-column .post-meta {
+    margin-top: 6px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .post .footer-facepile-container {
+    height: 64px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+  }
+}
+@media screen and (max-width: 650px) {
+  .post .post-footer.use-separators {
+    justify-content: center;
+  }
+}
+@media screen and (max-width: 650px) {
+  .post .post-footer.next-prev {
+    height: 64px;
+    justify-content: space-between;
+    box-sizing: border-box;
+  }
+}
+@media screen and (max-width: 650px) {
+  .post-contributor-footer .post-contributor-bio-table {
+    display: block;
+  }
+  .post-contributor-footer .post-contributor-bio-table-row {
+    display: flex;
+    flex-direction: row;
+  }
+  .post-contributor-footer .post-contributor-bio-userhead-cell,
+  .post-contributor-footer .post-contributor-bio-body-cell {
+    display: block;
+  }
+  .post-contributor-footer .post-contributor-bio-body-cell {
+    flex-grow: 1;
+  }
+  .post-contributor-footer .post-contributor-bio-body-table {
+    display: block;
+  }
+  .post-contributor-footer .post-contributor-bio-body-table-row {
+    display: block;
+  }
+  .post-contributor-footer .post-contributor-bio-copy-cell,
+  .post-contributor-footer .post-contributor-bio-controls-cell {
+    display: block;
+  }
+  .post-contributor-footer .post-contributor-bio-copy-cell {
+    margin: 0 0 16px 0;
+  }
+  .post-contributor-footer .post-contributor-bio-controls-cell {
+    width: auto;
+  }
+  .post-contributor-footer .post-contributor-bio-controls {
+    margin: auto;
+  }
+  .post-contributor-footer .post-contributor-bio-controls .button.primary {
+    width: 100%;
+  }
+  .post-contributor-footer .post-contributor-bio-text {
+    font-size: 14px;
+  }
+}
+@media screen and (min-width: 768px) {
+  .post-silhouette {
+    padding: 32px 0;
+  }
+}
+@media screen and (max-width: 650px) {
+  .post-silhouette .post-silhouette-title {
+    margin-top: 10.44225025px;
+    height: 120px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .post-silhouette .post-silhouette-meta {
+    width: 75%;
+  }
+}
+@media screen and (max-width: 650px) {
+  .post-silhouette .post-silhouette-meta.with-byline-image {
+    margin: 20px 0;
+  }
+}
+@media screen and (max-width: 650px) {
+  .use-theme-bg .post-meta.alternative-meta .post-meta-item,
+  .post-meta.alternative-meta .post-meta-item {
+    padding-right: 16px;
+  }
+}
+@media screen and (max-width: 370px) {
+  .use-theme-bg .post-meta.alternative-meta .post-meta-item,
+  .post-meta.alternative-meta .post-meta-item {
+    font-size: 14px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .use-theme-bg .post-meta.alternative-meta .post-meta-item.guest-author-publication,
+  .post-meta.alternative-meta .post-meta-item.guest-author-publication {
+    display: none;
+  }
+}
+@media screen and (max-width: 370px) {
+  .post-meta .post-meta-item .post-meta-button {
+    height: 36px !important;
+    /* important to override in-line height style on emails */
+  }
+  .post-meta .post-meta-item .post-meta-button .meta-button-label {
+    display: none;
+  }
+  .post-meta .post-meta-item .post-meta-button > svg {
+    margin-right: 0;
+  }
+}
+@media screen and (max-width: 370px) {
+  .post-meta .post-meta-item {
+    font-size: 12px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .post .floating-subscribe-button {
+    bottom: 20px;
+    right: 20px;
+  }
+}
+@media (max-width: 1024px) {
+  body .pullquote-align-left,
+  body .pullquote-align-right,
+  body .pullquote-align-wide,
+  body .pullquote-align-center {
+    float: none;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+  body .markup table.image-wrapper img,
+  body .markup table.kindle-wrapper img {
+    max-width: 550px;
+  }
+}
+@media (min-width: 1024px) {
+  body:not(:has(#toc)) .captioned-image-container figure:has(> a.image2-offset-left) {
+    margin-left: var(--image-offset-margin);
+  }
+  body:not(:has(#toc)) .captioned-image-container figure:has(> a.image2-offset-right) {
+    margin-right: var(--image-offset-margin);
+  }
+}
+@media (min-width: 1300px) {
+  body .captioned-image-container figure:has(> a.image2-offset-left) {
+    margin-left: var(--image-offset-margin);
+  }
+  body .captioned-image-container figure:has(> a.image2-offset-right) {
+    margin-right: var(--image-offset-margin);
+  }
+}
+@media (max-width: 1024px) {
+  body {
+    /* Disable offset on mobile/tablet */
+  }
+  body .captioned-image-container figure:has(> a.image2-align-left),
+  body .captioned-image-container figure:has(> a.image2-align-right) {
+    float: none;
+    margin: 1em auto;
+    max-width: 100%;
+    width: auto;
+    padding: 0;
+  }
+  body .captioned-image-container figure:has(> a.image2-align-left.thefp),
+  body .captioned-image-container figure:has(> a.image2-align-right.thefp) {
+    margin: 1em auto;
+  }
+  body .captioned-image-container figure:has(> a.image2-offset-left),
+  body .captioned-image-container figure:has(> a.image2-offset-right) {
+    margin: 1em auto;
+  }
+  body .captioned-image-container figure:has(> a.image2-align-left) .image2-inset,
+  body .captioned-image-container figure:has(> a.image2-align-right) .image2-inset {
+    display: block;
+    justify-content: initial;
+  }
+}
+@media (max-width: 768px) {
+  body .markup div.sponsorship-campaign-embed {
+    margin-top: 24px;
+    margin-bottom: 24px;
+  }
+  body .markup div.sponsorship-campaign-embed:first-child {
+    margin-top: 0px;
+  }
+}
+@media screen and (max-width: 650px) {
+  body .markup div.youtube-overlay,
+  body .markup div.vimeo-overlay {
+    display: none !important;
+  }
+}
+@media screen and (max-width: 370px) {
+  body .markup div.tiktok-wrap {
+    width: calc(95vw - 32px);
+    height: calc((95vw - 32px - 2px) / 0.485714);
+  }
+}
+@media screen and (max-width: 650px) {
+  body .markup div.embedded-publication-wrap .embedded-publication.show-subscribe {
+    padding: 24px;
+  }
+}
+@media screen and (max-width: 650px) {
+  body .markup div.subscription-widget-wrap .subscription-widget.show-subscribe,
+  body .markup div.subscription-widget-wrap-editor .subscription-widget.show-subscribe,
+  body .markup div.captioned-button-wrap .subscription-widget.show-subscribe {
+    padding: 0px 24px;
+  }
+}
+@media screen and (max-width: 650px) {
+  body .markup div.subscription-widget-wrap .subscription-widget.show-subscribe .subscription-widget-subscribe .button,
+  body .markup div.subscription-widget-wrap-editor .subscription-widget.show-subscribe .subscription-widget-subscribe .button,
+  body .markup div.captioned-button-wrap .subscription-widget.show-subscribe .subscription-widget-subscribe .button {
+    padding: 10px 12px;
+    min-width: 110px;
+  }
+}
+@media (max-width: 650px) {
+  body .markup .twitter-embed,
+  body .markup .tweet {
+    padding: 12px;
+  }
+}
+@media (max-width: 650px) {
+  body .markup .twitter-embed .tweet-text,
+  body .markup .tweet .tweet-text {
+    font-size: 14px;
+    line-height: 20px;
+  }
+}
+@media (max-width: 650px) {
+  body .markup .twitter-embed .tweet-photos-container.two,
+  body .markup .tweet .tweet-photos-container.two,
+  body .markup .twitter-embed .tweet-photos-container.three,
+  body .markup .tweet .tweet-photos-container.three,
+  body .markup .twitter-embed .tweet-photos-container.four,
+  body .markup .tweet .tweet-photos-container.four {
+    height: 200px;
+  }
+}
+@media (max-width: 650px) {
+  body .markup .twitter-embed a.expanded-link .expanded-link-img,
+  body .markup .tweet a.expanded-link .expanded-link-img {
+    max-height: 180px;
+  }
+}
+@media (max-width: 650px) {
+  body .markup .twitter-embed a.expanded-link .expanded-link-description,
+  body .markup .tweet a.expanded-link .expanded-link-description {
+    display: none;
+  }
+}
+@media screen and (max-width: 650px) {
+  body .markup .apple-podcast-container {
+    width: unset;
+  }
+}
+@media (max-width: 420px) {
+  body .markup .install-substack-app-embed img.install-substack-app-embed-img {
+    margin: 0 auto 16px auto;
+  }
+}
+@media (max-width: 420px) {
+  body .markup .install-substack-app-embed .install-substack-app-embed-text {
+    margin: 0 0 12px 0;
+    max-width: 100%;
+    width: auto;
+    text-align: center;
+  }
+}
+@media (max-width: 420px) {
+  body .markup .install-substack-app-embed .install-substack-app-embed-link {
+    display: flex;
+    justify-content: center;
+  }
+}
+@media screen and (min-width: 500px) {
+  body .header a.logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+}
+@media screen and (max-width: 420px) {
+  body .subscription-receipt table:first-of-type .subscription-amount .subscription-discount {
+    width: 72px !important;
+  }
+}
+@media screen and (min-width: 481px) {
+  body .share-button-container {
+    height: auto;
+  }
+}
+@media screen and (max-width: 480px) {
+  body .share-button-container .separator {
+    display: block !important;
+    margin: 0 !important;
+    height: 8px !important;
+    border-left: none !important;
+  }
+}
+@media screen and (max-width: 650px) {
+  .digest .item .post-meta-item.audience {
+    display: none;
+  }
+}
+@media screen and (min-width: 500px) {
+  .digest-publication .logo img {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .comments-page .container .comment-list .collapsed-reply {
+    margin-left: calc(10 + 32px - 24px);
+  }
+}
+@media screen and (max-width: 650px) {
+  .comment > .comment-list {
+    padding-left: 24px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .finish-magic-login-modal .modal-content .container {
+    padding: 24px 0;
+  }
+}
+@media (max-width: 650px) {
+  .reader2-text-b3 {
+    line-height: 24px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .reader2-text-h4 {
+    line-height: 24px;
+  }
+}
+@media screen and (min-width: 541px) {
+  .user-profile-modal {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .subscribe-widget form.form .sideBySideWrap button.rightButton {
+    padding: 10px 12px;
+  }
+}
+@media screen and (min-width: 541px) {
+  .pub-icon:hover .logo-hover,
+  .feed-item-icon:hover .logo-hover {
+    display: block;
+  }
+}
+@media screen and (max-width: 650px) {
+  .post-ufi.single-full-width-button .post-ufi-button-wrapper {
+    width: 100%;
+    padding: 16px;
+  }
+  .post-ufi.single-full-width-button .post-ufi-button-wrapper:empty {
+    display: none;
+  }
+  .post-ufi.single-full-width-button .post-ufi-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+@media screen and (max-width: 768px) {
+  .file-embed-wrapper {
+    padding: 0;
+  }
+}
+@media screen and (max-width: 768px) {
+  .file-embed-wrapper-editor {
+    padding: 0;
+  }
+}
+@media screen and (max-width: 768px) {
+  .file-embed-wrapper-editor:active {
+    padding: 0;
+  }
+}
+@media only screen and (max-width: 650px) {
+  .file-embed-button.wide,
+  .file-embed-error-button.wide {
+    display: none;
+  }
+}
+@media only screen and (min-width: 630px) {
+  .file-embed-button.narrow,
+  .file-embed-error-button.narrow {
+    display: none;
+  }
+}
+@media screen and (min-width: 541px) {
+  .audio-player-wrapper .audio-player {
+    min-width: 500px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .audio-player-wrapper .audio-player .audio-player-progress {
+    border-left-width: 16px;
+    border-right-width: 16px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .audio-player-wrapper .audio-player .audio-player-progress .audio-player-progress-bar .audio-player-progress-bar-popup {
+    top: -54px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .audio-player-wrapper-fancy .audio-player .audio-player-progress {
+    border-left-width: 16px;
+    border-right-width: 16px;
+  }
+}
+@media screen and (max-width: 650px) {
+  .audio-player-wrapper-fancy .audio-player .audio-player-progress .audio-player-progress-bar .audio-player-progress-bar-popup {
+    top: -54px;
+  }
+}
+@media (min-width: 250px) {
+  .audio-player-wrapper-fancy .audio-player {
+    padding: 32px;
+  }
+  .audio-player-wrapper-fancy .audio-player .btn-group {
+    display: flex;
+  }
+  .audio-player-wrapper-fancy .audio-player .btn-group .button:last-of-type {
+    display: block;
+  }
+}
+@media (min-width: 300px) {
+  .audio-player-wrapper-fancy .audio-player .btn-group {
+    display: block;
+  }
+  .audio-player-wrapper-fancy .audio-player .btn-group .button:first-of-type {
+    display: block;
+  }
+}
+@media (min-width: 350px) {
+  .audio-player-wrapper-fancy .audio-player .audio-player-substack-logo {
+    display: block;
+  }
+  .audio-player-wrapper-fancy .audio-player .audio-player-title {
+    margin-top: 16px;
+  }
+  .audio-player-wrapper-fancy .audio-player .audio-player-hero-image-container {
+    padding-top: 15%;
+    width: 15%;
+    display: block;
+  }
+  .audio-player-wrapper-fancy .audio-player .btn-group .button:first-of-type {
+    display: block;
+  }
+  .audio-player-wrapper-fancy .audio-player .audio-player-substack-logo {
+    display: block;
+  }
+}
+@media (min-width: 350px) {
+  .audio-player-wrapper-fancy .audio-player .audio-player-hero-image-container {
+    padding-top: 25%;
+    width: 25%;
+    display: block;
+  }
+  .audio-player-wrapper-fancy .audio-player .btn-group {
+    display: flex;
+  }
+  .audio-player-wrapper-fancy .audio-player .btn-group .button:first-of-type {
+    display: block;
+  }
+}
+@media (min-width: 400px) {
+  .audio-player-wrapper-fancy .audio-player .audio-player-hero-image-container {
+    padding-top: 40%;
+    width: 40%;
+  }
+}
+@media (max-width: 400px) {
+  .audio-player-wrapper-fancy .audio-player .btn-group {
+    margin-top: 12px;
+  }
+  .audio-player-wrapper-fancy .audio-player .btn-group .button {
+    font-size: 13px;
+    padding: 6px 12px;
+    height: auto;
+    margin-top: 10px;
+  }
+}
+@media (min-width: 600px) {
+  .audio-player-wrapper-fancy .audio-player .audio-player-hero-image-container {
+    padding-top: 55%;
+    width: 55%;
+  }
+}
+@media (max-width: 650px) {
+  .poll-editor-modal {
+    min-width: calc(100% - 20px);
+  }
+}
+@media (max-width: 750px) {
+  .poll-embed .poll-anchor-target .poll-anchor-copy-button {
+    left: 8px;
+    top: 45px;
+  }
+}</style></head><body class="email-body" style="font-kerning: auto;--image-offset-margin: -120px;"><img src="https://eotrx.substackcdn.com/o/84ea56895f76fbfc/p.gif?token=eyJtIjoiPDIwMjYwNTEzMTMwMzMyLjMuZDFkMjM4MWM2YmU0NzJiOEBtZzEuc3Vic3RhY2suY29tPiIsInUiOjQ3MjU0ODY0NywiciI6Im1vbHRvYm90b0BnbWFpbC5jb20iLCJkIjoibWcxLnN1YnN0YWNrLmNvbSIsInAiOjE5NzQyNDQ5OSwidCI6InBvZGNhc3QiLCJhIjoib25seV9wYWlkIiwicyI6MTM3MzIzMSwiYyI6InBvc3QiLCJmIjpmYWxzZSwicG9zaXRpb24iOiJ0b3AiLCJpYXQiOjE3Nzg2ODEzNjQsImV4cCI6MTc4MTI3MzM2NCwiaXNzIjoicHViLTAiLCJzdWIiOiJlbyJ9.ejzaFFvOJmkD9Eb-PdD_UN9CiAJ2AuQZhZ2fN1U2KDA" alt="" width="1" height="1" border="0" style="height:1px !important;width:1px !important;border-width:0 !important;margin-top:0 !important;margin-bottom:0 !important;margin-right:0 !important;margin-left:0 !important;padding-top:0 !important;padding-bottom:0 !important;padding-right:0 !important;padding-left:0 !important;"/><div class="preview" style="display:none;font-size:1px;color:#333333;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">Watch now | There&#8217;s a debate going on right now about whether vector search is obsolete.</div><div class="preview" style="display:none;font-size:1px;color:#333333;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;&#847; &nbsp; &#8199; &#173;</div><table class="email-body-container" role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td></td><td class="content" width="550"></td><td></td></tr><tr><td></td><td class="content" width="550" align="left"><div style="font-size: 16px;line-height: 26px;max-width: 550px;width: 100%;margin: 0 auto;overflow-wrap: break-word;"><table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td align="right" style="height:20px;"><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td style="vertical-align:middle;"><span class="pencraft pc-reset reset-IxiVJZ tw-font-body tw-text-ssm tw-text-substack-secondary" style="font-family: SF Pro Text, -apple-system, system-ui, BlinkMacSystemFont, Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;font-size: 13px;color: unset;list-style: none;text-decoration: unset;margin: 0;"><a class="tw-text-substack-secondary tw-underline" href="https://substack.com/redirect/2/eyJlIjoiaHR0cHM6Ly9uYXRlc25ld3NsZXR0ZXIuc3Vic3RhY2suY29tL3AvcmFnLWFnZW50cy1rbm93bGVkZ2UtbGF5ZXItYXJjaGl0ZWN0dXJlP3V0bV9jYW1wYWlnbj1lbWFpbC1wb3N0JnI9N3RjY3ZiJnRva2VuPWV5SjFjMlZ5WDJsa0lqbzBOekkxTkRnMk5EY3NJbkJ2YzNSZmFXUWlPakU1TnpReU5EUTVPU3dpYVdGMElqb3hOemM0TmpneE16WTBMQ0psZUhBaU9qRTNPREV5TnpNek5qUXNJbWx6Y3lJNkluQjFZaTB4TXpjek1qTXhJaXdpYzNWaUlqb2ljRzl6ZEMxeVpXRmpkR2x2YmlKOS45M0lVRDBuU1pGUEdnZ29XZXRwUFIxdVE1VlhnRkhrdjFONG96aWNBNXFVIiwicCI6MTk3NDI0NDk5LCJzIjoxMzczMjMxLCJmIjpmYWxzZSwidSI6NDcyNTQ4NjQ3LCJpYXQiOjE3Nzg2ODEzNjQsImV4cCI6MjA5NDI1NzM2NCwiaXNzIjoicHViLTAiLCJzdWIiOiJsaW5rLXJlZGlyZWN0In0.HazVxIfxJLDGqwRqrbPgVkozNS6XP3REM-Md7o_jzYk?" style="color: rgb(119,119,119);-webkit-text-decoration-line: underline;text-decoration-line: underline;">View in browser</a></span></td></tr></tbody></table></td></tr></tbody></table><div class="typography" style="--image-offset-margin: -120px;font-size: 16px;line-height: 26px;"><div class="preamble" style="font-size: 16px;line-height: 26px;margin-top: 16px;"><div class="body markup" dir="auto" style="text-align: initial;font-size: 16px;line-height: 26px;width: 100%;word-break: break-word;margin-bottom: 16px;"><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;margin-top: 0;margin-bottom: 0;">Look at you getting killer career perspective and the full AI picture. Give yourself a pat on the back for diving in on AI and go get a coffee &#9749;</p></div><hr style="padding: 0;height: 1px;background: rgb(0,0,0,.1);border: none;margin: 16px 0 0;"></div></div><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0" style="width:100%;"><tbody><tr><td style="vertical-align:middle;width:100%;"><a href="https://substack.com/app-link/post?publication_id=1373231&post_id=197424499&utm_source=podcast-email&play_audio=true&r=7tccvb&utm_campaign=email-play-on-substack&token=eyJ1c2VyX2lkIjo0NzI1NDg2NDcsInBvc3RfaWQiOjE5NzQyNDQ5OSwiaWF0IjoxNzc4NjgxMzY0LCJleHAiOjE3ODEyNzMzNjQsImlzcyI6InB1Yi0xMzczMjMxIiwic3ViIjoicG9zdC1yZWFjdGlvbiJ9.93IUD0nSZFPGggoWetpPR1uQ5VXgFHkv1N4ozicA5qU&utm_content=watch_now_gif"><img src="https://substackcdn.com/image/fetch/$s_!3NUW!,w_1138,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb3e3d452-0a48-4311-bb54-05fa278854e3_320x180.gif" alt="028_rag_vector_redo_composite_SS.mp4" style="max-width: 550px;border: none;vertical-align: middle;width: 100%;border-radius: 12px"></a></td></tr></tbody></table><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0" style="width:100%;"><tbody><tr><td><div style="font-size: 16px;line-height: 26px;height: 16px">&nbsp;</div></td></tr><tr height="8"><td></td></tr><tr><td><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0" style="width:100%;"><tbody><tr><td style="vertical-align:middle;width:100%;"><table class="fullWidth-mgXGs7" role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0" style="box-sizing: border-box;width: 100%;min-height: 40px;padding-left: 0;padding-right: 0;"><tbody><tr><td class="fullWidth-mgXGs7 emailButtonTd-o2ymya priority_primary-vWRHI0" align="center" style="box-sizing: border-box;width: 100%;min-height: 40px;padding-left: 0;padding-right: 0;border-radius: 8px;background-color: #04d4f4;"><a class="fullWidth-mgXGs7 emailButtonA-Ktpg7h" href="https://substack.com/app-link/post?publication_id=1373231&post_id=197424499&utm_source=podcast-email&play_audio=true&r=7tccvb&utm_campaign=email-play-on-substack&token=eyJ1c2VyX2lkIjo0NzI1NDg2NDcsInBvc3RfaWQiOjE5NzQyNDQ5OSwiaWF0IjoxNzc4NjgxMzY0LCJleHAiOjE3ODEyNzMzNjQsImlzcyI6InB1Yi0xMzczMjMxIiwic3ViIjoicG9zdC1yZWFjdGlvbiJ9.93IUD0nSZFPGggoWetpPR1uQ5VXgFHkv1N4ozicA5qU&utm_content=watch_now_button" style="box-sizing: border-box;width: 100%;min-height: 40px;padding-left: 0;padding-right: 0;font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-size: 14px;font-weight: 600;letter-spacing: -.15px;border-radius: 8px;padding: 12px 24px;line-height: 1;text-decoration: none;display: inline-block;color: #ffffff;border: none;"><img src="https://substackcdn.com/image/fetch/$s_!JR-4!,w_26.046511627906977,c_scale,f_png,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Ficon%2FPlayIcon%3Fv%3D4%26height%3D32%26fill%3D%2523ffffff%26stroke%3D%2523ffffff%26strokeWidth%3D2" width="13.023255813953488" height="16" style="border: none;vertical-align: middle;max-width: 13.023255813953488px" alt=""><span style="margin-left:8px;vertical-align:middle;color:#ffffff;">Watch now</span></a></td></tr></tbody></table></td></tr></tbody></table></td></tr><tr height="8"><td></td></tr><tr><td><div style="font-size: 16px;line-height: 26px;height: 16px">&nbsp;</div></td></tr></tbody></table><div class="post typography" dir="auto" style="--image-offset-margin: -120px;padding: 32px 0 0 0;font-size: 16px;line-height: 26px;"><div class="post-header" role="region" aria-label="Post header" style="font-size: 16px;line-height: 26px;"><h1 class="post-title published title-X77sOw" dir="auto" style="direction: auto;text-align: start;unicode-bidi: isolate;color: rgb(54,55,55);font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 0;line-height: 36px;font-size: 32px;"><a href="https://substack.com/app-link/post?publication_id=1373231&post_id=197424499&utm_source=post-email-title&utm_campaign=email-post-title&isFreemail=false&r=7tccvb&token=eyJ1c2VyX2lkIjo0NzI1NDg2NDcsInBvc3RfaWQiOjE5NzQyNDQ5OSwiaWF0IjoxNzc4NjgxMzY0LCJleHAiOjE3ODEyNzMzNjQsImlzcyI6InB1Yi0xMzczMjMxIiwic3ViIjoicG9zdC1yZWFjdGlvbiJ9.93IUD0nSZFPGggoWetpPR1uQ5VXgFHkv1N4ozicA5qU" style="color: rgb(54,55,55);text-decoration: none;">Your AI agent is rediscovering 85% of its context every run. Here's the architecture fix (+ Contract Spec, Failure Triage, and Stack ADR)</a></h1><h3 class="subtitle subtitle-HEEcLo" dir="auto" style="direction: auto;text-align: start;unicode-bidi: isolate;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: normal;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 4px 0 0;color: #777777;line-height: 24px;font-size: 18px;margin-top: 12px;">Why production agents need more than a vector database.</h3><table class="post-meta" role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 1em 0;height: 20px;align-items: center;"><tbody><tr><td><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td style="vertical-align:middle;"><div class="pencraft pc-reset color-primary-zABazT line-height-20-t4M0El font-meta-MWBumP size-11-NuY2Zx weight-medium-fw81nC transform-uppercase-yKDgcq reset-IxiVJZ meta-EgzBVA custom-css-email-post-author" style="list-style: none;font-size: 11px;line-height: 20px;text-decoration: unset;color: rgb(54,55,55);margin: 0;font-family: 'SF Compact',-apple-system,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: 500;text-transform: uppercase;letter-spacing: .2px;"><a class="pencraft pc-reset color-primary-zABazT line-height-20-t4M0El font-meta-MWBumP size-11-NuY2Zx weight-medium-fw81nC transform-uppercase-yKDgcq reset-IxiVJZ meta-EgzBVA" style="list-style: none;color: rgb(54,55,55);margin: 0;font-size: 11px;line-height: 20px;font-family: 'SF Compact',-apple-system,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: 500;text-transform: uppercase;letter-spacing: .2px;text-decoration: none" href="https://substack.com/@natesnewsletter">Nate</a></div></td></tr></tbody></table></td></tr><tr><td><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td style="vertical-align:middle;"><div class="pencraft pc-reset color-secondary-ls1g8s line-height-20-t4M0El font-meta-MWBumP size-11-NuY2Zx weight-medium-fw81nC transform-uppercase-yKDgcq reset-IxiVJZ meta-EgzBVA" style="list-style: none;font-size: 11px;line-height: 20px;text-decoration: unset;color: rgb(119,119,119);margin: 0;font-family: 'SF Compact',-apple-system,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: 500;text-transform: uppercase;letter-spacing: .2px;"><time datetime="2026-05-13T13:03:32.382Z">May 13</time></div></td><td width="4" style="min-width:4px;"></td><td style="vertical-align:middle;"><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td style="vertical-align:middle;"><div class="pencraft pc-reset color-secondary-ls1g8s line-height-20-t4M0El font-meta-MWBumP size-11-NuY2Zx weight-medium-fw81nC transform-uppercase-yKDgcq reset-IxiVJZ meta-EgzBVA" style="list-style: none;font-size: 11px;line-height: 20px;text-decoration: unset;color: rgb(119,119,119);margin: 0;font-family: 'SF Compact',-apple-system,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: 500;text-transform: uppercase;letter-spacing: .2px;">&#8729;</div></td><td width="4" style="min-width:4px;"></td><td style="vertical-align:middle;"><div class="pencraft pc-reset color-paid-LmY0EP line-height-20-t4M0El font-meta-MWBumP size-11-NuY2Zx weight-medium-fw81nC transform-uppercase-yKDgcq reset-IxiVJZ meta-EgzBVA" translated="" style="list-style: none;font-size: 11px;line-height: 20px;text-decoration: unset;color: rgb(94,73,217);margin: 0;font-family: 'SF Compact',-apple-system,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: 500;text-transform: uppercase;letter-spacing: .2px;">Paid</div></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></td><td align="right"><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td style="vertical-align:middle;"><a href="https://substack.com/@natesnewsletter"><img class="custom-css-email-avatar avatar-QIQ5yR" src="https://substackcdn.com/image/fetch/$s_!AgBy!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa37385e3-0387-487a-9f2c-e13aa963da4c_1080x1080.png" style="box-sizing: border-box;max-width: 550px;border: none;vertical-align: middle;width: 40px;height: 40px;min-width: 40px;min-height: 40px;object-fit: cover;margin: 0px;display: inline;border-radius: 50%" width="40" height="40"></a></td></tr></tbody></table></td></tr></tbody></table><table class="email-ufi-2-top" role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top: 1px solid rgb(0,0,0,.1);border-bottom: 1px solid rgb(0,0,0,.1);min-width: 100%;"><tbody><tr height="16"><td height="16" style="font-size:0px;line-height:0;">&nbsp;</td></tr><tr><td><table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td style="vertical-align:middle;"><table role="presentation" width="38" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td align="center"><a class="email-icon-button" href="https://substack.com/app-link/post?publication_id=1373231&post_id=197424499&utm_source=substack&isFreemail=false&submitLike=true&token=eyJ1c2VyX2lkIjo0NzI1NDg2NDcsInBvc3RfaWQiOjE5NzQyNDQ5OSwicmVhY3Rpb24iOiLinaQiLCJpYXQiOjE3Nzg2ODEzNjQsImV4cCI6MTc4MTI3MzM2NCwiaXNzIjoicHViLTEzNzMyMzEiLCJzdWIiOiJyZWFjdGlvbiJ9.zu1p63bVJb6bqcvUFLej5ctoqnvCEZHl7iLGy2b54gI&utm_medium=email&utm_campaign=email-reaction&r=7tccvb" style="font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';display: inline-block;font-weight: 500;border: 1px solid rgb(0,0,0,.1);border-radius: 9999px;text-transform: uppercase;font-size: 12px;line-height: 1;padding: 9px 0;text-decoration: none;color: rgb(119,119,119);min-width: 38px;box-sizing: border-box;width: 38px"><img class="icon" src="https://substackcdn.com/image/fetch/$s_!PeVs!,w_36,c_scale,f_png,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Ficon%2FLucideHeart%3Fv%3D4%26height%3D36%26fill%3Dnone%26stroke%3D%2523808080%26strokeWidth%3D2" width="18" height="18" style="border: none;vertical-align: middle;max-width: 18px" alt=""></a></td></tr></tbody></table></td><td width="8" style="min-width:8px;"></td><td style="vertical-align:middle;"><table role="presentation" width="38" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td align="center"><a class="email-icon-button" href="https://substack.com/app-link/post?publication_id=1373231&post_id=197424499&utm_source=substack&utm_medium=email&isFreemail=false&comments=true&token=eyJ1c2VyX2lkIjo0NzI1NDg2NDcsInBvc3RfaWQiOjE5NzQyNDQ5OSwiaWF0IjoxNzc4NjgxMzY0LCJleHAiOjE3ODEyNzMzNjQsImlzcyI6InB1Yi0xMzczMjMxIiwic3ViIjoicG9zdC1yZWFjdGlvbiJ9.93IUD0nSZFPGggoWetpPR1uQ5VXgFHkv1N4ozicA5qU&r=7tccvb&utm_campaign=email-half-magic-comments&action=post-comment&utm_source=substack&utm_medium=email" style="font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';display: inline-block;font-weight: 500;border: 1px solid rgb(0,0,0,.1);border-radius: 9999px;text-transform: uppercase;font-size: 12px;line-height: 1;padding: 9px 0;text-decoration: none;color: rgb(119,119,119);min-width: 38px;box-sizing: border-box;width: 38px"><img class="icon" src="https://substackcdn.com/image/fetch/$s_!x1tS!,w_36,c_scale,f_png,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Ficon%2FLucideComments%3Fv%3D4%26height%3D36%26fill%3Dnone%26stroke%3D%2523808080%26strokeWidth%3D2" width="18" height="18" style="border: none;vertical-align: middle;max-width: 18px" alt=""></a></td></tr></tbody></table></td><td width="8" style="min-width:8px;"></td><td style="vertical-align:middle;"><table role="presentation" width="38" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td align="center"><a class="email-icon-button" href="https://substack.com/app-link/post?publication_id=1373231&post_id=197424499&utm_source=substack&utm_medium=email&utm_content=share&utm_campaign=email-share&action=share&triggerShare=true&isFreemail=false&r=7tccvb&token=eyJ1c2VyX2lkIjo0NzI1NDg2NDcsInBvc3RfaWQiOjE5NzQyNDQ5OSwiaWF0IjoxNzc4NjgxMzY0LCJleHAiOjE3ODEyNzMzNjQsImlzcyI6InB1Yi0xMzczMjMxIiwic3ViIjoicG9zdC1yZWFjdGlvbiJ9.93IUD0nSZFPGggoWetpPR1uQ5VXgFHkv1N4ozicA5qU" style="font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';display: inline-block;font-weight: 500;border: 1px solid rgb(0,0,0,.1);border-radius: 9999px;text-transform: uppercase;font-size: 12px;line-height: 1;padding: 9px 0;text-decoration: none;color: rgb(119,119,119);min-width: 38px;box-sizing: border-box;width: 38px"><img class="icon" src="https://substackcdn.com/image/fetch/$s_!_L14!,w_36,c_scale,f_png,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Ficon%2FLucideShare2%3Fv%3D4%26height%3D36%26fill%3Dnone%26stroke%3D%2523808080%26strokeWidth%3D2" width="18" height="18" style="border: none;vertical-align: middle;max-width: 18px" alt=""></a></td></tr></tbody></table></td><td width="8" style="min-width:8px;"></td><td style="vertical-align:middle;"><table role="presentation" width="38" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td align="center"><a class="email-icon-button" href="https://substack.com/redirect/2/eyJlIjoiaHR0cHM6Ly9vcGVuLnN1YnN0YWNrLmNvbS9wdWIvbmF0ZXNuZXdzbGV0dGVyL3AvcmFnLWFnZW50cy1rbm93bGVkZ2UtbGF5ZXItYXJjaGl0ZWN0dXJlP3V0bV9zb3VyY2U9c3Vic3RhY2smdXRtX21lZGl1bT1lbWFpbCZ1dG1fY2FtcGFpZ249ZW1haWwtcmVzdGFjay1jb21tZW50JmFjdGlvbj1yZXN0YWNrLWNvbW1lbnQmcj03dGNjdmImdG9rZW49ZXlKMWMyVnlYMmxrSWpvME56STFORGcyTkRjc0luQnZjM1JmYVdRaU9qRTVOelF5TkRRNU9Td2lhV0YwSWpveE56YzROamd4TXpZMExDSmxlSEFpT2pFM09ERXlOek16TmpRc0ltbHpjeUk2SW5CMVlpMHhNemN6TWpNeElpd2ljM1ZpSWpvaWNHOXpkQzF5WldGamRHbHZiaUo5LjkzSVVEMG5TWkZQR2dnb1dldHBQUjF1UTVWWGdGSGt2MU40b3ppY0E1cVUiLCJwIjoxOTc0MjQ0OTksInMiOjEzNzMyMzEsImYiOmZhbHNlLCJ1Ijo0NzI1NDg2NDcsImlhdCI6MTc3ODY4MTM2NCwiZXhwIjoyMDk0MjU3MzY0LCJpc3MiOiJwdWItMCIsInN1YiI6ImxpbmstcmVkaXJlY3QifQ.zlF-YYNsSRI_H6u0AwYpjflMNpPs26H4j_5usd9KLqQ?&utm_source=substack&utm_medium=email" style="font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';display: inline-block;font-weight: 500;border: 1px solid rgb(0,0,0,.1);border-radius: 9999px;text-transform: uppercase;font-size: 12px;line-height: 1;padding: 9px 0;text-decoration: none;color: rgb(119,119,119);min-width: 38px;box-sizing: border-box;width: 38px"><img class="icon" src="https://substackcdn.com/image/fetch/$s_!ubXF!,w_36,c_scale,f_png,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Ficon%2Fnotes__NoteRestackIcon%3Fv%3D4%26height%3D36%26fill%3Dnone%26stroke%3D%2523808080%26strokeWidth%3D2%26strokeLinecap%3Dround%26strokeLinejoin%3Dround" width="18" height="18" alt="" style="max-width: 550px;border: none !important;vertical-align: middle;"></a></td></tr></tbody></table></td></tr></tbody></table></td><td align="right"><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td style="vertical-align:middle;"><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td align="center"><a class="email-button-outline" href="https://open.substack.com/pub/natesnewsletter/p/rag-agents-knowledge-layer-architecture?utm_source=email&redirect=app-store&utm_campaign=email-read-in-app" style="font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';display: inline-block;font-weight: 500;border: 1px solid rgb(0,0,0,.1);border-radius: 9999px;text-transform: uppercase;font-size: 12px;line-height: 12px;padding: 9px 14px;text-decoration: none;color: rgb(119,119,119);"><div class="email-button-spacer" style="font-size: 16px;line-height: 26px;display: inline-block;vertical-align: middle;max-width: 0;min-height: 18px;"></div><span class="email-button-text" style="vertical-align: middle;margin-right: 4px">READ IN APP</span><img class="icon text-icon" src="https://substackcdn.com/image/fetch/$s_!ET-_!,w_36,c_scale,f_png,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Ficon%2FLucideArrowUpRight%3Fv%3D4%26height%3D36%26fill%3Dnone%26stroke%3D%2523808080%26strokeWidth%3D2" width="18" height="18" style="min-width: 18px;min-height: 18px;border: none;vertical-align: middle;margin-right: 0;margin-left: 0;max-width: 18px" alt=""></a></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></td></tr><tr height="16"><td height="16" style="font-size:0px;line-height:0;">&nbsp;</td></tr></tbody></table></div></div><div class="post typography" dir="auto" style="--image-offset-margin: -120px;padding: 32px 0 0 0;font-size: 16px;line-height: 26px;"><div class="body markup" dir="auto" style="text-align: initial;font-size: 16px;line-height: 26px;width: 100%;word-break: break-word;margin-bottom: 16px;"><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;margin-top: 0;">There&#8217;s a debate going on right now about whether vector search is obsolete. That&#8217;s the wrong layer to be arguing about. The agents I&#8217;m watching fail in production aren&#8217;t failing because the retrieval method is wrong &#8212; they&#8217;re failing because the retrieval system can&#8217;t assemble what the agent actually needs before it starts acting.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">A vector database can find text semantically related to a question. Useful, but nowhere near enough. Agents need the current account record, the user&#8217;s permissions, the controlling policy, the right section of a long document, the table behind a metric, the prior decision from a meeting, and the source trail that lets a human reviewer reconstruct why the agent did what it did. When the system doesn&#8217;t prepare that context, the model improvises &#8212; and the cost shows up everywhere except the place you&#8217;re looking. Wrong refunds get issued. Stale policies get cited. Outdated metrics make it into board decks. The agent burns tokens and wall-clock time rebuilding context every run, and when the answer finally lands, it lands confidently &#8212; which is the most expensive way to be wrong. That&#8217;s the new RAG problem &#8212; not a retrieval problem, an assembly problem.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">So the next move isn&#8217;t &#8220;vectors versus something else.&#8221; It&#8217;s that vector search is quietly getting demoted from the whole architecture to one component inside a broader knowledge layer for agents &#8212; a layer that includes retrieval, but also document structure, semantic data models, access control, provenance, memory, and write-back. I want to be careful not to overstate this: vector search isn&#8217;t going anywhere. But the conversation about where the real work happens has moved.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><strong>Here&#8217;s what&#8217;s inside:</strong></p><ul style="margin-top: 0;padding: 0;"><li style="margin: 8px 0 0 32px;mso-special-format: bullet;"><p style="color: rgb(54,55,55);line-height: 26px;margin-bottom: 0;box-sizing: border-box;padding-left: 4px;font-size: 16px;margin: 0;"><strong>Why classic RAG worked &#8212; and where it stops working.</strong><span> How to spot the moment your retrieval architecture became the bottleneck instead of the solution.</span></p></li><li style="margin: 8px 0 0 32px;mso-special-format: bullet;"><p style="color: rgb(54,55,55);line-height: 26px;margin-bottom: 0;box-sizing: border-box;padding-left: 4px;font-size: 16px;margin: 0;"><strong>What Pinecone, PageIndex, SAP, and Dremio are all saying.</strong><span> Four different companies, one shared shift in what &#8220;retrieval&#8221; actually means for agents.</span></p></li><li style="margin: 8px 0 0 32px;mso-special-format: bullet;"><p style="color: rgb(54,55,55);line-height: 26px;margin-bottom: 0;box-sizing: border-box;padding-left: 4px;font-size: 16px;margin: 0;"><strong>The practical architecture.</strong><span> Seven questions to test whether your knowledge layer can support a production agent.</span></p></li><li style="margin: 8px 0 0 32px;mso-special-format: bullet;"><p style="color: rgb(54,55,55);line-height: 26px;margin-bottom: 0;box-sizing: border-box;padding-left: 4px;font-size: 16px;margin: 0;"><strong>What could go wrong.</strong><span> Where this new architecture quietly breaks, and how to tell if you&#8217;re overbuilding.</span></p></li><li style="margin: 8px 0 0 32px;mso-special-format: bullet;"><p style="color: rgb(54,55,55);line-height: 26px;margin-bottom: 0;box-sizing: border-box;padding-left: 4px;font-size: 16px;margin: 0;"><strong>How to put this to work.</strong><span> A Retrieval Contract Spec, a Failure Triage, and a Stack ADR: paste-ready artifacts for the three states a builder hits when working on retrieval.</span></p></li></ul><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Let&#8217;s walk through how this shift is playing out across the stack, and what it means for how you build. </p><div class="subscription-widget-wrap" style="font-size: 16px;line-height: 26px;"><div class="subscription-widget show-subscribe" style="font-size: 16px;direction: ltr !important;font-weight: 400;text-decoration: none;font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';color: #363737;line-height: 1.5;max-width: 560px;margin: 24px auto;align-items: flex-start;display: block;text-align: center;padding: 0px 32px;"><div class="preamble" style="margin-top: 16px;font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-size: 18px;max-width: 384px;width: fit-content;line-height: 22px;display: flex;align-items: center;text-align: center;font-weight: 400;margin-left: auto;margin-right: auto;"><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Subscribers get all posts like these!</p></div><div class="subscribe-widget is-signed-up is-fully-subscribed" data-component-name="SubscribeWidget" style="margin: 0 0 1em;direction: ltr;font-size: 16px;line-height: 26px;"><div class="pencraft pc-reset button-wrapper" style="text-decoration: unset;list-style: none;font-size: 16px;line-height: 26px;text-align: center;cursor: pointer;border-radius: 4px;"><a class="button subscribe-btn outline" href="https://substack.com/redirect/2/eyJlIjoiaHR0cHM6Ly9uYXRlc25ld3NsZXR0ZXIuc3Vic3RhY2suY29tL2FjY291bnQiLCJwIjoxOTc0MjQ0OTksInMiOjEzNzMyMzEsImYiOmZhbHNlLCJ1Ijo0NzI1NDg2NDcsImlhdCI6MTc3ODY4MTM2NCwiZXhwIjoyMDk0MjU3MzY0LCJpc3MiOiJwdWItMCIsInN1YiI6ImxpbmstcmVkaXJlY3QifQ.E2nViegIgGRan-N3OtpWNY3jwyv2zWevl3n8qm7Pt-Q?" style="font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';display: inline-block;box-sizing: border-box;cursor: pointer;border-radius: 8px;font-size: 14px;line-height: 20px;font-weight: 600;text-align: center;background-color: transparent;opacity: 1;outline: none;white-space: nowrap;text-decoration: none !important;border: 1px solid #04d4f4;margin: 0 auto;background: transparent;color: #04d4f4;padding: 12px 20px;height: auto;"><img class="check-icon static" src="https://substackcdn.com/image/fetch/$s_!vA53!,w_40,c_scale,f_png,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Ficon%2FLucideCheck%3Fv%3D4%26height%3D40%26fill%3Dtransparent%26stroke%3D%252304d4f4%26strokeWidth%3D3.6" width="20" height="20" style="border: none;vertical-align: middle;-ms-interpolation-mode: bicubic;height: auto;display: inline-block;margin: -2px 8px 0 0;max-width: 20px" alt=""><span style="text-decoration: none;">Subscribed</span></a></div></div></div></div><div class="paywall-jump" data-component-name="PaywallToDOM" style="font-size: 16px;line-height: 26px;display: none;"></div><h2 class="header-anchor-post" style="position: relative;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.625em * 1);"><span>LINK: Grab the </span><a href="https://substack.com/redirect/d31e2fa7-8870-4a46-924a-6c88c492a671?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="color: rgb(54,55,55);text-decoration: underline;">prompts</a></h2><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><span>Most teams discover their retrieval architecture is wrong after the agent is already in production &#8212; when the support bot cites an outdated policy, the finance agent pulls a stale metric, or the code reviewer misses the convention that would have prevented the bug. The prompts below help you get ahead of those failures with three engineering artifacts you can paste straight into your team&#8217;s docs: a </span><strong>Retrieval Contract Spec</strong><span> for designing what your agent needs to receive before it acts, a </span><strong>Retrieval Failure Triage</strong><span> for diagnosing what&#8217;s actually breaking when something goes wrong in production, and a </span><strong>Retrieval Stack ADR</strong><span> for documenting an architectural change with honest tradeoffs and a rollback plan you can defend in a design review.</span></p><h2 class="header-anchor-post" style="position: relative;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.625em * 1);">Why traditional RAG breaks for agents</h2><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Classic RAG worked because the early use case was mostly question answering.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">A customer asks &#8220;How do I reset my password?&#8221; and a support bot retrieves a few help-center chunks. An employee asks about the travel policy and gets back the relevant section of a policy document. Someone uploads a PDF and asks about it. The assistant pulls passages from the file. For these cases, vector search was a strong default. It handled messy wording well, the user didn&#8217;t need to know the exact phrasing in the source, and the model could produce a grounded answer from a small number of relevant passages.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">The unit of retrieval was usually a chunk of text. That worked when the task was simple and the answer lived in one or two paragraphs.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Chunk-based retrieval has a hidden assumption: that the information the model needs can be safely separated from the structure around it. That assumption breaks in plenty of real business settings.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">A paragraph in a contract may depend on a definition twenty pages earlier. A metric in a board deck may depend on a table in a warehouse. A policy exception may matter more than the policy summary. A section in a 10-K only makes sense in relation to the larger filing. A support answer may depend on the customer&#8217;s plan, geography, product version, and entitlement. A code change may depend on tests, prior review comments, architectural conventions, and issue history.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">In those cases, the relevant retrieval object isn&#8217;t &#8220;a chunk.&#8221; It&#8217;s a structured bundle of context.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Classic RAG often leaves the model to assemble that bundle itself. It retrieves fragments and asks the model to infer the structure. Sometimes that works. Often it works just well enough to be dangerous: the agent has the right passage in the prompt but misses that it&#8217;s outdated, cites a paragraph without seeing the exception, answers from a summary when the underlying table is the source of truth, applies a policy it isn&#8217;t allowed to apply for this user, or redoes background reading every time because nothing in the system preserves the result of the last run.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">That isn&#8217;t only a model problem. It&#8217;s a retrieval architecture problem.</p><h2 class="header-anchor-post" style="position: relative;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.625em * 1);">What Pinecone Nexus is actually saying</h2><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Pinecone&#8217;s Nexus launch matters because it names this shift directly. Pinecone isn&#8217;t claiming vector search is dead &#8212; its business is still built on vector infrastructure. The more interesting claim is that agents need a different retrieval contract than chatbots do.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><span>In its </span><a href="https://substack.com/redirect/dba4c8e7-77a6-4f0e-a23e-64a573439697?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="color: rgb(54,55,55);text-decoration: underline;">Nexus announcement</a><span>, Pinecone argues that agents waste too much effort rediscovering information. Pinecone&#8217;s CEO and CTO write that roughly 85% of agent effort goes to knowledge retrieval. I wouldn&#8217;t treat that figure as an independent industry fact. It&#8217;s Pinecone&#8217;s framing and should be attributed as such. But the failure mode is real.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">If an agent needs to prepare a customer escalation, it shouldn&#8217;t have to search the help center, the CRM, prior tickets, policy documents, Slack discussions, and product release notes from scratch every time. A useful system should already know how to assemble customer context, entitlement, relevant policy, prior history, and approved answer constraints into a usable object.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">If an agent is doing financial analysis, it shouldn&#8217;t answer from whatever paragraph happens to be nearest to the query vector. It needs to know whether the source of truth is a filing, a governed table, a metric definition, a prior forecast, or a current dashboard.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">If an agent is reviewing code, it shouldn&#8217;t only retrieve files that look semantically related. It needs the issue, the diff, the tests, the ownership, the repo conventions, and the mistakes this codebase has made before.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">This is the shift Pinecone is trying to capture with KnowQL and Nexus: moving from a retrieval call that returns chunks to a knowledge interface that returns task-shaped context. In Pinecone&#8217;s framing of KnowQL, retrieval goes beyond &#8220;top-k similar text.&#8221; It includes intent, filters, access policy, provenance, desired response shape, confidence, and budget.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Those details matter because they&#8217;re exactly the things production agents need.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">A support agent doesn&#8217;t only need related documentation. It needs documentation this user is allowed to receive and that applies to this product version. A compliance agent doesn&#8217;t only need a policy summary. It needs the current policy, the controlling source, the jurisdiction, and the audit trail. A research agent has to distinguish which claims are vendor claims, which are independent evidence, and which facts have changed recently. Relevant sources are not enough without that classification.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">That&#8217;s a different interface. A vector database can power part of it, but it doesn&#8217;t define all of it. The retrieval layer has to take responsibility for preparing context. Locating text is the starting point, not the destination.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">The takeaway from Pinecone isn&#8217;t the specific benchmark claim. It&#8217;s the category direction: agents create repeated, expensive context-preparation work, and infrastructure vendors are trying to move that work out of the model loop.</p><h2 class="header-anchor-post" style="position: relative;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.625em * 1);">How document structure improves RAG retrieval</h2><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">PageIndex makes a concrete point: many documents shouldn&#8217;t be retrieved as arbitrary chunks.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><span>In its </span><a href="https://substack.com/redirect/78cedd34-93c9-434e-801f-4ee0052434fe?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="color: rgb(54,55,55);text-decoration: underline;">research introduction</a><span>, PageIndex argues that document structure is often the missing retrieval primitive. That&#8217;s right. A long document isn&#8217;t just a sequence of semantically searchable paragraphs. It has hierarchy, sections, subsections, tables, references, footnotes, and relationships between parts. That structure carries meaning.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Take a financial filing. The risk factors are not the management discussion. The notes to financial statements are not the narrative summary. A table is not interchangeable with the paragraph before it. Retrieve a few semantically similar chunks and you may miss the part of the filing that controls the answer.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Contracts are an even cleaner example. A clause may look relevant, but the definitions section can change its meaning. A schedule may override a general term. An exception may sit far from the paragraph that triggers the search. Chunk retrieval can find text that looks relevant while losing the legal structure that makes it relevant.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">PageIndex&#8217;s approach is to preserve document hierarchy. Instead of flattening a document into chunks and asking the model to make sense of the pile, the system represents the document as a navigable tree with table of contents, section summaries, node IDs, metadata, and source pointers. The model can move through the structure, and retrieval can return coherent document units rather than isolated fragments.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">This is more than a better document search technique. It&#8217;s an instance of a larger rule: the retrieval unit should match the work.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">For some questions, the right unit is a paragraph. For others, it&#8217;s a section, a table, a definition plus every clause that depends on it, a customer record, a graph neighborhood, a code symbol, a prior decision, or a project brief. Pick the wrong unit and the model has to compensate &#8212; reconstructing hierarchy, inferring missing references, deciding whether the retrieved text is even enough. That&#8217;s where errors come from, and it&#8217;s where context windows go to die.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">The same logic explains why &#8220;just improve embeddings&#8221; doesn&#8217;t solve the whole problem. Better embeddings can find more relevant text. They can&#8217;t decide what kind of object the agent actually needs.</p><h2 class="header-anchor-post" style="position: relative;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.625em * 1);">SAP Dremio and governed data for agents</h2><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><span>SAP&#8217;s plan to acquire </span><a href="https://substack.com/redirect/39ade76f-2536-48ab-b3e8-27e190e2bb9d?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="color: rgb(54,55,55);text-decoration: underline;">Dremio</a><span> belongs in this article because it shows the same shift from the enterprise data side.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Most companies don&#8217;t store their important knowledge only in prose. They store it in ERP systems, CRMs, data warehouses, dashboards, spreadsheets, customer records, supplier records, payment systems, HR systems, ticketing systems, and governed tables. A large share of enterprise knowledge is structured data, not text.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Basic RAG systems often turn enterprise knowledge into documents anyway. Export a report, index the PDF, retrieve a paragraph, ask the model to answer. That can work for summaries, but it&#8217;s a weak way to run business operations. If an agent needs a revenue number, it should query the governed source of truth. For supplier risk, the supplier record and risk model are the right call. If it needs payment status, it should use the payment system. If it needs customer entitlement, it should use the customer system. The source of truth shouldn&#8217;t be a stale document that happened to get indexed.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">SAP&#8217;s Dremio move is about giving agents governed access to business data across SAP and non-SAP systems. Dremio brings a lakehouse, semantic layer, query federation, access controls, and lineage. Those aren&#8217;t cosmetic features. They&#8217;re the difference between an agent that can talk about business data and an agent that can safely use it.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">For enterprise agents, permissions and lineage aren&#8217;t optional. The agent has to know who can see the data, where the data came from, how the metric is defined, and whether the result is fit for the proposed action. When a procurement, finance, or sales agent answers from the wrong source, the failure isn&#8217;t only answer quality. It can move money, lose customers, break compliance, and corrupt downstream decisions.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">That&#8217;s why this is part of the RAG war. The market is realizing that &#8220;retrieval&#8221; doesn&#8217;t always mean &#8220;search documents.&#8221; Sometimes it means query a semantic layer. Sometimes it means retrieve a governed business object. Sometimes it means combine a table with a policy and a prior approval. The agent needs a usable representation of the business, not text about the business.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><span>SAP&#8217;s </span><a href="https://substack.com/redirect/bcdd4e45-868f-4188-b767-d8c3fc7ffe2d?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="color: rgb(54,55,55);text-decoration: underline;">Prior Labs acquisition</a><span> adds another piece. Prior Labs works on tabular foundation models &#8212; models built to reason over structured table data. That matters because general-purpose language models aren&#8217;t always the best tool for structured business prediction. Churn risk, supplier risk, invoice patterns, payment behavior, renewal forecasts, and operational anomalies often live in tabular data, and turning all of that into text is the wrong abstraction.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">So the SAP story isn&#8217;t a detour. It&#8217;s the enterprise version of the same argument. Agents need knowledge in the shape the business actually uses. Sometimes that shape is a document, sometimes a table, sometimes a metric definition, sometimes a workflow state. A serious knowledge layer respects those shapes instead of flattening everything into chunks.</p><h2 class="header-anchor-post" style="position: relative;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.625em * 1);">When to use GraphRAG for agent retrieval</h2><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">GraphRAG fits when the missing structure is relationships.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Vector search is good at finding passages close to a query. It&#8217;s weaker when the question depends on relationships across many documents or entities. Which suppliers are connected to which delayed shipments? Which research themes show up across a corpus? Which teams depend on which systems? Which customers share a failure pattern? Which policies conflict? Which incidents share a root cause? Those aren&#8217;t text similarity questions. They&#8217;re relationship questions.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><span>Microsoft&#8217;s </span><a href="https://substack.com/redirect/6d43057b-0879-4dda-86d8-ddc400a52e7d?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="color: rgb(54,55,55);text-decoration: underline;">GraphRAG work</a><span> is one attempt at that class of problem. The system extracts entities and relationships, builds graph structures, and uses summaries of graph communities to answer questions that need a broader view of the corpus.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">GraphRAG isn&#8217;t a universal replacement for vector search. Graphs are expensive to build. Entity extraction can be wrong. Relationships go stale. Community summaries can hide the detail that matters. But the reason graph approaches keep coming back is that some kinds of knowledge are naturally relational. If your agent needs to understand dependencies, ownership, influence, sequence, lineage, or clusters of related facts, a flat list of chunks won&#8217;t be enough. The model can try to infer the graph during the run, but that&#8217;s an expensive and unreliable way to do graph construction.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">The broader principle holds: don&#8217;t start with the retrieval technology. Start with the shape of the knowledge the agent needs. If the knowledge is fuzzy prose, vectors may be right. For long structured documents, a document tree. For business data, a semantic layer or SQL interface. For relationships, a graph. For repeated workflows, a compiled context object or memory layer. The right architecture often uses several of these at once.</p><h2 class="header-anchor-post" style="position: relative;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.625em * 1);">Long context doesn&#8217;t eliminate the problem</h2><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">There&#8217;s an obvious objection: if model context windows keep growing, maybe we can hand the model more material and stop worrying about retrieval.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Larger context helps in some cases. It doesn&#8217;t solve the core problem.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">A bigger window gives the model more room. It doesn&#8217;t decide what belongs in the room. It doesn&#8217;t mark which source is authoritative, enforce permissions, preserve document hierarchy, confirm a table is current, tell the agent which prior decision should govern the next step, or distinguish user-confirmed memory from model-inferred memory. Long context can reduce the need for aggressive retrieval. It can&#8217;t replace context design.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><span>Chroma&#8217;s </span><a href="https://substack.com/redirect/494978d4-4e72-4721-b6a1-e9f799129b35?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="color: rgb(54,55,55);text-decoration: underline;">Context Rot</a><span> work is useful here because it tracks what builders see in practice: model performance degrades when the context gets too large or too cluttered. The problem isn&#8217;t only whether the answer is present somewhere. It&#8217;s whether the answer is presented in a form the model can use reliably. Dump twenty documents into a context window and the model may have access to the right fact and still answer from the wrong one. It blends sources, misses exceptions, over-weights distractors, and treats stale and current sources as equal.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">The goal for production agents isn&#8217;t maximum context. It&#8217;s appropriate context.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">That&#8217;s why retrieval systems matter more, not less, as agents get more capable. The agent calls more tools, touches more systems, and accumulates more intermediate output. Without a context strategy, the agent&#8217;s own work becomes noise.</p><h2 class="header-anchor-post" style="position: relative;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.625em * 1);">What serious builders are changing</h2><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">The best builders aren&#8217;t arguing about whether to use vectors. They&#8217;re changing where context lives and how it moves through the system.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><span>Cognition&#8217;s </span><a href="https://substack.com/redirect/981b85b0-663a-4607-ada4-16421ab53559?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="color: rgb(54,55,55);text-decoration: underline;">Don&#8217;t Build Multi-Agents</a><span> is useful because it explains the context problem behind multi-agent failures. When multiple agents work on a task, the hard part isn&#8217;t only splitting the work. It&#8217;s making sure the right context moves between them. Decisions, constraints, discoveries, and partial state have to survive the handoff. When they don&#8217;t, each agent starts with an incomplete picture and the system gets brittle.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><span>Anthropic&#8217;s </span><a href="https://substack.com/redirect/cb834a22-2238-4724-84ea-aeb18ff03ad2?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="color: rgb(54,55,55);text-decoration: underline;">multi-agent research system writeup</a><span> shows the same issue from the other direction. Multi-agent systems can outperform single-agent setups on broad research tasks, but they can also burn far more tokens. That may be acceptable for high-value work, and it shows the cost of brute-force context gathering. If your system improves by having many agents search, read, summarize, and pass notes around, the architecture needs a way to control context cost and preserve useful work between runs.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><span>LangChain&#8217;s </span><a href="https://substack.com/redirect/66dcfa2a-01d6-4935-919a-0ea5a70c2b44?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="color: rgb(54,55,55);text-decoration: underline;">context engineering essay</a><span> names the practical patterns: write context somewhere, select the right context, compress what&#8217;s too large, isolate context so irrelevant material doesn&#8217;t pollute the main task. That&#8217;s the right frame. Context engineering isn&#8217;t prompt polishing. It&#8217;s the design of the information environment the agent operates in.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><span>This is why the RAG story connects to broader agent infrastructure. In my article on </span><a href="https://substack.com/redirect/59a9807f-ce7a-4e29-858c-6a59cd7f79d1?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="color: rgb(54,55,55);text-decoration: underline;">work primitives</a><span>, the argument was that agents need more than access to software. They need to understand the meaning of the actions they take. A browser can let an agent click a refund button. A better system tells the agent what a refund is, who is authorized to issue one, whether it&#8217;s reversible, whether it crosses a threshold, and what policy applies.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">The retrieval version of that argument is direct. A vector database can let an agent find a paragraph. A better system tells the agent what the paragraph is, whether it&#8217;s current, whether the user can rely on it, what source it came from, how it relates to other parts of the document, and whether it should be saved for future tasks.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Access to information isn&#8217;t the same as usable knowledge.</p><h2 class="header-anchor-post" style="position: relative;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.625em * 1);">How to build an agent knowledge layer</h2><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">I&#8217;m using &#8220;knowledge layer&#8221; in a practical engineering sense: the set of services that sits between your systems of record and your agents. Ingestion, parsing, indexing, document structure, table access, graph relationships, permissions, citations, reusable context objects, and the memory or state that persists after an agent run. If your agent depends on information outside the model, that layer already exists in some form. The question is whether you designed it intentionally or whether the model is improvising it during every run.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">A production agent knowledge layer should answer seven questions.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><strong>What is the work object?</strong><span> The agent shouldn&#8217;t begin with an abstract search query if the task is actually about a customer, contract, filing, supplier, metric, code change, incident, ticket, or decision. Naming the object changes the retrieval problem. A customer-support task assembles customer context. A legal task assembles document and clause context. A finance task assembles metric and source-of-truth context. A code task assembles issue, repo, diff, test, and convention context.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><strong>What&#8217;s the right retrieval unit?</strong><span> Pick the wrong one and the model wastes effort. A chunk may suffice for a simple FAQ. A section is needed for a filing. A table for financial analysis. A record for customer work. A graph neighborhood for dependency reasoning. A compiled brief for a repeated workflow.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><strong>Which source is authoritative?</strong><span> This is where many systems fail. They retrieve something relevant but not controlling. A sales deck mentions a metric, but the warehouse defines it. A Slack thread discusses a policy, but the policy document controls it. A meeting note mentions a decision, but the project tracker shows what was actually assigned. A support article is outdated. The knowledge layer has to help the agent distinguish relevant sources from authoritative ones.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><strong>What permissions apply?</strong><span> Agents can&#8217;t be allowed to treat retrieval as a free-for-all. The user&#8217;s role, customer relationship, geography, data sensitivity, and action type all matter. Retrieval has to be permission-aware before the model sees the content, not cleaned up afterward.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><strong>What provenance has to be preserved?</strong><span> For low-stakes tasks, a summary is fine. For business decisions, legal work, finance, compliance, customer actions, and code changes, the system needs source trails. The agent should be able to show where a claim came from and what evidence supports it.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><strong>What context should be compiled ahead of time?</strong><span> If an agent repeatedly works on the same project, customer, codebase, or workflow, don&#8217;t make it rediscover everything every run. Maintain a project brief, customer packet, repo memory, policy bundle, or task context object. Keep it current. Keep it sourced. Make it cheap to retrieve.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;"><strong>What should the agent write back?</strong><span> An agent should leave useful state behind: what it did, what it learned, what changed, what blocked it, what sources it used, what a future agent or human should know. But write-back needs discipline. Model-generated memory shouldn&#8217;t silently become instruction. Label it as observed, inferred, user-confirmed, stale, rejected, or authoritative.</span></p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">That labeling is what separates a useful memory layer from a pile of accumulated model guesses.</p><h2 class="header-anchor-post" style="position: relative;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.625em * 1);">The builder takeaway</h2><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">The action item isn&#8217;t &#8220;replace your vector database.&#8221; It&#8217;s to design the retrieval contract.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Before choosing a vendor or architecture, write down what your agent has to receive to do the job reliably. Be specific. If you&#8217;re using phrases like &#8220;relevant context,&#8221; you&#8217;re being too vague. Define the actual bundle.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">For a support refund agent, the bundle might be: customer plan, region, product version, purchase history, refund policy, refund threshold, prior exceptions, current ticket, approved response language, and whether the agent can issue the refund or only draft a recommendation.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">For a contract review agent: clause, definitions, related exceptions, schedule references, governing law, negotiation history, prior fallback language, and source citations.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">For a finance agent: metric definition, current value, source table, lineage, reporting period, variance explanation, owner, and whether the number is approved for external use.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">For a code review agent: issue, diff, touched files, tests, failing logs, ownership, repo conventions, recent related bugs, and prior review lessons.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Once you&#8217;ve defined the bundle, the technology decisions get clearer. You may still use vector search. You may also need exact search, metadata filters, SQL, graph retrieval, document trees, semantic layers, or memory. Those choices follow the knowledge contract &#8212; they don&#8217;t precede it.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">A vector database should sit behind the retrieval interface. It shouldn&#8217;t define the interface. That&#8217;s the practical change.</p><h2 class="header-anchor-post" style="position: relative;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.625em * 1);">What could go wrong</h2><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">There are real risks in this shift.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Compiled context goes stale. A project brief that isn&#8217;t updated is worse than no project brief, because it gives the agent confidence in old information.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Graphs encode bad relationships. Get extraction wrong and the agent reasons from a false structure.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Document parsers miss formatting and table relationships. That&#8217;s dangerous in legal, finance, and technical workflows.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Semantic layers are incomplete or politically contested. In many companies, &#8220;source of truth&#8221; isn&#8217;t a technical fact &#8212; it&#8217;s an organizational fight.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Memory accumulates bad conclusions. If an agent stores its own inference as confirmed fact, future runs get worse in a personal way, specific to how you&#8217;ve been using the agent.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Knowledge infrastructure can also be overbuilt. A simple help-center assistant doesn&#8217;t need GraphRAG, PageIndex, a warehouse semantic layer, and a memory system. Complexity has a cost: every new layer needs ownership, monitoring, evaluation, freshness checks, and failure modes.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">So the right conclusion isn&#8217;t that every team needs the most elaborate version of this architecture. It&#8217;s that agent systems should make context preparation an explicit design problem.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">If your system handles simple documents and low-risk answers, classic RAG may be enough. If it does repeated, high-context, permissioned work, it probably isn&#8217;t.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">You can tell from the logs. How many retrieval calls happen before useful work starts? How often does the agent open the same sources? How much of the token budget is raw context? How often does the agent ask the user for information the system already has? How often does it cite a weak source when a stronger one exists? How often does the next run rediscover what the prior run learned?</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Those aren&#8217;t abstract architecture questions. They&#8217;re operating metrics.</p><h2 class="header-anchor-post" style="position: relative;font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.625em * 1);">The new RAG market</h2><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">This is why Pinecone, PageIndex, SAP, Prior Labs, GraphRAG, context engineering, and agent memory all belong in the same conversation. They aren&#8217;t all solving the same narrow problem. They&#8217;re responding to the same pressure from different parts of the stack.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Pinecone is moving from vector retrieval toward agent-ready knowledge objects. PageIndex is preserving document structure so agents don&#8217;t have to rebuild it from chunks. SAP and Dremio are building governed access to enterprise data so agents can use business facts, not just reports about business facts. Prior Labs points toward models that understand tables as tables. GraphRAG makes relationships retrievable. Context engineering gives builders a language for controlling what enters, stays in, and leaves the agent&#8217;s working environment.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">The common thread is that production agents need prepared context. Prepared context means the system has done enough work before generation that the agent isn&#8217;t starting from raw search results. It means the agent receives information in a form close to the task it&#8217;s performing &#8212; text, tables, records, citations, permissions, summaries, prior state, and structured fields.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">That&#8217;s the new RAG war. It isn&#8217;t a fight over whether vector search survives. It&#8217;s a fight over who owns the layer that turns company knowledge into usable agent context.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">The teams that win won&#8217;t be the ones with the most fashionable retrieval primitive. They&#8217;ll be the ones that reduce wasted agent work, preserve source authority, handle permissions correctly, and make context reusable across runs.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">For builders, the instruction is clear. Keep vectors where they help. Add structure where chunks fail. Use governed data where documents are the wrong source of truth. Use graphs where relationships matter. Compile context for repeated workflows. Preserve provenance for decisions. Write back carefully when the agent learns something useful.</p><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">Don&#8217;t ask your model to rebuild the business every time it runs. Build the layer that gives it the part of the business it actually needs.</p><div class="subscription-widget-wrap" style="font-size: 16px;line-height: 26px;"><div class="subscription-widget show-subscribe" style="font-size: 16px;direction: ltr !important;font-weight: 400;text-decoration: none;font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';color: #363737;line-height: 1.5;max-width: 560px;margin: 24px auto;align-items: flex-start;display: block;text-align: center;padding: 0px 32px;"><div class="preamble" style="margin-top: 16px;font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-size: 18px;max-width: 384px;width: fit-content;line-height: 22px;display: flex;align-items: center;text-align: center;font-weight: 400;margin-left: auto;margin-right: auto;"><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;">I make this Substack thanks to readers like you! <a href="https://substack.com/redirect/c2f613b8-813a-4a4d-af00-47e64d047c65?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="color: rgb(54,55,55);text-decoration: underline;">Learn all about my Substack tiers here</a></p></div><div class="subscribe-widget is-signed-up is-fully-subscribed" data-component-name="SubscribeWidget" style="margin: 0 0 1em;direction: ltr;font-size: 16px;line-height: 26px;"><div class="pencraft pc-reset button-wrapper" style="text-decoration: unset;list-style: none;font-size: 16px;line-height: 26px;text-align: center;cursor: pointer;border-radius: 4px;"><a class="button subscribe-btn outline" href="https://substack.com/redirect/2/eyJlIjoiaHR0cHM6Ly9uYXRlc25ld3NsZXR0ZXIuc3Vic3RhY2suY29tL2FjY291bnQiLCJwIjoxOTc0MjQ0OTksInMiOjEzNzMyMzEsImYiOmZhbHNlLCJ1Ijo0NzI1NDg2NDcsImlhdCI6MTc3ODY4MTM2NCwiZXhwIjoyMDk0MjU3MzY0LCJpc3MiOiJwdWItMCIsInN1YiI6ImxpbmstcmVkaXJlY3QifQ.E2nViegIgGRan-N3OtpWNY3jwyv2zWevl3n8qm7Pt-Q?" style="font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';display: inline-block;box-sizing: border-box;cursor: pointer;border-radius: 8px;font-size: 14px;line-height: 20px;font-weight: 600;text-align: center;background-color: transparent;opacity: 1;outline: none;white-space: nowrap;text-decoration: none !important;border: 1px solid #04d4f4;margin: 0 auto;background: transparent;color: #04d4f4;padding: 12px 20px;height: auto;"><img class="check-icon static" src="https://substackcdn.com/image/fetch/$s_!vA53!,w_40,c_scale,f_png,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Ficon%2FLucideCheck%3Fv%3D4%26height%3D40%26fill%3Dtransparent%26stroke%3D%252304d4f4%26strokeWidth%3D3.6" width="20" height="20" style="border: none;vertical-align: middle;-ms-interpolation-mode: bicubic;height: auto;display: inline-block;margin: -2px 8px 0 0;max-width: 20px" alt=""><span style="text-decoration: none;">Subscribed</span></a></div></div></div></div><div class="captioned-image-container-static" style="font-size: 16px;line-height: 26px;margin: 32px auto;"><figure style="width: 100%;margin: 0 auto;"><table class="image-wrapper" width="100%" border="0" cellspacing="0" cellpadding="0" data-component-name="Image2ToDOMStatic" style="mso-padding-alt: 1em 0 1.6em;"><tbody><tr><td style="text-align: center;"></td><td class="content" align="left" width="1024" style="text-align: center;"><a class="image-link" target="_blank" href="https://substack.com/redirect/1490c116-6c07-4281-b753-12341b082873?j=eyJ1IjoiN3RjY3ZiIn0.TKSSIqic6BQEG7Nwl3ehOpiPCFuTrV8yykQNbT7P7iM" style="position: relative;flex-direction: column;align-items: center;padding: 0;width: auto;height: auto;border: none;text-decoration: none;display: block;margin: 0;"><img class="wide-image" data-attrs="{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/222fe587-cc73-46c0-a86c-2ee94bd7f9e2_1024x1024.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:1024,&quot;width&quot;:1024,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:944421,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:&quot;https://natesnewsletter.substack.com/i/197424499?img=https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F222fe587-cc73-46c0-a86c-2ee94bd7f9e2_1024x1024.png&quot;,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}" alt="" width="550" height="550" src="https://substackcdn.com/image/fetch/$s_!ha-w!,w_1100,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F222fe587-cc73-46c0-a86c-2ee94bd7f9e2_1024x1024.png" style="border: none !important;vertical-align: middle;display: block;-ms-interpolation-mode: bicubic;height: auto;margin-bottom: 0;width: auto !important;max-width: 100% !important;margin: 0 auto;"></a></td><td style="text-align: center;"></td></tr></tbody></table></figure></div><p style="margin: 0 0 20px 0;color: rgb(54,55,55);line-height: 26px;font-size: 16px;margin-bottom: 0;"></p></div></div><div class="container-border" style="margin: 32px 0 0;width: 100%;box-sizing: border-box;border-top: 1px solid #272e40;font-size: 16px;line-height: 26px;"></div><div class="post-cta typography markup" style="--image-offset-margin: -120px;text-align: initial;word-break: break-word;margin-bottom: 32px;margin: 32px 0;font-size: 16px;line-height: 26px;"><p class="referrals-cta-text" style="color: rgb(54,55,55);text-align: center;width: 90%;line-height: 26px;font-size: 16px;margin-top: 0;max-width: 384px;margin: auto"></p><h4 style="font-family: 'SF Pro Display',-apple-system-headline,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-weight: bold;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: antialiased;-webkit-appearance: optimizelegibility;-moz-appearance: optimizelegibility;appearance: optimizelegibility;margin: 1em 0 0.625em 0;color: rgb(54,55,55);line-height: 1.16em;font-size: calc(1.125em * 1);text-align: center">Invite your friends and earn rewards</h4><div style="line-height: 26px;text-align: center;font-size: 14px">If you enjoy Nate&#8217;s Substack, share it with your friends and earn rewards when they subscribe.</div><p style="color: rgb(54,55,55);margin: 0 auto 20px;text-align: center;width: 90%;line-height: 26px;font-size: 16px;"></p><p class="cta-box" style="color: rgb(54,55,55);margin: 0 auto 20px;width: 90%;line-height: 26px;font-size: 16px;margin-bottom: 0;text-align: center;margin-left: auto;margin-right: auto;"><a class="button primary" role="button" href="https://substack.com/redirect/2/eyJlIjoiaHR0cHM6Ly9uYXRlc25ld3NsZXR0ZXIuc3Vic3RhY2suY29tL2xlYWRlcmJvYXJkP3JlZmVycmVyX3Rva2VuPTd0Y2N2YiZyPTd0Y2N2YiZ1dG1fY2FtcGFpZ249ZW1haWwtbGVhZGVyYm9hcmQiLCJwIjoxOTc0MjQ0OTksInMiOjEzNzMyMzEsImYiOmZhbHNlLCJ1Ijo0NzI1NDg2NDcsImlhdCI6MTc3ODY4MTM2NCwiZXhwIjoyMDk0MjU3MzY0LCJpc3MiOiJwdWItMCIsInN1YiI6ImxpbmstcmVkaXJlY3QifQ.PzpA1QhDpoF1b9eyusgkf08Y0cUikpfDc-seF1jvmyw?&utm_source=substack&utm_medium=email&utm_content=postcta" style="font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';display: inline-block;box-sizing: border-box;cursor: pointer;border: none;height: 40px;border-radius: 8px;font-size: 14px;line-height: 20px;font-weight: 600;text-align: center;padding: 10px 20px;margin: 0;opacity: 1;outline: none;white-space: nowrap;color: #ffffff !important;text-decoration: none !important;background-color: #04d4f4;">Invite Friends</a></p></div><table class="email-ufi-2-bottom" role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top: 1px solid rgb(0,0,0,.1);border-bottom: 1px solid rgb(0,0,0,.1);min-width: 100%;"><tbody><tr height="16"><td height="16" style="font-size:0px;line-height:0;">&nbsp;</td></tr><tr><td><table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0" style="margin:0 auto;"><tbody><tr><td style="vertical-align:middle;"><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td align="center"><a class="email-button-outline" href="https://substack.com/app-link/post?publication_id=1373231&post_id=197424499&utm_source=substack&isFreemail=false&submitLike=true&token=eyJ1c2VyX2lkIjo0NzI1NDg2NDcsInBvc3RfaWQiOjE5NzQyNDQ5OSwicmVhY3Rpb24iOiLinaQiLCJpYXQiOjE3Nzg2ODEzNjQsImV4cCI6MTc4MTI3MzM2NCwiaXNzIjoicHViLTEzNzMyMzEiLCJzdWIiOiJyZWFjdGlvbiJ9.zu1p63bVJb6bqcvUFLej5ctoqnvCEZHl7iLGy2b54gI&utm_medium=email&utm_campaign=email-reaction&r=7tccvb" style="font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';display: inline-block;font-weight: 500;border: 1px solid rgb(0,0,0,.1);border-radius: 9999px;text-transform: uppercase;font-size: 12px;line-height: 12px;padding: 9px 14px;text-decoration: none;color: rgb(119,119,119);"><img class="icon" src="https://substackcdn.com/image/fetch/$s_!PeVs!,w_36,c_scale,f_png,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Ficon%2FLucideHeart%3Fv%3D4%26height%3D36%26fill%3Dnone%26stroke%3D%2523808080%26strokeWidth%3D2" width="18" height="18" style="margin-right: 8px;min-width: 18px;min-height: 18px;border: none;vertical-align: middle;max-width: 18px" alt=""><span class="email-button-text" style="vertical-align: middle;">Like</span></a></td></tr></tbody></table></td><td width="8" style="min-width:8px;"></td><td style="vertical-align:middle;"><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td align="center"><a class="email-button-outline" href="https://substack.com/app-link/post?publication_id=1373231&post_id=197424499&utm_source=substack&utm_medium=email&isFreemail=false&comments=true&token=eyJ1c2VyX2lkIjo0NzI1NDg2NDcsInBvc3RfaWQiOjE5NzQyNDQ5OSwiaWF0IjoxNzc4NjgxMzY0LCJleHAiOjE3ODEyNzMzNjQsImlzcyI6InB1Yi0xMzczMjMxIiwic3ViIjoicG9zdC1yZWFjdGlvbiJ9.93IUD0nSZFPGggoWetpPR1uQ5VXgFHkv1N4ozicA5qU&r=7tccvb&utm_campaign=email-half-magic-comments&action=post-comment&utm_source=substack&utm_medium=email" style="font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';display: inline-block;font-weight: 500;border: 1px solid rgb(0,0,0,.1);border-radius: 9999px;text-transform: uppercase;font-size: 12px;line-height: 12px;padding: 9px 14px;text-decoration: none;color: rgb(119,119,119);"><img class="icon" src="https://substackcdn.com/image/fetch/$s_!x1tS!,w_36,c_scale,f_png,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Ficon%2FLucideComments%3Fv%3D4%26height%3D36%26fill%3Dnone%26stroke%3D%2523808080%26strokeWidth%3D2" width="18" height="18" style="margin-right: 8px;min-width: 18px;min-height: 18px;border: none;vertical-align: middle;max-width: 18px" alt=""><span class="email-button-text" style="vertical-align: middle;">Comment</span></a></td></tr></tbody></table></td><td width="8" style="min-width:8px;"></td><td style="vertical-align:middle;"><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr><td align="center"><a class="email-button-outline" href="https://substack.com/redirect/2/eyJlIjoiaHR0cHM6Ly9vcGVuLnN1YnN0YWNrLmNvbS9wdWIvbmF0ZXNuZXdzbGV0dGVyL3AvcmFnLWFnZW50cy1rbm93bGVkZ2UtbGF5ZXItYXJjaGl0ZWN0dXJlP3V0bV9zb3VyY2U9c3Vic3RhY2smdXRtX21lZGl1bT1lbWFpbCZ1dG1fY2FtcGFpZ249ZW1haWwtcmVzdGFjay1jb21tZW50JmFjdGlvbj1yZXN0YWNrLWNvbW1lbnQmcj03dGNjdmImdG9rZW49ZXlKMWMyVnlYMmxrSWpvME56STFORGcyTkRjc0luQnZjM1JmYVdRaU9qRTVOelF5TkRRNU9Td2lhV0YwSWpveE56YzROamd4TXpZMExDSmxlSEFpT2pFM09ERXlOek16TmpRc0ltbHpjeUk2SW5CMVlpMHhNemN6TWpNeElpd2ljM1ZpSWpvaWNHOXpkQzF5WldGamRHbHZiaUo5LjkzSVVEMG5TWkZQR2dnb1dldHBQUjF1UTVWWGdGSGt2MU40b3ppY0E1cVUiLCJwIjoxOTc0MjQ0OTksInMiOjEzNzMyMzEsImYiOmZhbHNlLCJ1Ijo0NzI1NDg2NDcsImlhdCI6MTc3ODY4MTM2NCwiZXhwIjoyMDk0MjU3MzY0LCJpc3MiOiJwdWItMCIsInN1YiI6ImxpbmstcmVkaXJlY3QifQ.zlF-YYNsSRI_H6u0AwYpjflMNpPs26H4j_5usd9KLqQ?&utm_source=substack&utm_medium=email" style="font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';display: inline-block;font-weight: 500;border: 1px solid rgb(0,0,0,.1);border-radius: 9999px;text-transform: uppercase;font-size: 12px;line-height: 12px;padding: 9px 14px;text-decoration: none;color: rgb(119,119,119);"><img class="icon" src="https://substackcdn.com/image/fetch/$s_!ubXF!,w_36,c_scale,f_png,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Ficon%2Fnotes__NoteRestackIcon%3Fv%3D4%26height%3D36%26fill%3Dnone%26stroke%3D%2523808080%26strokeWidth%3D2%26strokeLinecap%3Dround%26strokeLinejoin%3Dround" width="18" height="18" alt="" style="margin-right: 8px;min-width: 18px;min-height: 18px;max-width: 550px;border: none !important;vertical-align: middle;"><span class="email-button-text" style="vertical-align: middle;">Restack</span></a></td></tr></tbody></table></td></tr></tbody></table></td><td align="right"><table role="presentation" width="auto" border="0" cellspacing="0" cellpadding="0"><tbody><tr></tr></tbody></table></td></tr></tbody></table></td></tr><tr height="16"><td height="16" style="font-size:0px;line-height:0;">&nbsp;</td></tr></tbody></table><div class="footer footer-ZM59BM" style="color: rgb(119,119,119);text-align: center;font-size: 16px;line-height: 26px;padding: 24px0;"><div style="font-size: 16px;line-height: 26px;padding-bottom: 24px"><p class="pencraft pc-reset color-secondary-ls1g8s size-12-mmZ61m reset-IxiVJZ small meta-B2bqa5" style="list-style: none;font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';padding-bottom: 0;font-size: 12px;line-height: 16px;margin: 0;color: rgb(119,119,119);text-decoration: unset;">&#169; 2026 <span>Nate</span><br>548 Market Street PMB 72296, San Francisco, CA 94104 <br><a href="https://substack.com/redirect/2/eyJlIjoiaHR0cHM6Ly9uYXRlc25ld3NsZXR0ZXIuc3Vic3RhY2suY29tL2FjdGlvbi9kaXNhYmxlX2VtYWlsP3Rva2VuPWV5SjFjMlZ5WDJsa0lqbzBOekkxTkRnMk5EY3NJbkJ2YzNSZmFXUWlPakU1TnpReU5EUTVPU3dpYVdGMElqb3hOemM0TmpneE16WTBMQ0psZUhBaU9qRTRNVEF5TVRjek5qUXNJbWx6Y3lJNkluQjFZaTB4TXpjek1qTXhJaXdpYzNWaUlqb2laR2x6WVdKc1pWOWxiV0ZwYkNKOS5HWE5lVFhxck15UldYQnJZaHoxTllDZjBjd1F6RkMtQk81d2RVbF9DN2Q0IiwicCI6MTk3NDI0NDk5LCJzIjoxMzczMjMxLCJmIjpmYWxzZSwidSI6NDcyNTQ4NjQ3LCJpYXQiOjE3Nzg2ODEzNjQsImV4cCI6MjA5NDI1NzM2NCwiaXNzIjoicHViLTAiLCJzdWIiOiJsaW5rLXJlZGlyZWN0In0.fteoesxKnQIvagZDoFMMluiF5dMjLXZUblhWoC6FuEc?" style="text-decoration: underline;color: rgb(119,119,119);"><span style="color: rgb(119,119,119);text-decoration: underline;">Unsubscribe</span></a></p></div><p class="footerSection-EHR0jG small powered-by-substack" style="padding: 0 24px;font-size: 12px;line-height: 20px;margin: 0;color: rgb(119,119,119);font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';padding-bottom: 0;margin-top: 0;"><a href="https://substack.com/redirect/2/eyJlIjoiaHR0cHM6Ly9zdWJzdGFjay5jb20vc2lnbnVwP3V0bV9zb3VyY2U9c3Vic3RhY2smdXRtX21lZGl1bT1lbWFpbCZ1dG1fY29udGVudD1mb290ZXImdXRtX2NhbXBhaWduPWF1dG9maWxsZWQtZm9vdGVyJmZyZWVTaWdudXBFbWFpbD1tb2x0b2JvdG9AZ21haWwuY29tJnI9N3RjY3ZiIiwicCI6MTk3NDI0NDk5LCJzIjoxMzczMjMxLCJmIjpmYWxzZSwidSI6NDcyNTQ4NjQ3LCJpYXQiOjE3Nzg2ODEzNjQsImV4cCI6MjA5NDI1NzM2NCwiaXNzIjoicHViLTAiLCJzdWIiOiJsaW5rLXJlZGlyZWN0In0.y0SMNNidZ3MKFdZ0gn2K48g2DjgLn43wMsmhTsyQ6KE?" style="color: rgb(119,119,119);text-decoration: none;display: inline-block;margin: 0 4px;"><img src="https://substackcdn.com/image/fetch/$s_!LkrL!,w_270,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Fimg%2Femail%2Fpublish-button%402x.png" srcset="https://substackcdn.com/image/fetch/$s_!wgfj!,w_135,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Fimg%2Femail%2Fpublish-button.png, https://substackcdn.com/image/fetch/$s_!LkrL!,w_270,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Fimg%2Femail%2Fpublish-button%402x.png 2x, https://substackcdn.com/image/fetch/$s_!KjtY!,w_405,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack.com%2Fimg%2Femail%2Fpublish-button%403x.png 3x" width="135" alt="Start writing" height="40" style="max-width: 550px;border: none !important;vertical-align: middle;"></a></p></div></div></td><td></td></tr></tbody></table><img src="https://eotrx.substackcdn.com/o/12e82e5a5aa0af7b/p.gif?token=eyJtIjoiPDIwMjYwNTEzMTMwMzMyLjMuZDFkMjM4MWM2YmU0NzJiOEBtZzEuc3Vic3RhY2suY29tPiIsInUiOjQ3MjU0ODY0NywiciI6Im1vbHRvYm90b0BnbWFpbC5jb20iLCJkIjoibWcxLnN1YnN0YWNrLmNvbSIsInAiOjE5NzQyNDQ5OSwidCI6InBvZGNhc3QiLCJhIjoib25seV9wYWlkIiwicyI6MTM3MzIzMSwiYyI6InBvc3QiLCJmIjpmYWxzZSwicG9zaXRpb24iOiJib3R0b20iLCJpYXQiOjE3Nzg2ODEzNjQsImV4cCI6MTc4MTI3MzM2NCwiaXNzIjoicHViLTAiLCJzdWIiOiJlbyJ9.Njg358HH6yKtA4pW0DMSCxvHeiaGNqxaUxHv40WFrgQ" alt="" width="1" height="1" border="0" style="height:1px !important;width:1px !important;border-width:0 !important;margin-top:0 !important;margin-bottom:0 !important;margin-right:0 !important;margin-left:0 !important;padding-top:0 !important;padding-bottom:0 !important;padding-right:0 !important;padding-left:0 !important;"/><img width="1" height="1" alt="" src="https://email.mg1.substack.com/o/eJxEkMGOhSAMRb_msTS0oOCCbzEFGoeMgpE6E_9-4nuL2d6TnJw2kfDazjscrYvKQTtMLioO4JyfPJjJK96pbMvKlU8SzgvJP7VuBPUVrE4OMI3o4owaJmDPesoOiTwkT6oE1DjpEQwYbQwOZsiQ0XhIU2TrMPqX1fsKQ79iF0rfQ2q7eqoWunLhmji0ut3LQSV_9pIDzM6itfP8WeQ-OBwtJ-qijisuqe37VYvcC1eKG-cg58UP2koiKa2-LcYZNKDOsLdNWmzSXlavz9nvin7F3HYqNVQS7pV_-8YifCr5_O3qfD4i63C0frJO_QT8CwAA__-f83GH"></body></html></main></div></body></html>

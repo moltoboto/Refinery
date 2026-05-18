@@ -17,6 +17,20 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-18 - Claude Code (Viewer v2.34 — iconized header + ICON + LIST chips)
+- Request: Rework menuing to minimize space with icons; add a toggle to iconize the nav (vs hide it entirely); add a toggle to hide the list pane (focus mode); make iconized nav butt up to list pane.
+- Implementation:
+  - Header chips replaced with Unicode/emoji icons: ● Unread / ☰ Hide nav / ◫ Iconize nav / 📖 Reading / 📋 List / ▤ Compact / Aa / ↻. All chips keep `title=` attribute so iPad voice-over and desktop hover tooltips still surface the full label.
+  - New body class `nav-iconic` (CSS: aside 60px, hide labels/counts/section headers, center nav-items). Distinct from the existing `nav-icons` class which still means "hide entirely" — preserves v2.21 semantics and any saved localStorage prefs.
+  - New body class `list-hidden` (CSS: .list-pane display:none). When combined with `no-reading-pane` you get a blank middle — user-recoverable by untoggling.
+  - Populated `.nav-icon` glyphs: CATEGORIES emoji slots filled with single-letter glyphs (N/A/F/L/T/W/Y/R/E/D); source nav uses first letter of the source name uppercased. `.nav-icon` CSS visibility scoped to `body.nav-iconic` so full-nav mode still hides them.
+  - LAYOUT_PREFS_ extended with two new entries (nav-iconic, list-hidden); toggleIconNav() and toggleList() functions added. localStorage keys: refinery.navIconic, refinery.listHidden.
+  - Butt-up against list pane: flex layout handles it automatically since aside collapses to 60px and the list-pane is the next flex child.
+- Version bumped to v2.34 in 5 places (Viewer/Code.js header + setTitle, Viewer/index.html title + 2 logos).
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md, BACKLOG.md
+- Deployment: clasp push DONE. Apps Script redeploy required (pencil → New version → Deploy).
+- Closes BACKLOG #3b (focus mode) and #3c (iconized nav). Open follow-ups (deferred): icon style refinement after iPad testing (consider SVG over Unicode), Claude Design review (H1).
+
 ### 2026-05-18 - Claude Code (docs — design brief for Claude Design)
 - Request: User wants a self-contained brief they can paste into Claude.ai later for a design review of the iPad header + iconized nav redesign. Deferred until after v2.34 ships and is tested on iPad.
 - Fix: Created `design/ipad-header-redesign-brief.md` — covers project context, current state, goals, constraints (Apps Script single-file + iPad iframe + no external libs), 6 specific design questions, scope-exclusions, and expected deliverables. Added to BACKLOG.md as deferred item H1.
