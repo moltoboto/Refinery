@@ -17,6 +17,12 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-18 - Claude Code (docs — backlog 3a clarified)
+- Request: User confirmed the "trapped" behavior is specifically: Windows opens a new window (fine), iPad replaces the current screen (bad). Diagnosis added to backlog 3a so future session has the root cause locked in.
+- Root cause: Apps Script serves the Viewer iframe-sandboxed; iPad Safari treats `target="_blank"` from inside an iframe as in-place navigation rather than spawning a new tab.
+- Files touched: BACKLOG.md, AUDIT_TRAIL.md
+- Deployment: docs only.
+
 ### 2026-05-18 - Claude Code (docs — backlog: N/P in artifact view)
 - Request: User wants N/P keyboard navigation in the artifact reading view, matching the existing N/P nav in the article list pane.
 - Findings: N/P keyboard handler already exists at Viewer/index.html line ~2132, dispatches to `navigate(dir)`. That function explicitly bails when `artView === true` at line ~2162. ARTIFACTS array, selectedArtifact variable, and selectArtifact(id) function all exist — only the branch in navigate() is missing.
