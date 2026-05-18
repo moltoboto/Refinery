@@ -17,6 +17,16 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-18 - Claude Code (docs — backlog additions from iPad 11" testing)
+- Request: User tested v2.33 on 11" iPad; logged four issues to capture before context fades.
+- Findings (now in BACKLOG.md Active section):
+  - Right gutter (280px) felt wrong on 11" — needs 12.9" comparison and likely viewport-relative sizing.
+  - "Trapped" when tapping the per-card ↗ open-original link — no clear path back to Refinery from the article. Likely Apps Script iframe sandbox interaction with `target="_blank"`.
+  - No current toggle yields a focus mode (reading pane only). Reading + Nav are independent — there's no "both off" state that keeps the reader.
+  - Pinch-zoom on iPad pushes the fixed top bar and chips off-screen. Proposed fix: resurrect `body.nav-icons` mode (deprecated in v2.21 because .nav-icon spans were empty), populate with real glyphs/SVG, butt against list pane so nav stays accessible at any zoom level.
+- Files touched: BACKLOG.md, AUDIT_TRAIL.md
+- Deployment: docs only — no clasp push, no version bump.
+
 ### 2026-05-17 - Claude Code (docs — BACKLOG.md created)
 - Request: Consolidate everything raised this session that's not yet done into a durable operational queue.
 - Fix: New `BACKLOG.md` at repo root, sectioned Active / Held / Horizon / Done-recent. Captures session asks (full article in reading pane, GitHub Models for Summarize, iPad test, resize-handle cleanup, feed curation, backfill, OPML re-import, mark-read verification), dedup work held pending diagnostic data, and CONTEXT.md horizon items consolidated here.
