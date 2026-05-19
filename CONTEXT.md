@@ -108,25 +108,11 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 - **enrichArticleFromUrl()** — HTTP fetch commented out in enrichTORArticle_(). Any slow destination URL could hang UrlFetchApp indefinitely. RSS title/summary/image is sufficient. Re-enable selectively if richer summaries are needed.
 - **Finance filter** — isFastFinanceFiltered_() and isFinanceFiltered_() checks commented out in TOR loop. Decision: curate by removing feeds from OPML rather than keyword-blocking topics.
 
-## Pending (Tomorrow)
-1. **Purge 8K old articles**: run in Ingestion editor in order:
-   - `previewPurgeBeforeApr15()` — dry run, shows count + sample
-   - `purgeBeforeApr15()` — soft-deletes everything before April 15 (kept=true rows safe)
-   - `hardPurgeDeletedArticles()` — permanently removes soft-deleted rows
-2. **Verify v2.35 fixes**: first run after quota reset (midnight Pacific) should show:
-   - `DEDUP CACHE: warmed with ~2000 candidates`
-   - `TOR: marked X/500 as read (10 batches)` — confirms batched mark-read is working
-   - Subsequent run should return far fewer articles (TOR actually marks them read now)
-3. **Finance feed curation**: decide which feeds to remove from subscriptions.opml (currently: Yahoo Finance, MarketWatch, CNBC Mad Money, Seeking Alpha, Motley Fool, Fox Business). Remove unwanted ones, import updated OPML into TOR.
-4. **Import OPML into TOR**: Google News was removed from subscriptions.opml but TOR still has it. Import the OPML to drop it from the live reader.
+## What's Next
 
-## On the Horizon
-- **Substack ingestion** - confirm working end-to-end via TOR RSS
-- **Direct URL input for artifacts** - UI to paste a URL and save as artifact manually
-- OpenClaw Phase 2 - signal/category enrichment (stubbed, deriveSignal returns '')
-- Raindrop / Reddit integration
-- TipRanks alerts as separate category
-- Per-ticker Yahoo Finance feeds (AAPL/MSFT/GOOGL/AMZN/NVDA/TSLA/META/AMD/ORCL/CMCSA) as alternative to broad Yahoo Finance feed
+See **[BACKLOG.md](BACKLOG.md)** for the operational queue: active code work, held items, and horizon ideas.
+
+Items that used to live in this section are now tracked there. Don't duplicate — pick from BACKLOG and promote into a session.
 
 ## Change Log
 | Version | Date | Tool | Changes |

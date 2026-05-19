@@ -17,6 +17,17 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-19 - Claude Code (docs pass — Pending section stale, HANDOFF version count)
+- Request: Fourth item of the autonomous morning list — review CONTEXT.md and HANDOFF_PROMPT.md for stale content.
+- Findings:
+  - CONTEXT.md "Pending (Tomorrow)" section was stale: item 1 (purge 8K articles) done by auto hard-purge in v2.46; item 2 (verify v2.35 mark-read) still nominally open but tracked in BACKLOG #7; items 3+4 (finance OPML, OPML re-import) duplicated in BACKLOG #5 and #8. Replaced the whole section with a pointer to BACKLOG.md to eliminate duplicate sources of truth.
+  - CONTEXT.md "On the Horizon" section moved to BACKLOG.md Horizon section in earlier session — empty here, also collapsed into the pointer.
+  - HANDOFF_PROMPT.md said "Viewer bumps version in 3 places" — wrong. PROCESS.md correctly says 5 places. Fixed to 5 and cross-referenced PROCESS.md §3.
+  - HANDOFF_PROMPT.md "Today's task" template now mentions BACKLOG.md as a source.
+  - Added a note about moving closed items to BACKLOG Done section as part of the standard loop.
+- Files touched: CONTEXT.md, HANDOFF_PROMPT.md, AUDIT_TRAIL.md
+- Deployment: docs only.
+
 ### 2026-05-19 - Claude Code (dedup analysis — Cluster E should already cluster)
 - Request: Verify analytically whether Cluster E (Longines Legend Diver 59, 3 articles) should be caught by current v2.45/v2.47 dedup or whether it represents a new failure mode.
 - Method: walked through `extractProperNouns_` by hand for all 3 titles. Confirmed all pairs share exactly `[longines, legend, diver]` = 3 strong entities. That hits the `sharedNouns >= 3` branch in `scorePossibleDuplicateMatch_` at line 1959 → score 0.66 → above MIN_SCORE 0.55 → match returned. Likely an earlier branch ("same event with overlapping titles", line 1950) fires first with score 0.78.

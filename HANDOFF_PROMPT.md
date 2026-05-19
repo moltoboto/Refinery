@@ -82,7 +82,7 @@ Push commands:
 
 After every meaningful change — IN THIS ORDER:
   1. Bump version in the file header (Ingestion `Version: X.Y` line, Viewer
-     bumps version in 3 places — see CONTEXT.md gotchas).
+     bumps version in 5 places — see CONTEXT.md gotchas, or PROCESS.md §3).
   2. Add a row to the CONTEXT.md Change Log (top of the table).
   3. Append a new entry to the TOP of AUDIT_TRAIL.md (above the previous
      entry). Match the format of the 2-3 most recent entries: header line
@@ -93,11 +93,13 @@ After every meaningful change — IN THIS ORDER:
   4. clasp push (Viewer also needs redeploy).
   5. git add -A && git commit -m "vX.Y: short summary" && git push
 
+If the change closes a BACKLOG.md item, move it to the Done section.
+
 The audit trail is the single most important durable artifact. If the trail
 is wrong or missing, future sessions will rediscover bugs that were already
 fixed and intent that was already decided.
 
-Today's task: [DESCRIBE TASK HERE]
+Today's task: [DESCRIBE TASK HERE — or pick from BACKLOG.md]
 ```
 
 ---
