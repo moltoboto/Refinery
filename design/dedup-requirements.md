@@ -57,12 +57,27 @@ E2: Hands-On With The Faithful Longines Legend Diver 59
 E3: The new Longines Legend Diver 59 brings real diving pedigree back to the surface
 ```
 
-**Why current v2.45 may or may not have missed it (needs verification):**
-- All three share `Longines`, `Legend`, `Diver` — 3 strong entities. Should already cluster under the existing 3-shared rule.
-- If it didn't cluster, possible causes:
-  - `Legend` is in HEADLINE_STOPWORDS_ (e.g. confused with "legendary" or as a marketing word).
-  - The product name `Legend Diver 59` reads as a multi-word entity to a human but is 2–3 separate tokens to the matcher; with R2 it becomes `legend-diver` + `diver-59` (digit run treated as token) which strengthens the match.
-- **Action:** verify this in production. If it already clusters, no new requirement; if not, document as failure mode F8.
+**Code analysis (2026-05-19) — Cluster E SHOULD already cluster under v2.45/v2.47.**
+
+`extractProperNouns_` would produce:
+- E1 → `[look, longines, legend, diver, return, icon]` (6 entities — "first" and "the" stopworded; "new" lowercase-skip)
+- E2 → `[hands-on, faithful, longines, legend, diver]` (5 entities — "with", "the" stopworded; "hands-on" stays one token because the splitter preserves hyphens)
+- E3 → `[longines, legend, diver]` (3 entities — all other capitalized words start lowercase after "The new")
+
+**Pairwise shared proper nouns:**
+- E1 ∩ E2: `longines, legend, diver` = 3 shared ✓
+- E1 ∩ E3: `longines, legend, diver` = 3 shared ✓
+- E2 ∩ E3: `longines, legend, diver` = 3 shared ✓
+
+All three pairs hit the `sharedNouns >= 3` branch in `scorePossibleDuplicateMatch_` (line 1959+) → score boosted to 0.66 → above `MIN_SCORE=0.55` → duplicate match returned.
+
+Furthermore, the earlier scoring branches likely fire first because all 3 titles share the `Longines / Legend / Diver` tokens, hitting the "same event with overlapping titles" branch (titleStats.shared >= 3 + containment >= 0.7) → score 0.78.
+
+**Conclusion:** Cluster E is almost certainly already being caught — 2 of the 3 articles are sitting in the **Duplicate review category**, not in the main inbox. If the user is seeing all 3 in their main feed, the actual failure is probably in the Viewer's Duplicate-category filter, NOT in the matcher. Recommended verification step: open the Viewer's Duplicate category and search for "Longines". Expected: 2 of the 3 articles present with summary explaining the match reason.
+
+If they're NOT in Duplicate, then re-investigate — could be cache window (>30 days apart), missing simhash precompute on candidate, or article was inserted before v2.45 shipped.
+
+**No new requirement added for Cluster E** — system appears to be working. Verification by the user in the Viewer is the only outstanding item.
 
 ### Cluster F — Exact-duplicate title slipped through (2 articles, byte-identical)
 ```

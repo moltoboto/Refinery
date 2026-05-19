@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-19 - Claude Code (dedup analysis — Cluster E should already cluster)
+- Request: Verify analytically whether Cluster E (Longines Legend Diver 59, 3 articles) should be caught by current v2.45/v2.47 dedup or whether it represents a new failure mode.
+- Method: walked through `extractProperNouns_` by hand for all 3 titles. Confirmed all pairs share exactly `[longines, legend, diver]` = 3 strong entities. That hits the `sharedNouns >= 3` branch in `scorePossibleDuplicateMatch_` at line 1959 → score 0.66 → above MIN_SCORE 0.55 → match returned. Likely an earlier branch ("same event with overlapping titles", line 1950) fires first with score 0.78.
+- Conclusion: Cluster E is almost certainly already being caught — 2 of 3 are in the Viewer's Duplicate review category, not the main inbox. User verification step: open Viewer Duplicate category, search "Longines", expect to find them.
+- If they're NOT in Duplicate, root cause is something else (cache window, missing precompute on older articles, pre-v2.45 ingest). Re-investigate then.
+- No new requirement added for Cluster E.
+- Files touched: design/dedup-requirements.md, AUDIT_TRAIL.md
+- Deployment: docs only.
+
 ### 2026-05-19 - Claude Code (Ingestion — dedup corpus test runner added)
 - Request: Build a self-contained Apps Script function that regression-tests the dedup matcher against the ground-truth corpus from design/dedup-requirements.md.
 - Implementation: New function `runDedupCorpusTest_()` at the bottom of Ingestion/Code.js (before ARTICLE_PURGE_). Embeds 5 clusters (A Spencer Pratt, B Musk-OpenAI 6-article, C Trump Iran, D Musk-OpenAI second wave, E Longines Legend Diver), 4 cross-cluster guard pairs (must NOT match), and the exact-duplicate cluster F (tested via normalizeTitleForDedupe equality rather than scorePossibleDuplicateMatch_ since the latter short-circuits on exact normalized-title match).
