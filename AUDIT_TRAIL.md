@@ -17,6 +17,20 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-19 - Claude Code (Ingestion v2.48 — Dedup Phase 1: R1+R2+R3 + minimal R5 Tier 2)
+- Request: Ship Phase 1 dedup improvements per design/dedup-requirements.md based on v2.47 baseline scorecard (2/5 clusters fully pass, B partial at 40%, C+D fail).
+- Implementation:
+  - **R1 — Apostrophe normalization** in `extractProperNouns_`: pre-tokenize step strips `'s` and `s'` suffixes. `Pratt's` → `Pratt`, `Musk's` → `Musk`, `students'` → `students`. All single-quote variants unified first.
+  - **R2 — Multi-word entity bigrams** in `extractProperNouns_`: when two consecutive tokens in the original input both pass the strong-entity filter (capitalized, 3+ chars, not stopwords), emit a third compound entity. `Sam Altman` → emits `sam`, `altman`, AND `sam-altman`. Same for `Mark Halperin`, `Bel Air`, `Middle East`, `Harvey Levin`, etc. Two-pass implementation: pass 1 marks strong-token positions; pass 2 emits singletons + adjacent-position bigrams.
+  - **R3 — Verb stemming**: new `VERB_STEM_MAP_` covering ~22 action-verb groups (lose/delay/postpone/rule/file/sue/win/launch/buy/sell/announce/release/cancel/acquire/fire/hire/unveil/attack/strike + legal nouns trial/lawsuit/verdict/feud). `say`/`said`/`says`/`saying` deliberately excluded — too generic, would over-cluster. New `extractStemmedVerbs_(title)` helper.
+  - **Minimal R5 Tier 2 scoring branch**: when `sharedNouns >= 2 && sharedVerbs >= 1`, fire duplicate match with score 0.70 reason "N entities + verb-stem (M)". Inserted BEFORE the existing `sharedNouns >= 3` branch (which keeps score 0.66) since 2-entities-plus-verb is a stronger signal than 3 generic entities. Pre-existing simhash and token branches unchanged.
+  - **Wiring**: `verbStems` added to `incoming` features in both `findPossibleDuplicateCandidate_` and the fallback path; precomputed as `row._verbStems` in `warmDedupCache_`.
+- Expected test corpus improvement: Cluster B 6/15 → ~10-12/15 (B1 pairs now cluster via "elon+musk+lose"). Cluster D 0/1 → 1/1 (musk+openai+lose shared). Cluster A 1/1 stays. Cluster C 0/1 → 0/1 still (postpone vs delay isn't covered until R4 synonyms; attack vs strike same).
+- v2.48 bump in Ingestion/Code.js header (1 place).
+- Files touched: Ingestion/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion.
+- Follow-up: user runs `runDedupCorpusTest` and reports new scorecard. If B and D improve as expected, proceed to Phase 2 (R4 synonyms). If unexpected false positives appear in the cross-cluster guard, tighten the Tier 2 branch (e.g. require verb-stem to be "strong" action verb, not just any).
+
 ### 2026-05-19 - Claude Code (docs pass — Pending section stale, HANDOFF version count)
 - Request: Fourth item of the autonomous morning list — review CONTEXT.md and HANDOFF_PROMPT.md for stale content.
 - Findings:

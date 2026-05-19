@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.47
+ * Version: 2.48
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1861,7 +1861,8 @@ function findPossibleDuplicateCandidate_(record, headers) {
     titleTokens: dedupeTokens_(record && record.title || '', true),
     topicTokens: dedupeTokens_(incomingFullText, false),
     simhash: simhashText_(incomingFullText),
-    properNouns: extractProperNouns_(record && record.title || '')
+    properNouns: extractProperNouns_(record && record.title || ''),
+    verbStems:   extractStemmedVerbs_(record && record.title || '')  // v2.48 R3
   };
 
   var matches = rows.map(function(candidate) {
@@ -1896,7 +1897,8 @@ function scorePossibleDuplicateMatch_(record, candidate, incoming) {
       titleTokens: dedupeTokens_(record && record.title || '', true),
       topicTokens: dedupeTokens_(incomingFullText_, false),
       simhash: simhashText_(incomingFullText_),
-      properNouns: extractProperNouns_(record && record.title || '')
+      properNouns: extractProperNouns_(record && record.title || ''),
+      verbStems:   extractStemmedVerbs_(record && record.title || '')  // v2.48 R3
     };
   }
 
@@ -1942,6 +1944,19 @@ function scorePossibleDuplicateMatch_(record, candidate, incoming) {
     incoming.properNouns.forEach(function(n) { if (nounSet[n]) sharedNouns++; });
   }
 
+  // v2.48 — verb-stem overlap. Action-verb stems shared between titles signal
+  // same-event coverage when combined with at least one shared entity.
+  var candidateVerbs = candidate._verbStems || extractStemmedVerbs_(candidate && candidate.title || '');
+  var incomingVerbs  = (incoming.verbStems && incoming.verbStems.length)
+    ? incoming.verbStems
+    : extractStemmedVerbs_(record && record.title || '');
+  var sharedVerbs = 0;
+  if (incomingVerbs && incomingVerbs.length && candidateVerbs.length) {
+    var verbSet = {};
+    candidateVerbs.forEach(function(v) { verbSet[v] = true; });
+    incomingVerbs.forEach(function(v) { if (verbSet[v]) sharedVerbs++; });
+  }
+
   var reason = '';
   if (hdist <= 4) {
     reason = 'simhash near-identical (hamming=' + hdist + ')';
@@ -1956,8 +1971,14 @@ function scorePossibleDuplicateMatch_(record, candidate, incoming) {
   } else if (topicStats.shared.length >= (minShared + 2) && containment >= 0.45) {
     reason = 'same company/topic among active unread articles';
     score = Math.max(score, 0.68);
+  } else if (sharedNouns >= 2 && sharedVerbs >= 1) {
+    // v2.48 — R5 Tier 2: 2 shared entities + 1 shared action-verb stem.
+    // Catches Cluster B/D pairs (Elon+Musk+lose) and helps Cluster C if
+    // verb groups are added in Phase 2 (R4 synonyms).
+    reason = sharedNouns + ' entities + verb-stem (' + sharedVerbs + ')';
+    score = Math.max(score, 0.70);
   } else if (sharedNouns >= 3) {
-    // NEW in v2.45: catches same-watch / same-event articles with divergent headlines
+    // v2.45: catches same-watch / same-event articles with divergent headlines
     reason = sharedNouns + ' shared title entities';
     score = Math.max(score, 0.66);
   } else {
@@ -1997,20 +2018,94 @@ var HEADLINE_STOPWORDS_ = {
 // with different word choice" — e.g. two different write-ups of the same
 // Rolex GMT release will both contain 'rolex' and 'gmt'.
 function extractProperNouns_(title) {
+  // v2.48 — R1: strip possessive `'s` / `s'` before tokenization so
+  //   Pratt's → Pratt, Musk's → Musk. Single-quote variants unified first.
+  // v2.48 — R2: when two strong tokens are ADJACENT in the original input,
+  //   emit a third compound entity (`sam-altman`, `mark-halperin`, `middle-east`).
+  //   Compound is in addition to the individual entities — it boosts shared
+  //   count for clusters that name the same person/place by full name.
   var out = [];
   var seen = {};
   var tokens = String(title || '')
-    .replace(/[''""]/g, '')
+    .replace(/[‘’‚‛′]/g, "'")
+    .replace(/'s\b/g, '')
+    .replace(/\bs'/g, 's')
+    .replace(/['"“”„‟″]/g, '')
     .split(/[^A-Za-z0-9-]+/);
+
+  // Pass 1: identify strong-entity positions by index in the original stream
+  var strongAt = {};
   for (var i = 0; i < tokens.length; i++) {
     var t = tokens[i];
     if (!t || t.length < 3) continue;
     if (!/^[A-Z]/.test(t)) continue;
     var key = t.toLowerCase();
     if (HEADLINE_STOPWORDS_[key]) continue;
-    if (seen[key]) continue;
-    seen[key] = true;
-    out.push(key);
+    strongAt[i] = key;
+  }
+
+  // Pass 2: emit singletons + R2 bigrams (when index i AND i+1 are both strong)
+  for (var i = 0; i < tokens.length; i++) {
+    if (!strongAt[i]) continue;
+    var key = strongAt[i];
+    if (!seen[key]) {
+      seen[key] = true;
+      out.push(key);
+    }
+    if (strongAt[i + 1]) {
+      var bigram = key + '-' + strongAt[i + 1];
+      if (!seen[bigram]) {
+        seen[bigram] = true;
+        out.push(bigram);
+      }
+    }
+  }
+  return out;
+}
+
+// v2.48 — R3: light verb stemming for news-domain action verbs.
+// Maps common -ed/-ing/-es/-s suffix variants to a canonical stem.
+// 'say' / 'said' / 'saying' deliberately excluded — too generic, would
+// cluster every "X says Y" article that shares any 2 entities.
+var VERB_STEM_MAP_ = {
+  lost: 'lose', losing: 'lose', loses: 'lose', lose: 'lose',
+  delayed: 'delay', delays: 'delay', delaying: 'delay', delay: 'delay',
+  postponed: 'postpone', postpones: 'postpone', postponing: 'postpone', postpone: 'postpone',
+  ruled: 'rule', rules: 'rule', ruling: 'rule', rule: 'rule',
+  filed: 'file', files: 'file', filing: 'file', file: 'file',
+  sued: 'sue', sues: 'sue', suing: 'sue', sue: 'sue',
+  won: 'win', winning: 'win', wins: 'win', win: 'win',
+  launched: 'launch', launches: 'launch', launching: 'launch', launch: 'launch',
+  bought: 'buy', buys: 'buy', buying: 'buy', buy: 'buy',
+  sold: 'sell', sells: 'sell', selling: 'sell', sell: 'sell',
+  announced: 'announce', announces: 'announce', announcing: 'announce', announce: 'announce',
+  released: 'release', releases: 'release', releasing: 'release', release: 'release',
+  cancelled: 'cancel', cancels: 'cancel', cancelling: 'cancel', cancel: 'cancel',
+  acquired: 'acquire', acquires: 'acquire', acquiring: 'acquire', acquire: 'acquire',
+  fired: 'fire', fires: 'fire', firing: 'fire', fire: 'fire',
+  hired: 'hire', hires: 'hire', hiring: 'hire', hire: 'hire',
+  unveiled: 'unveil', unveils: 'unveil', unveiling: 'unveil', unveil: 'unveil',
+  attacked: 'attack', attacks: 'attack', attacking: 'attack', attack: 'attack',
+  struck: 'strike', strikes: 'strike', striking: 'strike', strike: 'strike',
+  feud: 'feud', feuds: 'feud', feuding: 'feud',
+  trial: 'trial', trials: 'trial',
+  lawsuit: 'lawsuit', lawsuits: 'lawsuit',
+  verdict: 'verdict', verdicts: 'verdict'
+};
+
+function extractStemmedVerbs_(title) {
+  var out = [];
+  var seen = {};
+  var tokens = String(title || '')
+    .toLowerCase()
+    .replace(/[^a-z]+/g, ' ')
+    .split(/\s+/);
+  for (var i = 0; i < tokens.length; i++) {
+    var stem = VERB_STEM_MAP_[tokens[i]];
+    if (stem && !seen[stem]) {
+      seen[stem] = true;
+      out.push(stem);
+    }
   }
   return out;
 }
@@ -2248,6 +2343,7 @@ function warmDedupCache_(headers) {
       row._topicTokens   = dedupeTokens_(fullText, false);
       row._simhash       = simhashText_(fullText);
       row._properNouns   = extractProperNouns_(row.title || '');
+      row._verbStems     = extractStemmedVerbs_(row.title || '');  // v2.48 R3
     });
     Logger.log('DEDUP CACHE: warmed with ' + INGESTION_DEDUP_CACHE_.length + ' candidates (' +
                Object.keys(DEDUP_URL_MAP_).length + ' URLs, ' +
