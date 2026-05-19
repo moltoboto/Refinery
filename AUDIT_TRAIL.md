@@ -17,6 +17,17 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-19 - Claude Code (docs — backlog re-ranked by value, Phase 3 deprioritized)
+- Request: User directive — work by value-add, not order of discovery. Phase 3 dedup work analyzed as marginal/risky; demote.
+- Changes to BACKLOG.md:
+  - Restructured sections from "Active / Held / Deferred / Horizon" to "High value / Medium / Low / Deferred / Horizon" — explicit value ranking.
+  - **High value (do first):** #1 Full article in reading pane, #3a iPad trapped fix, #2 GitHub Models Summarize.
+  - **Medium:** #7 verify dedup work in production, #10 ongoing dedup diagnostic, #3 iPad gutter tuning.
+  - **Low (deprioritized):** #13 Dedup Phase 3 — only Tier 1 bigram boost + Tier 4 weak-tier remain after v2.48-49 already shipped Tier 2 + 3. Analysis: won't move test scorecard, high FP risk on Tier 4 (Apple+announce / Apple+launch type matches). Hold until v2.49 production FP rate is known.
+  - **Done — recent:** prune to last 5 entries, including all v2.47-49 dedup work and v2.35-36 Viewer cleanup.
+- Files touched: BACKLOG.md, AUDIT_TRAIL.md
+- Deployment: docs only.
+
 ### 2026-05-19 - Claude Code (Ingestion v2.49 — Dedup Phase 2: R4 synonym groups)
 - Request: Ship Phase 2 dedup work (R4 from design/dedup-requirements.md) — topic-synonym groups so different word choices for the same event still cluster.
 - Implementation:

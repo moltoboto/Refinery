@@ -1,58 +1,65 @@
 # Refinery - Backlog
 
-Operational queue of work not yet scheduled. Promote items to a session by moving them out of here and into a Code.js change with audit trail entry.
+Operational queue of work not yet scheduled. **Ranked by value-add, not order of discovery.** Promote items from High to a session; deprioritize anything that doesn't move the needle.
 
 ## How to use this file
-- New items get added to **Active** at the top.
-- When started, leave the item here until done — then delete the row and write the audit entry.
-- **Held** = waiting on something (data, user decision, etc.).
-- **Horizon** = directional, no near-term plan.
+- **High value** = visible to user, blocks current workflow, or unlocks new capability
+- **Medium value** = nice-to-have, polish, observation
+- **Low value** = marginal gain, high FP risk, or already covered indirectly
+- **Deferred** = planned but gated on something else
+- **Horizon** = directional, no near-term plan
+
+When something is done, delete the row and write the audit entry.
 
 ---
 
-## Active (raised this session, 2026-05-17)
+## 🔴 High value (do these first)
+
+| # | Item | Est. | Why high value |
+|---|------|------|----------------|
+| 1 | **Full article in reading pane** | 1–2 sessions | Highest-impact UX change available. Lets you read complete articles in-app — no more clicking out and getting trapped. Easy path: capture `<content:encoded>` from RSS into a new `content_html` column, render in reading pane. Hard path: on-demand fetch+extract for paywalled feeds (Motley Fool, Seeking Alpha, NYT). Re-uses `enrichArticleFromUrl()` infrastructure currently disabled in v2.34. |
+| 3a | **iPad "trapped" fix** | 1–2 hrs | Functional iPad blocker. Per-card ↗ icon uses `<a target="_blank">`; iPad Safari treats it as in-place navigation from the iframe sandbox. Combined with #1 above, this becomes less critical (you'd read in-app) but it's still a real escape hatch needed. Possible fixes: JS `window.open()`, persistent "← Refinery" floating badge, or Apps Script sandbox tweaks. |
+| 2 | **GitHub Models API for Summarize** | 1–2 sessions | Quality boost — better summaries could replace per-article reading for many items. Wire `UrlFetchApp` to GH Models endpoint with your token. Watch rate limits (~50 req/day personal). |
+
+## 🟡 Medium value
 
 | # | Item | Est. | Notes |
 |---|------|------|-------|
-| 1 | **Full article in reading pane** | 1–2 sessions | Easy path: capture `<content:encoded>` from RSS into new `content_html` column, render in reading pane. Hard path: on-demand fetch+extract for paywalled/teaser feeds (Motley Fool, Seeking Alpha, NYT). Re-uses `enrichArticleFromUrl()` infrastructure (currently disabled in v2.34). |
-| 2 | **GitHub Models API for Summarize** | 1–2 sessions | Replace current Summarize button logic with GH Models API call (gpt-4o or Claude). Wire `UrlFetchApp` to GH Models endpoint with user's token. Watch rate limits (~50 req/day personal). |
-| 3 | **iPad 11" — tune right gutter** | <30 min | Tested 2026-05-18 on 11" iPad. 280px right gutter felt off. Need to test on 12.9" iPad (user has one at current location) then settle on viewport-relative sizing — possibly `clamp()` or different value for narrow vs wide iPad. |
-| 3a | **iPad — "trapped" when clicking ↗ View** | 1–2 hrs | Per-card ↗ icon (from v2.14) uses `<a target="_blank">`. Confirmed behavior: on Windows it opens a new window (fine — Alt-Tab back). **On iPad it replaces the current screen** — no new tab spawns, and there's no obvious way back to Refinery without re-navigating to the bookmarked URL. Root cause: Apps Script serves the Viewer in an iframe sandbox; iPad Safari handles `target="_blank"` from inside an iframe by navigating in-place rather than opening a new tab. Possible fixes: (a) JS click handler using `window.open(url, '_blank')` from a user gesture (sometimes bypasses the iframe constraint on Safari), (b) detect iPad and show an explicit modal with "Open in new tab" intent, (c) add a persistent floating "← Refinery" badge so users always have a way back, (d) Apps Script `setSandboxMode` adjustments. Test each on iPad before committing. |
-| 5 | **Finance feed curation in `subscriptions.opml`** | <1 hour | Decide which Finance feeds to keep: Yahoo Finance, MarketWatch, CNBC Mad Money, Seeking Alpha, Motley Fool, Fox Business. Remove unwanted ones, re-import OPML into TOR. |
-| 7 | **Verify v2.35 mark-read fixes** | observation | First post-quota-reset run should log `DEDUP CACHE: warmed ~2000` and `TOR: marked X/500 as read (10 batches)`. Subsequent run should return far fewer articles. |
-| 8 | **Re-import OPML into TOR** | user action | Google News removed from subscriptions.opml but TOR still has it. Import to drop. |
+| 7 | **Verify v2.47 / v2.48 / v2.49 dedup work in production** | observation | Run `runDedupCorpusTest` for the regression scorecard; watch real ingestion logs for `DEDUP CACHE HIT` lines (v2.47 F8 fix) and false-positive rate in the Duplicate review queue (v2.48–49 fuzzy improvements). |
+| 10 | **Dedup diagnostic — ongoing miss capture** | as observed | Feed new miss clusters into [design/dedup-requirements.md](design/dedup-requirements.md). Cluster F addressed by v2.47; Clusters A/B/C/D/E addressed by v2.48–49. |
+| 3 | **iPad 11" right gutter tuning** | <30 min | Cosmetic. Tested 11" 2026-05-18 — 280px felt off. Test on 12.9" iPad then settle on viewport-relative sizing (clamp or per-width). |
 
-## Deferred (planned, but waiting on a follow-up)
+## 🟢 Low value (deprioritized — only if nothing better to do)
+
+| # | Item | Why low |
+|---|------|---------|
+| 13 | **Dedup Phase 3 (R5 Tier 1 bigram + Tier 4 weakest tier)** | Analysis shows won't move test scorecard. Tier 2+3 already shipped in v2.48–49. Tier 4 (1 entity + 2 actions) is permissive and will likely add false positives (Apple+announce / Apple+launch type matches). Hold until v2.49 FP rate is known, then re-evaluate. |
+| 5 | **Finance OPML curation** | User action, easy anytime — decide which Finance feeds to drop in `subscriptions.opml` |
+| 8 | **Re-import OPML into TOR** | User action — drop Google News from live reader |
+
+## 🔵 Deferred (gated)
 
 | # | Item | Trigger |
 |---|------|---------|
-| H1 | **Claude Design review of header + nav rail** | DONE 2026-05-18 — Claude Design delivered the v3.0 redesign package (see H2). Original brief at [design/ipad-header-redesign-brief.md](design/ipad-header-redesign-brief.md). |
-| H2 | **v3.0 visual rewrite (Claude Design package)** | After v2.34 has been tested on iPad and we're confident the chip system / iconized nav approach works. Package delivered at [design/claude-design-v3/](design/claude-design-v3/) with 1024-line styles.css (drop-in mostly unchanged), all 11 chip icons + 10 category SVGs in icons.jsx, detailed Apps Script implementation notes in README.md. **Phase 1 (visual only):** ~3 sessions / 15–20 hrs — paste CSS, inline SVG icons, rewrite header/rail/list/reading-pane HTML, add bottom keyboard-hint footer, single state object with localStorage, add IBM Plex Mono via Google Fonts. Use placeholder data for fields not in schema (author, image_url, read_progress). **Phase 2 (backend gaps):** ~1–2 sessions — new Supabase columns (author, image_url, read_later, read_progress), Ingestion captures from RSS, Viewer endpoints to toggle. **Phase 3 (defer):** Kept view grid, mobile patterns, add-source buttons, multi-tag display. Risk: uses `oklch()` colors — use the README's sRGB hex fallbacks as primary values for safety on older Safari. |
+| H2 | **v3.0 visual rewrite (Claude Design package)** | After v2.36+ tested on iPad. Package at [design/claude-design-v3/](design/claude-design-v3/). 1024-line styles.css drop-in, all icons in icons.jsx, Apps Script implementation notes in README. **Phase 1 (visual only):** ~3 sessions — paste CSS, inline SVG, rewrite components, add bottom keyboard footer, IBM Plex Mono. **Phase 2 (backend):** ~1–2 sessions — Supabase columns for author/image_url/read_later/read_progress; Ingestion captures from RSS. **Phase 3 (defer):** Kept view, mobile patterns, multi-tag. |
 
-## Held (waiting on data or decisions)
+## 🔵 Horizon (directional)
 
-| # | Item | Waiting on |
-|---|------|------------|
-| 10 | **Dedup diagnostic — manual cluster review** | Ongoing — user feeds new miss clusters into [design/dedup-requirements.md](design/dedup-requirements.md) as observed. Cluster F (exact-dup) addressed in v2.47. Open: Cluster E (Longines) needs verification — should already cluster under 3-shared-entity rule. |
-| 11 | **Dedup Phase 1 — token-level fixes (R1+R2+R3)** | After v2.47 has run for a few days and false-positive rate is known. Spec at design/dedup-requirements.md. Targets clusters A, D, E. v2.48. |
-| 12 | **Dedup Phase 2 — synonym dictionary (R4) + tiered scoring (R5)** | After Phase 1 outcomes. v2.49 + v2.50. |
-| 13 | **Dedup Phase 3 — time windows + standardized reason codes (R6, R7)** | Last. v2.51+. |
-
-## Horizon (directional, no near-term plan)
-
-- **PIM evolution / semantic layer** — turn Refinery from RSS reader into a personal information manager. Concrete tech path: Supabase `pgvector`, embed title+summary on insert, add semantic search and cross-article summarization. See the 2026-05-17 "knowledge base for AI" article review (PDF in Downloads). 1–2 sessions for MVP semantic search; more for "ask my news" RAG.
-- **OpenClaw Phase 2** — `deriveSignal()` currently stubbed (returns ''). Per CONTEXT.md, intended for signal/category enrichment.
-- **Substack ingestion** — confirm end-to-end via TOR RSS.
-- **Direct URL input for artifacts** — UI to paste a URL and save as artifact manually.
-- **Raindrop integration** — pull bookmarks as a source.
-- **Reddit native integration** — beyond current TOR routing.
-- **TipRanks alerts** — separate category.
-- **Per-ticker Yahoo Finance feeds** — replace broad Yahoo Finance with AAPL/MSFT/GOOGL/AMZN/NVDA/TSLA/META/AMD/ORCL/CMCSA-specific feeds. Less noise, more signal.
+- **PIM evolution / semantic layer** — pgvector + embedding on insert + semantic search. Strategic direction. 1–2 sessions MVP.
+- **OpenClaw Phase 2** — `deriveSignal()` enrichment (stubbed)
+- **Substack ingestion** — end-to-end confirm
+- **Direct URL input for artifacts**
+- **Raindrop integration**
+- **Reddit native integration**
+- **TipRanks alerts category**
+- **Per-ticker Yahoo Finance feeds** (Mag 7 + AMD/ORCL/CMCSA)
 
 ---
 
-## Done — recent (last 3 entries, then prune)
+## Done — recent (last 5 entries, then prune)
 
-- 2026-05-19 — F8 dedup fix on Gmail path + Viewer cleanup combo (Ingestion v2.47, Viewer v2.35); closes #4 resize handles + #9 N/P artifact nav
-- 2026-05-18 — Iconized header + ICON chip + LIST chip (Viewer v2.34); closes #3b focus mode + #3c iconized nav
-- 2026-05-18 — `applySourceCategoryBackfill()` run (user) — existing rows retagged to 10-category set
+- 2026-05-19 — Dedup Phase 2: R4 topic-synonym groups (Ingestion v2.49)
+- 2026-05-19 — Dedup Phase 1: R1+R2+R3 + minimal R5 Tier 2 (Ingestion v2.48)
+- 2026-05-19 — F8 dedup fix on Gmail path (Ingestion v2.47); dedup corpus test runner; safety audit
+- 2026-05-19 — Chip overhaul + real category icons (Viewer v2.36)
+- 2026-05-19 — Resize-handle cleanup + N/P artifact nav (Viewer v2.35)
