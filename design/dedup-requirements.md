@@ -38,6 +38,45 @@ B6: Elon Musk lost his case against Sam Altman
 - Verb forms `lost`/`loses`/`losing` are different tokens → no signal that they're the same action.
 - The unifying topic word `lawsuit`/`trial`/`case`/`court battle`/`ruling`/`feud` is rich semantic signal but our matcher uses none of it (it's lowercase, not a proper noun).
 
+### Cluster D — Musk v. OpenAI verdict, second wave (2 more, same event as B)
+```
+D1: Elon Musk has lost his lawsuit against Sam Altman and OpenAI
+D2: Federal jury delivers verdict on Musk's lawsuit against OpenAI
+```
+
+**Why current v2.45 missed it:**
+- D1 strong entities: `Elon`, `Musk`, `Sam`, `Altman`, `OpenAI` — 5 strong.
+- D2 strong entities: `Federal`, `Musk`, `OpenAI` (and `Musk's` → `Musk` if R1 implemented; if not, `Musk's` may not extract cleanly).
+- Pair D1 ∩ D2 shared = `Musk` + `OpenAI` = **2 strong entities** → below current 3-entity threshold.
+- Should cluster with all 6 articles in Cluster B once R2 (multi-word `sam-altman`) and R5 (tiered scoring with 2 entities + verb-stem trigger) are in place.
+
+### Cluster E — Longines Legend Diver 59 watch (3 articles, same release)
+```
+E1: First Look The new Longines Legend Diver 59, The Return of the 42mm Icon
+E2: Hands-On With The Faithful Longines Legend Diver 59
+E3: The new Longines Legend Diver 59 brings real diving pedigree back to the surface
+```
+
+**Why current v2.45 may or may not have missed it (needs verification):**
+- All three share `Longines`, `Legend`, `Diver` — 3 strong entities. Should already cluster under the existing 3-shared rule.
+- If it didn't cluster, possible causes:
+  - `Legend` is in HEADLINE_STOPWORDS_ (e.g. confused with "legendary" or as a marketing word).
+  - The product name `Legend Diver 59` reads as a multi-word entity to a human but is 2–3 separate tokens to the matcher; with R2 it becomes `legend-diver` + `diver-59` (digit run treated as token) which strengthens the match.
+- **Action:** verify this in production. If it already clusters, no new requirement; if not, document as failure mode F8.
+
+### Cluster F — Exact-duplicate title slipped through (2 articles, byte-identical)
+```
+F1: What ChatGPT sees when it looks at your company + 3 diagnostics
+F2: What ChatGPT sees when it looks at your company + 3 diagnostics
+```
+
+**This is a different failure class — exact title duplication shouldn't happen at all.**
+`isFastExactDuplicate_` (v2.31) plus title `ilike` match (v2.24) should have caught this before insert. Hypotheses:
+1. **Invisible character difference** — em-dash vs hyphen, curly quotes, trailing whitespace, NBSP. The matcher needs an aggressive normalization step before comparison.
+2. **Cache miss** — F1 was inserted in run N; F2 came in run N+1 but warmDedupCache_ window or LIMIT excluded F1 from the cache.
+3. **Same-run race** — both ingested in the same run, F1 not yet in cache when F2 was checked. v2.36 added `addToFastDedupCache_` to update the cache mid-run; verify this is firing on Gmail path (not just TOR).
+4. **Title normalization mismatch** between insertion and lookup — e.g. one stored with trailing whitespace, one without.
+
 ### Cluster C — Trump Iran strike postponed (2 articles, identical event)
 ```
 C1: Trump says he's postponing 'scheduled attack of Iran tomorrow' at Middle East leaders' request
@@ -64,6 +103,7 @@ C2: Trump says he delayed Iran strike planned for Tuesday
 | F5 | **Topic synonyms not recognized** — `strike`/`attack`; `lawsuit`/`trial`/`case`/`court battle` | B, C | High |
 | F6 | **Time markers ignored** — `tomorrow`/`Tuesday` reference the same upcoming event | C | Low |
 | F7 | **No bidirectional entity-alias resolution** — `Sam Altman` and `OpenAI` are tightly linked in this event; the matcher doesn't know that | B | Low |
+| F8 | **Exact-title dupes slipping through** — should be caught by `isFastExactDuplicate_` + title `ilike`. Hypotheses: invisible character drift (em-dash, NBSP, smart quotes, trailing WS), cache miss, same-run race on Gmail path, normalization mismatch | F | **Critical** — easier than fuzzy and shouldn't fail |
 
 ---
 
@@ -166,6 +206,19 @@ Each cluster below is canonical truth — all titles in a cluster are duplicates
 - Trump says he's postponing 'scheduled attack of Iran tomorrow' at Middle East leaders' request
 - Trump says he delayed Iran strike planned for Tuesday
 
+### Cluster D — Musk v. OpenAI verdict (extends B)
+- Elon Musk has lost his lawsuit against Sam Altman and OpenAI
+- Federal jury delivers verdict on Musk's lawsuit against OpenAI
+
+### Cluster E — Longines Legend Diver 59
+- First Look The new Longines Legend Diver 59, The Return of the 42mm Icon
+- Hands-On With The Faithful Longines Legend Diver 59
+- The new Longines Legend Diver 59 brings real diving pedigree back to the surface
+
+### Cluster F — exact-duplicate title (should be a hard fail under any matcher)
+- What ChatGPT sees when it looks at your company + 3 diagnostics
+- What ChatGPT sees when it looks at your company + 3 diagnostics
+
 ### Cross-cluster guard (must NOT match)
 Add as we discover them. Initial:
 - `Elon Musk` mentioned in a different week / different topic must not cluster with B.
@@ -175,12 +228,21 @@ Add as we discover them. Initial:
 
 ## Implementation order
 
-1. **R1 + R2 + R3** (token-level fixes) — smallest, no scoring change yet. Verify against test corpus.
-2. **R4** (synonym dictionary) — additive, easy to expand.
-3. **R5** (tiered scoring) — replaces the single 3-shared-noun rule with the tier system.
-4. **R6** (time windows) — last, after we see false positive rates from R5.
+**Phase 0 — fix F8 first (critical, separate from fuzzy work).** Exact-title dedup shouldn't fail. Before touching scoring, instrument the existing fast-path:
+- Log when `isFastExactDuplicate_` returns false but a near-identical title exists later in the same run.
+- Add aggressive pre-comparison normalization: NFKC unicode normalization, collapse all whitespace runs to single space, strip surrounding whitespace, normalize quotes (`'`→`'`, `"`→`"`), normalize dashes (em-dash and en-dash → hyphen with spaces). Compare normalized titles.
+- Verify `addToFastDedupCache_` is called on the Gmail ingestion path, not just TOR.
+- If F8 root cause is invisible-character drift, this alone may close it.
 
-Ingestion version bumps: each phase its own version. Probably v2.47 → v2.50.
+**Phase 1 — R1 + R2 + R3** (token-level fixes) — smallest, no scoring change yet. Verify against clusters A, D, E.
+
+**Phase 2 — R4** (synonym dictionary) — additive, easy to expand.
+
+**Phase 3 — R5** (tiered scoring) — replaces the single 3-shared-noun rule with the tier system. Largest behavioral change; watch the Duplicate review queue closely for false positives.
+
+**Phase 4 — R6** (time windows) — last, after we see false positive rates from R5.
+
+Ingestion version bumps: Phase 0 = v2.47, Phase 1 = v2.48, Phase 2 = v2.49, Phase 3 = v2.50, Phase 4 = v2.51.
 
 ---
 

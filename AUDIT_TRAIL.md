@@ -17,6 +17,17 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-19 - Claude Code (docs — dedup requirements: 3 more clusters, F8 critical)
+- Request: User provided 3 more dedup miss clusters (Musk-OpenAI second wave, Longines Legend Diver, exact-duplicate ChatGPT title).
+- Findings:
+  - **Cluster D** (Musk-OpenAI second wave): 2 shared strong entities — below 3-entity threshold; validates R5 tiered scoring.
+  - **Cluster E** (Longines Legend Diver 59): 3 shared strong entities — *should* cluster under existing rule, needs verification. If not clustering, root cause to be added.
+  - **Cluster F** (exact-duplicate title): byte-identical titles slipped through — this is a different failure class. Should never happen under `isFastExactDuplicate_` + `ilike`. New failure mode F8 added: invisible character drift, cache miss, same-run race on Gmail path, or normalization mismatch.
+- New Phase 0 added to implementation order: fix F8 first (separate from fuzzy work). Aggressive pre-comparison normalization (NFKC, whitespace collapse, quote/dash normalization), verify `addToFastDedupCache_` is firing on Gmail path. Phase 0 = v2.47.
+- All 3 new clusters added to inline test corpus.
+- Files touched: design/dedup-requirements.md, AUDIT_TRAIL.md
+- Deployment: docs only.
+
 ### 2026-05-18 - Claude Code (docs — dedup requirements with 3 ground-truth clusters)
 - Request: User provided 3 real dedup misses from production. Asked for a requirement doc the ingestion can be built against.
 - Findings: 3 root-cause failure modes documented (F1–F7): apostrophe handling, multi-word entities lost in tokenization, no verb stemming, no topic-synonym recognition, 3-shared-entity threshold too strict when 2 strong entities + verb + topic word are present.
