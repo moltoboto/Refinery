@@ -2704,14 +2704,14 @@ function hardPurgeDeletedArticles() {
 }
 
 // ── DEDUP CORPUS TEST RUNNER ──────────────────────────────────────────────
-// Run from the Apps Script editor: select `runDedupCorpusTest_` → Run.
+// Run from the Apps Script editor: select `runDedupCorpusTest` → Run.
 // Output goes to the Execution log. Self-contained: no Supabase calls, no
 // cache warmup needed. Every dedup change (R1 → R7 in design/dedup-requirements.md)
 // MUST regression-pass this before shipping.
 //
 // Each cluster's articles must score as duplicates against each other.
 // The cross-cluster guard articles must NOT match.
-function runDedupCorpusTest_() {
+function runDedupCorpusTest() {
   // Inline test corpus — mirrors design/dedup-requirements.md.
   // Cluster F (byte-identical titles) is tested separately via normalizeTitleForDedupe
   // because scorePossibleDuplicateMatch_ short-circuits on exact normalized-title match
