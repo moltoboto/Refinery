@@ -17,6 +17,23 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-19 - Claude Code (Ingestion v2.49 — Dedup Phase 2: R4 synonym groups)
+- Request: Ship Phase 2 dedup work (R4 from design/dedup-requirements.md) — topic-synonym groups so different word choices for the same event still cluster.
+- Implementation:
+  - **Extended `VERB_STEM_MAP_`** with topic nouns critical to news-domain duplicate detection: case, court, judgment, layoff, victory, defeat, deal, acquisition, merger, takeover, raid, debut, ban, block, prohibit, recruit, poach, deliver, defer, terminate, cut, triumph, loss. These were missing in v2.48 and meant the matcher couldn't see "court battle" / "case" / "verdict" as part of the lawsuit cluster.
+  - **Added `SYNONYM_GROUPS_`** dictionary — maps ~50 stems into 10 canonical groups: `lawsuit` (lawsuit/trial/case/court/verdict/ruling/rule/judgment/feud/sue), `strike` (strike/attack/raid), `delay` (delay/postpone/defer), `launch` (launch/release/debut/unveil), `layoff` (fire/layoff/cut/terminate), `hire` (hire/recruit/poach), `ban` (ban/block/prohibit), `win` (win/victory/triumph), `lose` (lose/defeat/loss), `deal` (buy/acquire/deal/acquisition/merger/takeover).
+  - **Modified `extractStemmedVerbs_`** to return synonym group keys instead of raw stems. So `attack`+`strike` both produce the same `strike` group key; `postpone`+`delay` both produce `delay`. No other code changes — the existing `sharedVerbs` counting in `scorePossibleDuplicateMatch_` now operates on group keys, which transparently picks up synonym matches.
+- Expected test corpus impact (based on analytical walkthrough):
+  - **Cluster C** (Trump Iran strike postponed) — 0/1 → 1/1. C1 stems: [delay (from postpone), strike (from attack)]. C2 stems: [delay, strike]. Shared = [delay, strike]. With 2 shared entities (trump, iran), Tier 2 branch fires.
+  - **Cluster B** (Musk v. OpenAI, 6 articles) — 6/15 → ~14/15. Every pair now shares either `lose` group OR `lawsuit` group (via lawsuit/trial/case/court/verdict/ruling).
+  - **Cluster D** (Musk-OpenAI second wave) — 0/1 → 1/1. D1: [lose, lawsuit]; D2: [lawsuit (from verdict and lawsuit)]. Shared = [lawsuit]. With 2 shared entities (musk, openai), Tier 2 branch fires.
+  - **Cluster A** stays 1/1, **Cluster E** stays 3/3, **Cluster F** unchanged.
+- False positive risk: synonym groups inherently expand match surface. Tradeoff bounded by the existing rule (need ≥2 shared entities IN ADDITION to a shared action signal). Cross-cluster guard pairs in the test corpus should still NOT match — verify after deploy.
+- v2.49 bump in Ingestion/Code.js header (1 place).
+- Files touched: Ingestion/Code.js, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion. User reruns `runDedupCorpusTest` and reports new scorecard.
+- Follow-up: if FP rate is acceptable, Phase 3 (R5 full tiered scoring with 4 tiers) is next. If FPs appear, tighten the Tier 2 branch (e.g. require both shared entities to be high-specificity, not generic).
+
 ### 2026-05-19 - Claude Code (Viewer v2.36 — chip overhaul + real category icons)
 - Request: User feedback on v2.34 iconized header: (1) category letters (N/A/F/L/T/W/Y/R/E/D) in the iconized nav rail aren't as good as real icons. (2) Chips have functional overlap — two chips act on the nav (hide-entirely + iconize); keep only the collapse-to-icons one. (3) Reorder chips to match column position: NAV/LIST/READER.
 - Changes:

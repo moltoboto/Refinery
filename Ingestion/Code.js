@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.48
+ * Version: 2.49
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -2063,14 +2063,18 @@ function extractProperNouns_(title) {
   return out;
 }
 
-// v2.48 — R3: light verb stemming for news-domain action verbs.
-// Maps common -ed/-ing/-es/-s suffix variants to a canonical stem.
-// 'say' / 'said' / 'saying' deliberately excluded — too generic, would
-// cluster every "X says Y" article that shares any 2 entities.
+// v2.48 R3 + v2.49 R4 — News-domain action stems + synonym groups.
+// VERB_STEM_MAP_: maps -ed/-ing/-es/-s suffix variants to a canonical stem.
+// 'say'/'said'/'saying' deliberately excluded — too generic.
+// v2.49 added topic nouns (case, court, judgment, layoff, victory, etc.)
+// so two articles describing the same event with different word choice
+// still share a signal.
 var VERB_STEM_MAP_ = {
+  // Action verbs (R3 — v2.48)
   lost: 'lose', losing: 'lose', loses: 'lose', lose: 'lose',
   delayed: 'delay', delays: 'delay', delaying: 'delay', delay: 'delay',
   postponed: 'postpone', postpones: 'postpone', postponing: 'postpone', postpone: 'postpone',
+  deferred: 'defer', defers: 'defer', deferring: 'defer', defer: 'defer',
   ruled: 'rule', rules: 'rule', ruling: 'rule', rule: 'rule',
   filed: 'file', files: 'file', filing: 'file', file: 'file',
   sued: 'sue', sues: 'sue', suing: 'sue', sue: 'sue',
@@ -2087,10 +2091,68 @@ var VERB_STEM_MAP_ = {
   unveiled: 'unveil', unveils: 'unveil', unveiling: 'unveil', unveil: 'unveil',
   attacked: 'attack', attacks: 'attack', attacking: 'attack', attack: 'attack',
   struck: 'strike', strikes: 'strike', striking: 'strike', strike: 'strike',
+  debuts: 'debut', debuted: 'debut', debut: 'debut',
+  banned: 'ban', bans: 'ban', banning: 'ban', ban: 'ban',
+  blocked: 'block', blocks: 'block', blocking: 'block', block: 'block',
+  prohibited: 'prohibit', prohibits: 'prohibit', prohibiting: 'prohibit', prohibit: 'prohibit',
+  recruited: 'recruit', recruits: 'recruit', recruiting: 'recruit', recruit: 'recruit',
+  poached: 'poach', poaches: 'poach', poaching: 'poach', poach: 'poach',
+  delivered: 'deliver', delivers: 'deliver', delivering: 'deliver', deliver: 'deliver',
+  // Topic nouns (R4 — v2.49) — included so they extract as action stems
+  // and then map via SYNONYM_GROUPS_ to a shared canonical group
   feud: 'feud', feuds: 'feud', feuding: 'feud',
   trial: 'trial', trials: 'trial',
   lawsuit: 'lawsuit', lawsuits: 'lawsuit',
-  verdict: 'verdict', verdicts: 'verdict'
+  verdict: 'verdict', verdicts: 'verdict',
+  case: 'case', cases: 'case',
+  court: 'court', courts: 'court',
+  judgment: 'judgment', judgments: 'judgment', judgement: 'judgment', judgements: 'judgment',
+  raid: 'raid', raids: 'raid', raided: 'raid', raiding: 'raid',
+  layoff: 'layoff', layoffs: 'layoff',
+  terminate: 'terminate', terminated: 'terminate', terminating: 'terminate',
+  cut: 'cut', cuts: 'cut', cutting: 'cut',
+  victory: 'victory', victories: 'victory',
+  triumph: 'triumph', triumphs: 'triumph',
+  defeat: 'defeat', defeats: 'defeat', defeated: 'defeat',
+  loss: 'loss', losses: 'loss',
+  deal: 'deal', deals: 'deal',
+  acquisition: 'acquisition', acquisitions: 'acquisition',
+  merger: 'merger', mergers: 'merger', merged: 'merger',
+  takeover: 'takeover', takeovers: 'takeover'
+};
+
+// v2.49 R4 — Synonym groups. Token-stems collapse to a canonical group key,
+// so two articles using different words for the same event still match.
+// Example: 'attack' + 'strike' both → 'strike-group'; 'postpone' + 'delay'
+// both → 'delay-group'. The matcher counts these as a shared action signal.
+//
+// Tradeoff: some words are ambiguous (e.g. 'rule' = court ruling OR "rules
+// the market"). False positive risk is bounded because the scoring rule
+// requires ≥2 shared entities IN ADDITION to a shared action signal.
+var SYNONYM_GROUPS_ = {
+  // legal/lawsuit cluster
+  lawsuit: 'lawsuit', trial: 'lawsuit', case: 'lawsuit', court: 'lawsuit',
+  verdict: 'lawsuit', ruling: 'lawsuit', rule: 'lawsuit', judgment: 'lawsuit',
+  feud: 'lawsuit', sue: 'lawsuit',
+  // military strike/attack cluster
+  strike: 'strike', attack: 'strike', raid: 'strike',
+  // delay/postpone cluster
+  delay: 'delay', postpone: 'delay', defer: 'delay',
+  // launch/release cluster
+  launch: 'launch', release: 'launch', debut: 'launch', unveil: 'launch',
+  // fire/layoff cluster
+  fire: 'layoff', layoff: 'layoff', cut: 'layoff', terminate: 'layoff',
+  // hire cluster
+  hire: 'hire', recruit: 'hire', poach: 'hire',
+  // ban cluster
+  ban: 'ban', block: 'ban', prohibit: 'ban',
+  // win cluster
+  win: 'win', victory: 'win', triumph: 'win',
+  // lose cluster
+  lose: 'lose', defeat: 'lose', loss: 'lose',
+  // deal/acquisition cluster
+  buy: 'deal', acquire: 'deal', deal: 'deal',
+  acquisition: 'deal', merger: 'deal', takeover: 'deal'
 };
 
 function extractStemmedVerbs_(title) {
@@ -2102,9 +2164,13 @@ function extractStemmedVerbs_(title) {
     .split(/\s+/);
   for (var i = 0; i < tokens.length; i++) {
     var stem = VERB_STEM_MAP_[tokens[i]];
-    if (stem && !seen[stem]) {
-      seen[stem] = true;
-      out.push(stem);
+    if (stem) {
+      // v2.49 R4 — map stem to canonical synonym group when one exists
+      var groupKey = SYNONYM_GROUPS_[stem] || stem;
+      if (!seen[groupKey]) {
+        seen[groupKey] = true;
+        out.push(groupKey);
+      }
     }
   }
   return out;
