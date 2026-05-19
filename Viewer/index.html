@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.35</title>
+<title>Refinery V2.36</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -166,6 +166,8 @@ header {
 }
 .chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.chip svg { vertical-align: middle; display: inline-block; }
+.nav-icon svg { vertical-align: middle; display: inline-block; }
 
 .status-badge {
   font-size: 11px;
@@ -969,7 +971,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.35
+    Refinery V2.36
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -985,7 +987,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.35
+      Refinery V2.36
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -996,14 +998,17 @@ kbd {
         <div class="live-dot" id="liveDot"></div>
         <span id="statusText"></span>
       </div>
-      <button class="chip" id="unreadChip"       onclick="toggleUnread()"   title="Unread only">●</button>
-      <button class="chip" id="toggleNavBtn"     onclick="toggleNav()"      title="Hide left nav">☰</button>
-      <button class="chip" id="toggleIconNavBtn" onclick="toggleIconNav()"  title="Iconize nav (collapse to icon rail)">◫</button>
-      <button class="chip" id="toggleReadingBtn" onclick="toggleReading()"  title="Hide reading pane">📖</button>
-      <button class="chip" id="toggleListBtn"    onclick="toggleList()"     title="Hide list pane (focus mode)">📋</button>
-      <button class="chip" id="toggleDensityBtn" onclick="toggleDensity()"  title="Compact density">▤</button>
-      <button class="chip" id="toggleFontBtn"    onclick="cycleFontSize()"  title="Cycle font size (normal / large / extra large)">Aa</button>
-      <button class="chip"                       onclick="refreshAll()"     title="Refresh">↻</button>
+      <!-- v2.36 — Chips reordered by column position: Unread filter, then NAV/LIST/READER matching
+           left/middle/right columns, then Compact/Aa/Refresh utilities. The previous "hide nav
+           entirely" chip was removed — the NAV chip now collapses to an icon rail (always-accessible)
+           which is the only behavior worth keeping. SVG icons replace emoji for visual consistency. -->
+      <button class="chip" id="unreadChip"       onclick="toggleUnread()"   title="Unread — filter the list to unread articles only"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/><circle cx="9" cy="9" r="2.6" fill="currentColor" stroke="none"/></svg></button>
+      <button class="chip" id="toggleIconNavBtn" onclick="toggleIconNav()"  title="NAV — collapse the left navigation to an icon rail (left column)"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="13" height="12" rx="1.5"/><path d="M7 3v12"/><circle cx="4.6" cy="6" r="0.8" fill="currentColor" stroke="none"/><circle cx="4.6" cy="9" r="0.8" fill="currentColor" stroke="none"/><circle cx="4.6" cy="12" r="0.8" fill="currentColor" stroke="none"/></svg></button>
+      <button class="chip" id="toggleListBtn"    onclick="toggleList()"     title="LIST — hide the middle article list pane (focus on reading)"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="13" height="12" rx="1.5"/><path d="M7 3v12M11 3v12" stroke-dasharray="1.4 1.6"/></svg></button>
+      <button class="chip" id="toggleReadingBtn" onclick="toggleReading()"  title="READER — hide the right reading pane (list-only view)"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="13" height="12" rx="1.5"/><path d="M11 3v12"/><path d="M12.5 6.5h1.4M12.5 8.6h1.4M12.5 10.7h1"/></svg></button>
+      <button class="chip" id="toggleDensityBtn" onclick="toggleDensity()"  title="Compact — tighter density, more cards visible"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h12M3 8h12M3 11h12M3 14h12"/></svg></button>
+      <button class="chip" id="toggleFontBtn"    onclick="cycleFontSize()"  title="Aa — cycle font size (normal / large / extra large)">Aa</button>
+      <button class="chip"                       onclick="refreshAll()"     title="Refresh — reload articles"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 9a5.5 5.5 0 1 1-1.6-3.9"/><path d="M14.5 3.5V6h-2.5"/></svg></button>
     </div>
   </header>
 
@@ -1159,17 +1164,37 @@ const CATEGORY_MAP = {
 };
 
 const CATEGORIES = [
-  { key: 'News',      emoji: 'N' },
-  { key: 'AI',        emoji: 'A' },
-  { key: 'Finance',   emoji: 'F' },
-  { key: 'Learning',  emoji: 'L' },
-  { key: 'Tech',      emoji: 'T' },
-  { key: 'Watches',   emoji: 'W' },
-  { key: 'YouTube',   emoji: 'Y' },
-  { key: 'Reddit',    emoji: 'R' },
-  { key: 'Email',     emoji: 'E' },
-  { key: 'Duplicate', emoji: 'D' }
+  { key: 'News'      },
+  { key: 'AI'        },
+  { key: 'Finance'   },
+  { key: 'Learning'  },
+  { key: 'Tech'      },
+  { key: 'Watches'   },
+  { key: 'YouTube'   },
+  { key: 'Reddit'    },
+  { key: 'Email'     },
+  { key: 'Duplicate' }
 ];
+
+// v2.36 — Inline SVG icons per category. 18px monoline, currentColor.
+// Pulled from the Claude Design v3 package (design/claude-design-v3/...).
+// Renders in the iconized nav rail and at the start of each full-mode nav-item.
+function catIcoSvg_(key) {
+  var c = 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"';
+  switch(key) {
+    case 'News':      return '<svg width="18" height="18" viewBox="0 0 20 20" '+c+'><rect x="3" y="4" width="11" height="12" rx="1"/><path d="M14 7h3v7.5a1.5 1.5 0 0 1-1.5 1.5h0a1.5 1.5 0 0 1-1.5-1.5V7"/><path d="M5.5 7.5h6M5.5 10h6M5.5 12.5h4"/></svg>';
+    case 'AI':        return '<svg width="18" height="18" viewBox="0 0 20 20" '+c+'><circle cx="10" cy="10" r="2"/><circle cx="4.5" cy="5.5" r="1"/><circle cx="15.5" cy="5.5" r="1"/><circle cx="4.5" cy="14.5" r="1"/><circle cx="15.5" cy="14.5" r="1"/><path d="M5.4 6.3l3 2.5M14.6 6.3l-3 2.5M5.4 13.7l3-2.5M14.6 13.7l-3-2.5"/></svg>';
+    case 'Finance':   return '<svg width="18" height="18" viewBox="0 0 20 20" '+c+'><path d="M3 15.5h14"/><path d="M5.5 15.5V11M9 15.5V8M12.5 15.5V5M16 15.5V9.5"/><path d="M3.5 6.5L6 5l3 3.5 3-3 4.5 1.5"/></svg>';
+    case 'Learning':  return '<svg width="18" height="18" viewBox="0 0 20 20" '+c+'><path d="M3.5 6L10 3l6.5 3-6.5 3-6.5-3z"/><path d="M6 7.5v3.5c0 1.4 1.8 2.5 4 2.5s4-1.1 4-2.5V7.5"/><path d="M16.5 6v4.5"/></svg>';
+    case 'Tech':      return '<svg width="18" height="18" viewBox="0 0 20 20" '+c+'><rect x="5" y="5" width="10" height="10" rx="1.2"/><rect x="7.5" y="7.5" width="5" height="5" rx="0.5"/><path d="M5 8h-2M5 12h-2M17 8h-2M17 12h-2M8 5V3M12 5V3M8 17v-2M12 17v-2"/></svg>';
+    case 'Watches':   return '<svg width="18" height="18" viewBox="0 0 20 20" '+c+'><circle cx="10" cy="10" r="5"/><path d="M10 7v3l2 1.5"/><path d="M7.5 5l-1-1.5h7l-1 1.5M7.5 15l-1 1.5h7l-1-1.5"/></svg>';
+    case 'YouTube':   return '<svg width="18" height="18" viewBox="0 0 20 20" '+c+'><rect x="2.5" y="5.5" width="15" height="9" rx="2"/><path d="M8.5 8.2v3.6l3-1.8z" fill="currentColor" stroke="none"/></svg>';
+    case 'Reddit':    return '<svg width="18" height="18" viewBox="0 0 20 20" '+c+'><circle cx="10" cy="11" r="6"/><circle cx="10" cy="3.5" r="1"/><path d="M10 4.5v3.5"/><circle cx="7.5" cy="11" r="0.7" fill="currentColor" stroke="none"/><circle cx="12.5" cy="11" r="0.7" fill="currentColor" stroke="none"/><path d="M7.5 13.5c1.5 1 3.5 1 5 0"/></svg>';
+    case 'Email':     return '<svg width="18" height="18" viewBox="0 0 20 20" '+c+'><rect x="2.5" y="5" width="15" height="10" rx="1.5"/><path d="M3 6l7 5 7-5"/></svg>';
+    case 'Duplicate': return '<svg width="18" height="18" viewBox="0 0 20 20" '+c+'><rect x="3" y="3" width="9" height="9" rx="1"/><rect x="8" y="8" width="9" height="9" rx="1"/></svg>';
+  }
+  return '';
+}
 
 window.addEventListener('load', function() {
   updateUnreadChip();
@@ -1268,7 +1293,7 @@ function buildSidebar() {
     var cnt = VIEWER_STATS.categoryCounts[cat.key] || 0;
     return `
       <div class="nav-item ${view === 'cat:' + cat.key ? 'active' : ''}" onclick="setView('cat:${cat.key}')">
-        <span class="nav-icon">${cat.emoji}</span>
+        <span class="nav-icon">${catIcoSvg_(cat.key)}</span>
         <span class="nav-label">${cat.key}</span>
         ${cnt > 0 ? `<span class="nav-count">${cnt}</span>` : `<span class="nav-count zero">0</span>`}
       </div>`;

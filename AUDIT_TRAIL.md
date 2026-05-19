@@ -17,6 +17,20 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-19 - Claude Code (Viewer v2.36 — chip overhaul + real category icons)
+- Request: User feedback on v2.34 iconized header: (1) category letters (N/A/F/L/T/W/Y/R/E/D) in the iconized nav rail aren't as good as real icons. (2) Chips have functional overlap — two chips act on the nav (hide-entirely + iconize); keep only the collapse-to-icons one. (3) Reorder chips to match column position: NAV/LIST/READER.
+- Changes:
+  - **Removed the "hide nav entirely" chip** (☰ → toggleNav). Kept the iconize-to-rail version, retitled it to NAV. The hide-entirely body class (`body.nav-icons`) and function (`toggleNav()`) remain in code but unreachable from UI — preserves backward compatibility without exposing the redundant control.
+  - **Reordered chips by column position:** Unread → NAV (left col) → LIST (middle col) → READER (right col) → Compact → Aa → Refresh. Was: 8 chips in mixed order. Now: 7 chips in logical order.
+  - **Replaced all chip emoji with inline SVG icons** pulled from the Claude Design v3 package (design/claude-design-v3/refinery/icons.jsx). Each chip got a descriptive title tooltip explaining what it does on hover/iPad long-press.
+  - **Replaced category letter glyphs with real SVG icons**: new `catIcoSvg_(key)` helper returns inline SVG for each of the 10 categories. Newspaper (News), node-graph (AI), bars+trendline (Finance), graduation cap (Learning), microchip (Tech), watch face (Watches), play triangle (YouTube), Reddit head (Reddit), envelope (Email), overlapping squares (Duplicate). 18px monoline, currentColor, matches the Lora/DM Sans visual language.
+  - **CSS:** added `.chip svg` and `.nav-icon svg` vertical-align rules so icons sit cleanly in their containers.
+  - **`Aa` chip kept as text** — the cycle indicator ("Aa" / "Aa+" / "Aa++") relies on textContent and converting to SVG would lose the level indicator. Exception by design.
+  - Source nav-icon kept as first-letter (user only flagged categories; per-source SVG isn't feasible at 50+ sources).
+- v2.36 bumped in 5 places.
+- Files touched: Viewer/Code.js, Viewer/index.html, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push + Apps Script redeploy required.
+
 ### 2026-05-19 - Claude Code (Ingestion v2.48 — Dedup Phase 1: R1+R2+R3 + minimal R5 Tier 2)
 - Request: Ship Phase 1 dedup improvements per design/dedup-requirements.md based on v2.47 baseline scorecard (2/5 clusters fully pass, B partial at 40%, C+D fail).
 - Implementation:

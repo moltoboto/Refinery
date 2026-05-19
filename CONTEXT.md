@@ -11,7 +11,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `BACKLOG.md` - operational queue of unscheduled work, held items, and horizon ideas
 
 ## Current Version
-Ingestion: v2.48 | Viewer: v2.35
+Ingestion: v2.48 | Viewer: v2.36
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -117,6 +117,7 @@ Items that used to live in this section are now tracked there. Don't duplicate �
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.36 | 2026-05-19 | Claude Code | Header chips overhauled: removed redundant "hide nav entirely" chip; kept the collapse-to-icons version, renamed to NAV. Chips reordered by column position (Unread, NAV, LIST, READER, Compact, Aa, Refresh). Replaced emoji with inline SVG monoline icons (from the Claude Design v3 package). Category nav-icon glyphs (was N/A/F/L/T/W/Y/R/E/D letters) replaced with real category SVGs — newspaper, AI node-graph, finance bars, graduation cap, microchip, watch face, play triangle, reddit head, envelope, overlapping squares. Tooltips on every chip now describe what each does |
 | Viewer v2.35 | 2026-05-19 | Claude Code | Removed v2.28 resize handles (cosmetic clutter after v2.32-33 fixed-gutter layout); N/P keyboard nav now works in artifact view via new branch in navigate(). Closes BACKLOG #4 + #9 |
 | v2.48 | 2026-05-19 | Claude Code | Dedup Phase 1 (R1+R2+R3 + minimal R5 Tier 2): R1 strips possessive `'s`/`s'` before tokenization so `Pratt's` → `Pratt`, `Musk's` → `Musk`. R2 emits multi-word entity bigrams from adjacent strong tokens (`sam-altman`, `mark-halperin`, `middle-east`). R3 adds VERB_STEM_MAP_ + extractStemmedVerbs_() for action verbs (lost→lose, postponed→postpone, etc.; 'say' excluded as too generic). New scoring branch: `sharedNouns >= 2 && sharedVerbs >= 1` → score 0.70 reason "2 entities + verb-stem". Test baseline before: 2/5 clusters pass. See AUDIT_TRAIL for after-score |
 | v2.47 | 2026-05-19 | Claude Code | Dedup Phase 0 (F8 fix): exact-duplicate titles slipping through on Gmail path. Root cause — Gmail never called isFastExactDuplicate_; reviewDuplicateRecord_ skipped exact URL/title checks when cache was warm because it assumed the fast-path ran upstream. Fix: reviewDuplicateRecord_ now performs the cache check itself when warm (works for both Gmail and TOR); Gmail loop skips insert on exact dup and re-affirms cache; new addToFastDedupCache_ call after successful Gmail insert (TOR had it since v2.36). normalizeTitleForDedupe gains NFKC unicode + smart-quote/dash/NBSP normalization for defensive coverage |
