@@ -2703,6 +2703,137 @@ function hardPurgeDeletedArticles() {
   return { purged: rows.length };
 }
 
+// ── DEDUP CORPUS TEST RUNNER ──────────────────────────────────────────────
+// Run from the Apps Script editor: select `runDedupCorpusTest_` → Run.
+// Output goes to the Execution log. Self-contained: no Supabase calls, no
+// cache warmup needed. Every dedup change (R1 → R7 in design/dedup-requirements.md)
+// MUST regression-pass this before shipping.
+//
+// Each cluster's articles must score as duplicates against each other.
+// The cross-cluster guard articles must NOT match.
+function runDedupCorpusTest_() {
+  // Inline test corpus — mirrors design/dedup-requirements.md.
+  // Cluster F (byte-identical titles) is tested separately via normalizeTitleForDedupe
+  // because scorePossibleDuplicateMatch_ short-circuits on exact normalized-title match
+  // (it returns null — exact dups are caught by isFastExactDuplicate_ upstream).
+  var CORPUS = {
+    A: [
+      "Spencer Pratt's Brilliant New Ad Shows Why He Can WIN in LA Mayor Race, with Mark Halperin",
+      "Watch Spencer Pratt's BRILLIANT New \"Fresh Prince of Bel Air\" Ad Firing Back at Harvey Levin"
+    ],
+    B: [
+      "Elon Musk just lost another lawsuit. Will he keep fighting?",
+      "What to Know About Elon Musk's Trial Against OpenAI",
+      "Jury rules against Elon Musk in his feud with OpenAI, saying he filed his lawsuit too late",
+      "The jury in the OpenAI case has ruled against Elon Musk",
+      "Elon Musk loses court battle against Sam Altman and OpenAI after 3-week trial",
+      "Elon Musk lost his case against Sam Altman"
+    ],
+    C: [
+      "Trump says he's postponing 'scheduled attack of Iran tomorrow' at Middle East leaders' request",
+      "Trump says he delayed Iran strike planned for Tuesday"
+    ],
+    D: [
+      "Elon Musk has lost his lawsuit against Sam Altman and OpenAI",
+      "Federal jury delivers verdict on Musk's lawsuit against OpenAI"
+    ],
+    E: [
+      "First Look The new Longines Legend Diver 59, The Return of the 42mm Icon",
+      "Hands-On With The Faithful Longines Legend Diver 59",
+      "The new Longines Legend Diver 59 brings real diving pedigree back to the surface"
+    ]
+  };
+
+  var EXACT_F = [
+    "What ChatGPT sees when it looks at your company + 3 diagnostics",
+    "What ChatGPT sees when it looks at your company + 3 diagnostics"
+  ];
+
+  // Cross-cluster guard — MUST NOT match (different events sharing only loose tokens).
+  var GUARD_PAIRS = [
+    [CORPUS.A[0], CORPUS.B[0], "Spencer Pratt × Musk lawsuit"],
+    [CORPUS.B[0], CORPUS.C[0], "Musk × Trump Iran"],
+    [CORPUS.C[0], CORPUS.E[0], "Trump × Longines watch"],
+    [CORPUS.B[0], CORPUS.E[0], "Musk × Longines"]
+  ];
+
+  var results = {
+    clustersPassed: [],
+    clustersPartial: [],
+    clustersFailed: [],
+    falsePositives: [],
+    exactF: null,
+    summary: ''
+  };
+
+  // Test 1 — pairwise within each cluster
+  Object.keys(CORPUS).forEach(function(clusterId) {
+    var titles = CORPUS[clusterId];
+    if (titles.length < 2) return;
+    var pairsExpected = 0;
+    var pairsMatched = 0;
+    var sampleFails = [];
+    for (var i = 0; i < titles.length; i++) {
+      for (var j = i + 1; j < titles.length; j++) {
+        pairsExpected++;
+        var record = { title: titles[i], summary: '', id: clusterId + '-' + i };
+        var candidate = { title: titles[j], summary: '', id: clusterId + '-' + j };
+        var match;
+        try { match = scorePossibleDuplicateMatch_(record, candidate); }
+        catch (e) { match = null; sampleFails.push('ERROR: ' + e); }
+        if (match) {
+          pairsMatched++;
+        } else if (sampleFails.length < 2) {
+          sampleFails.push(titles[i].substring(0, 40) + ' × ' + titles[j].substring(0, 40));
+        }
+      }
+    }
+    var pct = pairsExpected ? Math.round((pairsMatched / pairsExpected) * 100) : 0;
+    Logger.log("Cluster " + clusterId + ": " + pairsMatched + "/" + pairsExpected + " pairs matched (" + pct + "%)");
+    if (sampleFails.length) sampleFails.forEach(function(s){ Logger.log("  miss: " + s); });
+    if (pairsMatched === pairsExpected) results.clustersPassed.push(clusterId);
+    else if (pairsMatched === 0) results.clustersFailed.push(clusterId);
+    else results.clustersPartial.push({ cluster: clusterId, matched: pairsMatched, expected: pairsExpected });
+  });
+
+  // Test 2 — cross-cluster guard (must NOT match)
+  GUARD_PAIRS.forEach(function(pair) {
+    var record = { title: pair[0], summary: '', id: 'guard-a' };
+    var candidate = { title: pair[1], summary: '', id: 'guard-b' };
+    var match;
+    try { match = scorePossibleDuplicateMatch_(record, candidate); }
+    catch (e) { match = null; }
+    if (match) {
+      results.falsePositives.push({ pair: pair[2], score: match.score, reason: match.reason });
+      Logger.log("FALSE POSITIVE: " + pair[2] + " → score=" + match.score + " reason=" + match.reason);
+    }
+  });
+
+  // Test 3 — Cluster F (exact duplicate via normalization)
+  var f1 = normalizeTitleForDedupe(EXACT_F[0]).toLowerCase();
+  var f2 = normalizeTitleForDedupe(EXACT_F[1]).toLowerCase();
+  results.exactF = (f1 === f2) ? 'pass' : ('fail — "' + f1 + '" vs "' + f2 + '"');
+  Logger.log("Cluster F (normalize match): " + results.exactF);
+
+  // Scorecard
+  var totalClusters = Object.keys(CORPUS).length;
+  var passedCount = results.clustersPassed.length;
+  results.summary = passedCount + "/" + totalClusters + " clusters fully passed, "
+    + results.clustersPartial.length + " partial, "
+    + results.clustersFailed.length + " failed, "
+    + results.falsePositives.length + " false positives, "
+    + "Cluster F " + (results.exactF === 'pass' ? 'pass' : 'FAIL');
+  Logger.log("==== DEDUP CORPUS TEST ====");
+  Logger.log(results.summary);
+  Logger.log("Passed:   " + results.clustersPassed.join(", "));
+  Logger.log("Partial:  " + JSON.stringify(results.clustersPartial));
+  Logger.log("Failed:   " + results.clustersFailed.join(", "));
+  Logger.log("FPs:      " + JSON.stringify(results.falsePositives));
+
+  return results;
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 var ARTICLE_PURGE_ = {
   run: function(dryRun, cutoffInput, batchSize) {
     var cutoffIso = ARTICLE_PURGE_.normalizeCutoffIso(cutoffInput || '2026-04-01');

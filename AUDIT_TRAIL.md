@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-19 - Claude Code (Ingestion — dedup corpus test runner added)
+- Request: Build a self-contained Apps Script function that regression-tests the dedup matcher against the ground-truth corpus from design/dedup-requirements.md.
+- Implementation: New function `runDedupCorpusTest_()` at the bottom of Ingestion/Code.js (before ARTICLE_PURGE_). Embeds 5 clusters (A Spencer Pratt, B Musk-OpenAI 6-article, C Trump Iran, D Musk-OpenAI second wave, E Longines Legend Diver), 4 cross-cluster guard pairs (must NOT match), and the exact-duplicate cluster F (tested via normalizeTitleForDedupe equality rather than scorePossibleDuplicateMatch_ since the latter short-circuits on exact normalized-title match).
+- For each cluster: pairwise comparison of all titles, report matched/expected count. Logs per-cluster percentage and sample misses. For guard pairs: any match is a false positive logged with score + reason. Returns a structured result object plus prints a scorecard.
+- Usage: Apps Script editor → select `runDedupCorpusTest_` from function dropdown → Run. Output in the Execution log. Every future dedup change (v2.48 R1+R2+R3 → v2.51 R6+R7) regression-passes this before shipping.
+- No Supabase calls, no cache warmup needed. Pure JS unit test. Adds ~130 lines, no production behavior change.
+- Files touched: Ingestion/Code.js, AUDIT_TRAIL.md
+- Deployment: clasp push Ingestion.
+
 ### 2026-05-19 - Claude Code (safety audit — v2.35 cleanup verified)
 - Request: Verify the v2.35 resize-handle removal didn't leave dangling JS references that would error on Viewer load.
 - Method: grep'd Viewer/index.html and Viewer/Code.js for every removed symbol: `applySavedListGeometry_`, `positionResizeHandles_`, `initResizeHandles_`, `resizeLeft`, `resizeRight`, `resize-handle`, `LIST_W_KEY_`, `LIST_LEFT_KEY_`, `LIST_MIN_W_`, `LIST_MAX_W_`, `--list-w-px`, `--list-left-px`.
