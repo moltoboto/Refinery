@@ -480,13 +480,10 @@ body.nav-iconic .nav-icon {
    - body.compact-density → tighter padding/line-height for more cards on screen
    Active toggles get an .active class on the button via JS. */
 body.no-reading-pane .reading-pane { display: none; }
-/* Reading pane off → list pane gets a centered, viewport-scaled width AND
-   draggable resize handles on each side. Width and left margin are driven
-   by CSS variables so JS drag handlers can update them live; localStorage
-   persists the chosen size across sessions.
-     --list-w-px:    list pane width in pixels
-     --list-left-px: distance from the left edge of the flex parent
-   Defaults from clamp(): on 1440 → 840 list with auto margins (centered). */
+/* Reading pane off → list pane sits flush against the left rail with a fixed
+   280px gutter on the right. v2.32-33 replaced the previous draggable-handle /
+   localStorage approach (v2.28-31) because it created off-center layout when
+   Nav was also hidden. v2.35 removed the now-unused handle code entirely. */
 body.no-reading-pane .list-pane {
   flex: 1;
   width: auto;

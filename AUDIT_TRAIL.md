@@ -17,6 +17,13 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-19 - Claude Code (safety audit — v2.35 cleanup verified)
+- Request: Verify the v2.35 resize-handle removal didn't leave dangling JS references that would error on Viewer load.
+- Method: grep'd Viewer/index.html and Viewer/Code.js for every removed symbol: `applySavedListGeometry_`, `positionResizeHandles_`, `initResizeHandles_`, `resizeLeft`, `resizeRight`, `resize-handle`, `LIST_W_KEY_`, `LIST_LEFT_KEY_`, `LIST_MIN_W_`, `LIST_MAX_W_`, `--list-w-px`, `--list-left-px`.
+- Findings: Only 2 stale references found, both inside a CSS comment describing the old behavior (lines 487-488 of index.html). Updated the comment to describe the current v2.32-35 layout instead. No live references anywhere — JS and CSS are clean.
+- Files touched: Viewer/index.html (comment update only), AUDIT_TRAIL.md
+- Deployment: comment-only change to Viewer. No version bump needed. Will roll into the next clasp push naturally; no urgent redeploy.
+
 ### 2026-05-19 - Claude Code (Ingestion v2.47 + Viewer v2.35 — F8 dedup fix + cleanup combo)
 - Request: Morning working list: Priority 1 (F8 exact-dup fix on Gmail), Priority 2 (Viewer cleanup combo — resize handles + N/P artifact nav).
 
