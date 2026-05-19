@@ -17,6 +17,27 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-19 - Claude Code (Ingestion v2.47 + Viewer v2.35 — F8 dedup fix + cleanup combo)
+- Request: Morning working list: Priority 1 (F8 exact-dup fix on Gmail), Priority 2 (Viewer cleanup combo — resize handles + N/P artifact nav).
+
+- **Ingestion v2.47 — F8 fix (Dedup Phase 0):**
+  - Root cause confirmed: Gmail path in `processNewsletterEmail` (line 824) calls `reviewDuplicateRecord_` directly. That function explicitly SKIPS exact URL/title Supabase queries when `cacheWarm === true` (line 1707, 1730) on the assumption that `isFastExactDuplicate_` was called upstream — true for TOR (line 483), but Gmail never calls it. So exact dups bypassed all exact checks and fell through to the fuzzy matcher, which routed them to the Duplicate review category or (when fuzzy missed) into the main inbox.
+  - Fix 1 — `reviewDuplicateRecord_`: replaced the cache-warm-skip branches with explicit cache-warm-check branches. When `INGESTION_DEDUP_CACHE_` is populated, the function now checks `DEDUP_URL_MAP_` and `DEDUP_TITLE_MAP_` directly and returns `{duplicate:true, reason:'exact URL match (cache)'}` or `'exact title match (cache)'`. Diagnostic Logger.log added for each hit.
+  - Fix 2 — Gmail loop in `processNewsletterEmail`: on `duplicateResult.duplicate === true`, now SKIPS the insert entirely (mirrors TOR behavior). Was previously inserting into the Duplicate review category, polluting the review queue with byte-identical titles. Calls `addToFastDedupCache_` to re-affirm.
+  - Fix 3 — Gmail loop: added `addToFastDedupCache_(record.url, record.title)` after every successful insert. TOR has had this since v2.36; Gmail was missing it — meant a duplicate article in a second newsletter within the same run wouldn't be caught.
+  - Fix 4 — `normalizeTitleForDedupe`: added NFKC unicode normalization (catches ligatures, full-width chars, compatibility forms) plus explicit smart-quote/em-dash/en-dash/NBSP collapse to canonical forms. Defensive — most invisible-character drift was already neutralized by the existing strip-to-alphanumeric pass, but NFKC closes the few remaining edge cases.
+
+- **Viewer v2.35 — cleanup combo:**
+  - Removed resize-handle HTML divs (two `<div class="resize-handle">` blocks).
+  - Removed resize-handle CSS (the position:fixed grip handles block, plus the `body.no-reading-pane .resize-handle { display: flex }` and `body.list-hidden .resize-handle { display: none !important }` rules).
+  - Removed resize-handle JS (`applySavedListGeometry_`, `positionResizeHandles_`, `initResizeHandles_`, window resize listener, init calls). Also removed the `setTimeout positionResizeHandles_` call from `toggleLayoutPref_`. Total ~110 lines of JS removed.
+  - Added N/P artView branch to `navigate(dir)`: walks the ARTIFACTS array via `selectArtifact(id)`. Infrastructure (ARTIFACTS list, selectedArtifact, selectArtifact) was already in place.
+
+- Files touched: Ingestion/Code.js, Viewer/Code.js, Viewer/index.html, CONTEXT.md, AUDIT_TRAIL.md, BACKLOG.md
+- Deployment: clasp push both apps. Viewer needs Apps Script redeploy.
+- Closes BACKLOG #4 (resize-handle cleanup) and #9 (N/P keyboard nav in artifact view).
+- Follow-up: verify on next ingestion run that no exact-title dupes appear in Duplicate review queue. Watch for "DEDUP CACHE HIT" log lines on Gmail phase — they're the smoking gun for this fix working.
+
 ### 2026-05-19 - Claude Code (docs — dedup requirements: 3 more clusters, F8 critical)
 - Request: User provided 3 more dedup miss clusters (Musk-OpenAI second wave, Longines Legend Diver, exact-duplicate ChatGPT title).
 - Findings:

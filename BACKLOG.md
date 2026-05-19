@@ -18,11 +18,9 @@ Operational queue of work not yet scheduled. Promote items to a session by movin
 | 2 | **GitHub Models API for Summarize** | 1–2 sessions | Replace current Summarize button logic with GH Models API call (gpt-4o or Claude). Wire `UrlFetchApp` to GH Models endpoint with user's token. Watch rate limits (~50 req/day personal). |
 | 3 | **iPad 11" — tune right gutter** | <30 min | Tested 2026-05-18 on 11" iPad. 280px right gutter felt off. Need to test on 12.9" iPad (user has one at current location) then settle on viewport-relative sizing — possibly `clamp()` or different value for narrow vs wide iPad. |
 | 3a | **iPad — "trapped" when clicking ↗ View** | 1–2 hrs | Per-card ↗ icon (from v2.14) uses `<a target="_blank">`. Confirmed behavior: on Windows it opens a new window (fine — Alt-Tab back). **On iPad it replaces the current screen** — no new tab spawns, and there's no obvious way back to Refinery without re-navigating to the bookmarked URL. Root cause: Apps Script serves the Viewer in an iframe sandbox; iPad Safari handles `target="_blank"` from inside an iframe by navigating in-place rather than opening a new tab. Possible fixes: (a) JS click handler using `window.open(url, '_blank')` from a user gesture (sometimes bypasses the iframe constraint on Safari), (b) detect iPad and show an explicit modal with "Open in new tab" intent, (c) add a persistent floating "← Refinery" badge so users always have a way back, (d) Apps Script `setSandboxMode` adjustments. Test each on iPad before committing. |
-| 4 | **Resize-handle cleanup** | <30 min | Drag handles from v2.28 still show when Reading is off. They conflict with the fixed-gutter layout from v2.32–33. Likely just remove them. |
 | 5 | **Finance feed curation in `subscriptions.opml`** | <1 hour | Decide which Finance feeds to keep: Yahoo Finance, MarketWatch, CNBC Mad Money, Seeking Alpha, Motley Fool, Fox Business. Remove unwanted ones, re-import OPML into TOR. |
 | 7 | **Verify v2.35 mark-read fixes** | observation | First post-quota-reset run should log `DEDUP CACHE: warmed ~2000` and `TOR: marked X/500 as read (10 batches)`. Subsequent run should return far fewer articles. |
 | 8 | **Re-import OPML into TOR** | user action | Google News removed from subscriptions.opml but TOR still has it. Import to drop. |
-| 9 | **N/P keyboard nav in artifact view** | ~20 min | N/P already navigate articles in the list pane but explicitly bail when `artView === true` (Viewer/index.html line ~2162). Fix: branch in `navigate(dir)` — when in artifact view, walk the ARTIFACTS array and call `selectArtifact(id)` instead. Infrastructure (ARTIFACTS list, selectedArtifact, selectArtifact) all already exists. |
 
 ## Deferred (planned, but waiting on a follow-up)
 
@@ -35,10 +33,10 @@ Operational queue of work not yet scheduled. Promote items to a session by movin
 
 | # | Item | Waiting on |
 |---|------|------------|
-| 9 | **Dedup diagnostic — manual cluster review** | User screenshots of "search by entity" results to identify dedup misses. Approach: search known recurring topics in Viewer, screenshot the result list, evaluate whether dedup should have collapsed any of them. |
-| 10 | **Dedup Phase 1 — Levenshtein + two-tier auto-suppress** | Diagnostic data from #9. Without data we're guessing. Per Claude's recommendation, hold off on adding more matching techniques until we know what's actually being missed. |
-| 11 | **Dedup Phase 2 — standardized reason codes, override metrics** | Phase 1 outcome. |
-| 12 | **Dedup improvements — apostrophe / multi-word entities / verb stems / topic synonyms / tiered scoring** | Ground-truth requirements doc at [design/dedup-requirements.md](design/dedup-requirements.md). Captures 3 observed miss clusters (Spencer Pratt, Musk v. OpenAI, Trump Iran strike) with failure-mode analysis (F1–F7) and 7 numbered requirements (R1–R7). Implementation order: R1+R2+R3 (token fixes) → R4 (synonyms) → R5 (tiered scoring) → R6 (time windows). Spans v2.47 → v2.50. Test corpus inline — every implementation must regression-pass it. This subsumes #10 and #11. |
+| 10 | **Dedup diagnostic — manual cluster review** | Ongoing — user feeds new miss clusters into [design/dedup-requirements.md](design/dedup-requirements.md) as observed. Cluster F (exact-dup) addressed in v2.47. Open: Cluster E (Longines) needs verification — should already cluster under 3-shared-entity rule. |
+| 11 | **Dedup Phase 1 — token-level fixes (R1+R2+R3)** | After v2.47 has run for a few days and false-positive rate is known. Spec at design/dedup-requirements.md. Targets clusters A, D, E. v2.48. |
+| 12 | **Dedup Phase 2 — synonym dictionary (R4) + tiered scoring (R5)** | After Phase 1 outcomes. v2.49 + v2.50. |
+| 13 | **Dedup Phase 3 — time windows + standardized reason codes (R6, R7)** | Last. v2.51+. |
 
 ## Horizon (directional, no near-term plan)
 
@@ -55,6 +53,6 @@ Operational queue of work not yet scheduled. Promote items to a session by movin
 
 ## Done — recent (last 3 entries, then prune)
 
+- 2026-05-19 — F8 dedup fix on Gmail path + Viewer cleanup combo (Ingestion v2.47, Viewer v2.35); closes #4 resize handles + #9 N/P artifact nav
 - 2026-05-18 — Iconized header + ICON chip + LIST chip (Viewer v2.34); closes #3b focus mode + #3c iconized nav
 - 2026-05-18 — `applySourceCategoryBackfill()` run (user) — existing rows retagged to 10-category set
-- 2026-05-17 — Auto hard-purge wired into `runDailyIngestion` (Ingestion v2.46)

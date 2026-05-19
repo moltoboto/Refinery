@@ -11,7 +11,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `BACKLOG.md` - operational queue of unscheduled work, held items, and horizon ideas
 
 ## Current Version
-Ingestion: v2.46 | Viewer: v2.34
+Ingestion: v2.47 | Viewer: v2.35
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -131,6 +131,8 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.35 | 2026-05-19 | Claude Code | Removed v2.28 resize handles (cosmetic clutter after v2.32-33 fixed-gutter layout); N/P keyboard nav now works in artifact view via new branch in navigate(). Closes BACKLOG #4 + #9 |
+| v2.47 | 2026-05-19 | Claude Code | Dedup Phase 0 (F8 fix): exact-duplicate titles slipping through on Gmail path. Root cause — Gmail never called isFastExactDuplicate_; reviewDuplicateRecord_ skipped exact URL/title checks when cache was warm because it assumed the fast-path ran upstream. Fix: reviewDuplicateRecord_ now performs the cache check itself when warm (works for both Gmail and TOR); Gmail loop skips insert on exact dup and re-affirms cache; new addToFastDedupCache_ call after successful Gmail insert (TOR had it since v2.36). normalizeTitleForDedupe gains NFKC unicode + smart-quote/dash/NBSP normalization for defensive coverage |
 | Viewer v2.34 | 2026-05-18 | Claude Code | Header chips → icons (●/☰/◫/📖/📋/▤/Aa/↻). New ICON chip iconizes the nav to a 60px letter-glyph rail (resurrects body.nav-icons mode from v2.21 with populated icons; new class body.nav-iconic to avoid collision with old hide-entirely behavior). New LIST chip (body.list-hidden) hides the list pane for reading-only focus mode. Category icons = first letter (N/A/F/L/T/W/Y/R/E/D); source icons = first letter of source name. Five tooltips via title= attribute for accessibility |
 | Viewer v2.33 | 2026-05-17 | Claude Code | When Nav is hidden, list pane keeps sidebar-width left margin so it doesn't shift left — same start position and width whether Nav is on or off |
 | Viewer v2.32 | 2026-05-17 | Claude Code | List pane flush-left against nav, flex:1 minus 280px fixed right gutter — grows to fill available width with stable blank area on the right |

@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.46
+ * Version: 2.47
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -828,13 +828,27 @@ function processNewsletterEmail(msg) {
       result.canMarkRead = false;
       return;
     }
-    if (duplicateResult.duplicate || duplicateResult.possibleDuplicate) {
+    // v2.47 — On exact duplicate (URL or title), SKIP the insert entirely and
+    // re-affirm the cache. Mirrors TOR behavior (was previously inserting into
+    // the Duplicate review category, which polluted the queue with identical titles).
+    if (duplicateResult.duplicate) {
+      result.duplicatesSkipped++;
+      addToFastDedupCache_(record.url, record.title);
+      logToAuditTrail(record.source, record.url, record.title, 'exact_duplicate_skipped', duplicateResult.reason || null);
+      return;
+    }
+    if (duplicateResult.possibleDuplicate) {
       record = markRecordAsDuplicateReview_(record, duplicateResult);
     }
     var insertResult = insertToSupabase(record);
     if (insertResult.ok) {
       result.articlesInserted++;
-      logToAuditTrail(record.source, record.url, record.title, duplicateResult.duplicate ? 'exact_duplicate_review' : duplicateResult.possibleDuplicate ? 'possible_duplicate' : 'ingested', null);
+      // v2.47 — CRITICAL: add inserted article to fast dedup cache so a re-occurrence
+      // later in the SAME run (e.g. duplicate newsletter article in another email) is
+      // caught immediately without a Supabase round-trip. TOR has had this since v2.36;
+      // Gmail was missing it — root cause of F8.
+      addToFastDedupCache_(record.url, record.title);
+      logToAuditTrail(record.source, record.url, record.title, duplicateResult.possibleDuplicate ? 'possible_duplicate' : 'ingested', null);
     } else {
       result.errors++;
       result.canMarkRead = false;
@@ -1295,8 +1309,19 @@ function normalizeSourceForDedupe(source, url) {
 }
 
 function normalizeTitleForDedupe(title) {
-  return String(title || '')
+  // v2.47 — NFKC unicode compatibility normalization first, so ligatures (ﬁ → fi),
+  // full-width Latin (Ａ → A), and other compatibility forms collapse before the
+  // strip-to-alphanumeric pass. Defensive against invisible-character drift between
+  // identical-looking titles ingested from different sources.
+  var s;
+  try { s = String(title || '').normalize('NFKC'); }
+  catch(e) { s = String(title || ''); }
+  return s
     .toLowerCase()
+    .replace(/[‘’‚‛′]/g, "'")  // single-quote variants
+    .replace(/[“”„‟″]/g, '"')  // double-quote variants
+    .replace(/[‐-―−]/g, '-')             // dash variants
+    .replace(/[   ]/g, ' ')              // NBSP / figure space / narrow NBSP
     .replace(/[“”"']/g, '')
     .replace(/[^a-z0-9]+/g, ' ')
     .replace(/\b(the|a|an)\b/g, ' ')
@@ -1700,10 +1725,24 @@ function reviewDuplicateRecord_(record) {
     var resp;
     var cacheWarm = (INGESTION_DEDUP_CACHE_ !== null);
 
-    // When cache is warm, isFastExactDuplicate_() already covered exact URL/title matches
-    // in the 30-day window. The Supabase URL/title queries below could only find articles
-    // OLDER than that window — rare for active TOR feeds, and not worth the urlfetch quota.
-    // Only fall through to Supabase queries when the cache failed to warm.
+    // v2.47 — When cache is warm, perform the exact URL/title check against the in-memory
+    // map directly. Previously this branch was skipped entirely, assuming isFastExactDuplicate_
+    // was called upstream — but the Gmail path never calls it, so exact dups (e.g. the same
+    // newsletter article ingested twice) slipped through into the Duplicate review queue
+    // or worse, into the main inbox. Catching here covers both paths.
+    if (cacheWarm) {
+      if (url && DEDUP_URL_MAP_[url]) {
+        Logger.log("DEDUP CACHE HIT (url): " + url);
+        return { duplicate:true, possibleDuplicate:false, reason:'exact URL match (cache)', score:1 };
+      }
+      var normTitleCheck = normalizeTitleForDedupe(record.title || '').toLowerCase();
+      if (normTitleCheck && DEDUP_TITLE_MAP_[normTitleCheck]) {
+        Logger.log("DEDUP CACHE HIT (title): " + (record.title || '').substring(0, 80));
+        return { duplicate:true, possibleDuplicate:false, reason:'exact title match (cache)', score:0.98 };
+      }
+    }
+
+    // Cache-cold fallback: hit Supabase directly for exact URL/title checks.
     if (!cacheWarm && url) {
       resp = UrlFetchApp.fetch(
         CONFIG.SUPABASE_URL + '/rest/v1/articles?url=eq.' + encodeURIComponent(url)

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.34</title>
+<title>Refinery V2.35</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -496,33 +496,10 @@ body.no-reading-pane .list-pane {
   position: relative;
 }
 
-/* Cream grip handles, visible only when Reading is off. Position:fixed so
-   they stay in view regardless of list scroll position. JS positions them
-   horizontally to align with the list-pane edges. */
-.resize-handle {
-  display: none;
-  position: fixed;
-  top: var(--header-h);
-  bottom: 0;
-  width: 20px;
-  cursor: col-resize;
-  background: #ecdcb8;             /* visible cream */
-  border-left:  1px solid #d9c79e;
-  border-right: 1px solid #d9c79e;
-  z-index: 30;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent);
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-  transition: background 0.15s;
-}
-.resize-handle:hover,
-.resize-handle.dragging { background: #e0caa0; }
-.resize-handle svg { width: 8px; height: 36px; fill: currentColor; pointer-events: none; }
-body.no-reading-pane .resize-handle { display: flex; }
-@media (max-width: 720px) { .resize-handle { display: none !important; } }
+/* v2.35 — Resize handles removed. They were added in v2.28 to let the user
+   drag the list-pane width when Reading was off, but v2.32-33 switched the
+   list to a flush-left + fixed 280px right gutter layout that doesn't need
+   manual width adjustment. The handles became cosmetic clutter. */
 
 /* Nav toggle = hide left rail entirely. The original "collapse to icons"
    never had real icons populated, so a 60px empty stub was just dead space.
@@ -540,7 +517,6 @@ body.nav-iconic .nav-item    { justify-content: center; padding: 10px 0; gap: 0;
 
 /* Hide-list toggle — focus on reading pane (or nothing, if reading is also off). */
 body.list-hidden .list-pane  { display: none; }
-body.list-hidden .resize-handle { display: none !important; }
 
 /* When BOTH nav and reading pane are off, list fills the full viewport with
    a narrow margin on each side. Overrides the clamp/variable width from the
@@ -996,7 +972,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.34
+    Refinery V2.35
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -1012,7 +988,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.34
+      Refinery V2.35
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1072,12 +1048,6 @@ kbd {
 
       <!-- Article List -->
       <div class="list-pane" id="listPane">
-        <div class="resize-handle handle-left"  id="resizeLeft"  aria-label="Resize from left"  data-side="left">
-          <svg viewBox="0 0 6 28" aria-hidden="true"><circle cx="2" cy="6" r="1.2"/><circle cx="2" cy="14" r="1.2"/><circle cx="2" cy="22" r="1.2"/><circle cx="5" cy="6" r="1.2"/><circle cx="5" cy="14" r="1.2"/><circle cx="5" cy="22" r="1.2"/></svg>
-        </div>
-        <div class="resize-handle handle-right" id="resizeRight" aria-label="Resize from right" data-side="right">
-          <svg viewBox="0 0 6 28" aria-hidden="true"><circle cx="2" cy="6" r="1.2"/><circle cx="2" cy="14" r="1.2"/><circle cx="2" cy="22" r="1.2"/><circle cx="5" cy="6" r="1.2"/><circle cx="5" cy="14" r="1.2"/><circle cx="5" cy="22" r="1.2"/></svg>
-        </div>
         <div class="list-header">
           <div class="list-title" id="listTitle">All Unread</div>
           <div class="list-meta">
@@ -2011,9 +1981,6 @@ function toggleLayoutPref_(pref) {
   var next = localStorage.getItem(pref.storageKey) !== '1';
   localStorage.setItem(pref.storageKey, next ? '1' : '0');
   applyLayoutPref_(pref);
-  // Layout may have changed list-pane edges; reposition handles after the
-  // browser commits the new layout.
-  setTimeout(function() { if (typeof positionResizeHandles_ === 'function') positionResizeHandles_(); }, 0);
 }
 
 function toggleReading() { toggleLayoutPref_(LAYOUT_PREFS_[0]); }
@@ -2042,118 +2009,15 @@ function cycleFontSize() {
   applyFontSize_();
 }
 
-// ── List-pane resize handles ───────────────────────────────────────────────
-// Drag the cream handles on either side to resize the list pane (visible only
-// when Reading is off). Persisted to localStorage. On page load, hydrate from
-// saved values; if none, the CSS clamp() default applies.
-var LIST_W_KEY_    = 'refinery.listWidthPx';
-var LIST_LEFT_KEY_ = 'refinery.listLeftPx';
-var LIST_MIN_W_    = 280;
-var LIST_MAX_W_    = 1400;
-
-function applySavedListGeometry_() {
-  var w    = parseInt(localStorage.getItem(LIST_W_KEY_)    || '0', 10);
-  var left = parseInt(localStorage.getItem(LIST_LEFT_KEY_) || '0', 10);
-  if (w >= LIST_MIN_W_ && w <= LIST_MAX_W_) {
-    document.documentElement.style.setProperty('--list-w-px', w + 'px');
-  } else {
-    document.documentElement.style.removeProperty('--list-w-px');
-  }
-  if (left > 0) {
-    document.documentElement.style.setProperty('--list-left-px', left + 'px');
-  } else {
-    document.documentElement.style.removeProperty('--list-left-px');
-  }
-  positionResizeHandles_();
-}
-
-// Position the fixed-position resize handles to align with the list-pane edges.
-// Called on first paint, after each toggle, on window resize, and during drag.
-function positionResizeHandles_() {
-  var pane = document.getElementById('listPane');
-  var lh = document.getElementById('resizeLeft');
-  var rh = document.getElementById('resizeRight');
-  if (!pane || !lh || !rh) return;
-  if (!document.body.classList.contains('no-reading-pane')) return;
-  var rect = pane.getBoundingClientRect();
-  lh.style.left  = (rect.left  - 20) + 'px';
-  rh.style.left  = (rect.right) + 'px';
-}
-window.addEventListener('resize', positionResizeHandles_);
-
-function initResizeHandles_() {
-  ['resizeLeft', 'resizeRight'].forEach(function(id) {
-    var handle = document.getElementById(id);
-    if (!handle) return;
-    var side = handle.getAttribute('data-side'); // 'left' or 'right'
-
-    function onPointerDown(e) {
-      var pane = document.getElementById('listPane');
-      if (!pane) return;
-      var rect = pane.getBoundingClientRect();
-      var startX     = e.touches ? e.touches[0].clientX : e.clientX;
-      var startW     = rect.width;
-      var startLeft  = rect.left;
-      handle.classList.add('dragging');
-      document.body.style.cursor = 'col-resize';
-
-      function onMove(ev) {
-        var clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
-        var dx = clientX - startX;
-        var newW, newLeft;
-        if (side === 'right') {
-          // Drag right: grow width. Drag left: shrink.
-          newW    = Math.max(LIST_MIN_W_, Math.min(LIST_MAX_W_, startW + dx));
-          newLeft = startLeft;
-        } else {
-          // Drag left: grow width AND move left edge left. Drag right: shrink AND move right.
-          newW    = Math.max(LIST_MIN_W_, Math.min(LIST_MAX_W_, startW - dx));
-          newLeft = startLeft + (startW - newW); // keep right edge fixed
-          if (newLeft < 0) { newLeft = 0; newW = startW + startLeft; }
-        }
-        document.documentElement.style.setProperty('--list-w-px', newW + 'px');
-        document.documentElement.style.setProperty('--list-left-px', newLeft + 'px');
-        positionResizeHandles_();
-        if (ev.cancelable) ev.preventDefault();
-      }
-
-      function onUp() {
-        handle.classList.remove('dragging');
-        document.body.style.cursor = '';
-        var widthStr = getComputedStyle(document.documentElement).getPropertyValue('--list-w-px').trim();
-        var leftStr  = getComputedStyle(document.documentElement).getPropertyValue('--list-left-px').trim();
-        if (widthStr) localStorage.setItem(LIST_W_KEY_, parseInt(widthStr, 10));
-        if (leftStr)  localStorage.setItem(LIST_LEFT_KEY_, parseInt(leftStr, 10));
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup',   onUp);
-        document.removeEventListener('touchmove', onMove);
-        document.removeEventListener('touchend',  onUp);
-      }
-
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup',   onUp);
-      document.addEventListener('touchmove', onMove, { passive: false });
-      document.addEventListener('touchend',  onUp);
-      if (e.cancelable) e.preventDefault();
-    }
-
-    handle.addEventListener('mousedown',  onPointerDown);
-    handle.addEventListener('touchstart', onPointerDown, { passive: false });
-
-    // Double-click handle = reset to default (CSS clamp)
-    handle.addEventListener('dblclick', function() {
-      localStorage.removeItem(LIST_W_KEY_);
-      localStorage.removeItem(LIST_LEFT_KEY_);
-      applySavedListGeometry_();
-    });
-  });
-}
+// v2.35 — Resize-handle infrastructure removed. v2.32-33 introduced a fixed
+// flush-left + 280px right gutter layout that doesn't need manual width
+// adjustment. The handles became cosmetic clutter. localStorage keys
+// `refinery.listWidthPx` and `refinery.listLeftPx` are left in place for any
+// users who had values stored (they're harmless — the CSS no longer reads them).
 
 // Apply saved prefs on first paint
 LAYOUT_PREFS_.forEach(applyLayoutPref_);
 applyFontSize_();
-applySavedListGeometry_();
-initResizeHandles_();
 
 let navBusy = false;
 document.addEventListener('keydown', function(e) {
@@ -2186,7 +2050,31 @@ document.addEventListener('keydown', function(e) {
 });
 
 function navigate(dir) {
-  if (navBusy || artView || filtered.length === 0) return;
+  if (navBusy) return;
+  // v2.35 — N/P keyboard nav also works in artifact view, walking the ARTIFACTS array.
+  // Infrastructure (ARTIFACTS, selectedArtifact, selectArtifact) was already in place;
+  // navigate() was just explicitly bailing on artView. Now it branches.
+  if (artView) {
+    if (!ARTIFACTS || ARTIFACTS.length === 0) return;
+    navBusy = true;
+    try {
+      var aIdx = selectedArtifact
+        ? ARTIFACTS.findIndex(function(a) { return a.id === selectedArtifact.id; })
+        : -1;
+      if (aIdx === -1) {
+        aIdx = dir > 0 ? 0 : ARTIFACTS.length - 1;
+      } else {
+        var nextA = aIdx + dir;
+        if (nextA < 0 || nextA >= ARTIFACTS.length) return;
+        aIdx = nextA;
+      }
+      selectArtifact(ARTIFACTS[aIdx].id);
+    } finally {
+      setTimeout(function() { navBusy = false; }, 0);
+    }
+    return;
+  }
+  if (filtered.length === 0) return;
   navBusy = true;
   try {
     var idx = filtered.findIndex(function(a) { return a.id === selectedId; });

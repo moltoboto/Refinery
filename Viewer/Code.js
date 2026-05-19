@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend - Viewer v2.34
+// REFINERY - Google Apps Script Backend - Viewer v2.35
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.34')
+    .setTitle('Refinery V2.35')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
