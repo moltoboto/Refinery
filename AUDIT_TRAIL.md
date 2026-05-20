@@ -17,6 +17,18 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-20 - Claude Code (Viewer v2.40 — artifacts use standard reading-pane render)
+- Request: When clicking an artifact, use the same render path / styling as a regular article. Keep the Drive folder. Also remove the redundant HTML type-icon from the artifact list.
+- Implementation:
+  - `renderArtifactLocal` HTML branch: replaced `<iframe srcdoc>` rendering with direct DOM injection into a `<div class="artifact-viewer-body reading-body article-html">`. Picks up the same `.reading-body.article-html` CSS as content_html articles — Lora typography, accent-colored underlined links, image max-width 100%, table fixes from v2.39, inline-color overrides. Defense-in-depth: passes through `renderArticleHtml_` (strips scripts/iframes/onclick, rewrites links to target=_blank).
+  - PDF / image / Drive-preview artifacts unchanged — they still use their respective renderers.
+  - Removed the `<div class="artifact-type-icon">${a.typeIcon}</div>` HTML pill from artifact cards in `showArtifactsView`. Every artifact is HTML; the badge added visual noise without information. Removed the now-orphan `.artifact-type-icon` CSS block.
+  - Drive backup unchanged — saving and fetching behavior identical.
+- Files touched: Viewer/index.html, Viewer/Code.js, CONTEXT.md, AUDIT_TRAIL.md.
+- Deployment: clasp push Viewer + Apps Script redeploy required for live URL.
+- Tradeoff noted: artifact HTML no longer in an isolated iframe. Substack's inline styles could theoretically leak into the surrounding Viewer chrome — v2.39's `[style*="color"]` / `[style*="background"]` neutralization should catch the common cases. If aggressive bleed appears, easiest mitigation is wrapping the artifact-viewer-body in `all: revert` or going back to a sandboxed iframe with manual CSS injection.
+- Session wrap (real this time): Ingestion v2.46 → v2.55, Viewer v2.34 → v2.40.
+
 ### 2026-05-20 - Claude Code (Ingestion v2.55 + Viewer v2.39 — table CSS + content_html cap)
 - Request: Session-closing bundle after diagnosing newsletter rendering issues.
 

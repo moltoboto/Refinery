@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.39</title>
+<title>Refinery V2.40</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -771,17 +771,9 @@ body.font-xlarge .summary-prompt        { font-size: 16px; line-height: 1.6; }
 .artifact-card:hover { background: #fafaf8; }
 .artifact-card.selected { background: var(--accent-soft); }
 
-.artifact-type-icon {
-  width: 36px; height: 36px;
-  border-radius: var(--radius);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 17px;
-  flex-shrink: 0;
-}
+/* v2.40 — .artifact-type-icon CSS removed alongside the HTML pill in showArtifactsView.
+   File-type label was redundant (artifact list is HTML-dominant; type-icon added visual
+   noise without information value). */
 
 .artifact-info { flex: 1; min-width: 0; }
 
@@ -1009,7 +1001,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.39
+    Refinery V2.40
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -1025,7 +1017,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.39
+      Refinery V2.40
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1431,7 +1423,6 @@ function showArtifactsView() {
               return `
             <div class="artifact-card ${selectedArtifact && selectedArtifact.id === a.id ? 'selected' : ''}"
                  id="acard-${a.id}" onclick="selectArtifact('${a.id}')">
-              <div class="artifact-type-icon">${a.typeIcon}</div>
               <div class="artifact-info">
                 <div class="artifact-name" title="${escapeHtml(formatArtifactListTitle(a))}">${escapeHtml(formatArtifactListTitle(a))}</div>
               </div>
@@ -1540,9 +1531,13 @@ function renderArtifactLocal(artifact) {
         return;
       }
 
-      viewer.innerHTML = renderArtifactShell(artifact, '<iframe id="artifactHtmlFrame" class="artifact-viewer-frame" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin" allowfullscreen></iframe>');
-      var frame = document.getElementById('artifactHtmlFrame');
-      if (frame) frame.srcdoc = result.html || '';
+      // v2.40 — Render artifact HTML via the standard article-html path instead
+      // of an isolated iframe. Picks up the same Lora/DM Sans typography, link
+      // styling, and inline-color overrides as content_html articles. Sanitized
+      // through renderArticleHtml_ as defense-in-depth.
+      var sanitized = renderArticleHtml_(result.html || '');
+      viewer.innerHTML = renderArtifactShell(artifact,
+        '<div class="artifact-viewer-body reading-body article-html">' + sanitized + '</div>');
     })
     .withFailureHandler(function() {
       var viewer = document.getElementById('artifactViewer');

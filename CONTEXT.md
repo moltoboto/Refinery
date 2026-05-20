@@ -11,7 +11,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `BACKLOG.md` - operational queue of unscheduled work, held items, and horizon ideas
 
 ## Current Version
-Ingestion: v2.55 | Viewer: v2.39
+Ingestion: v2.55 | Viewer: v2.40
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -118,6 +118,7 @@ Items that used to live in this section are now tracked there. Don't duplicate �
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
 | Viewer v2.38 | 2026-05-20 | Claude Code | Slop cleanup — removed dead `body.nav-icons` (hide-entirely) path: CSS rules, toggleNav() function, LAYOUT_PREFS_ entry, storage key. Removed dormant `archived` field references throughout: --archived CSS var, .card.archived-card rule, archived-card class, Archived tag, 14 guard checks across filter/render/nav/counter. Removed doArchive() + applyArchiveLocal() functions (no UI callers). Single chokepoint filter added in fetchBatch_ to drop any pre-v2.13 archived=true rows at the data layer. LAYOUT_PREFS_ now keyed by name (getLayoutPref_) instead of fragile array indices |
+| Viewer v2.40 | 2026-05-20 | Claude Code | Artifacts now render through the standard reading-pane path. `renderArtifactLocal` HTML branch was using `<iframe srcdoc>` (isolated, Substack's raw email styling); now injects the sanitized HTML into a `<div class="reading-body article-html">` so v2.39's Lora typography / link colors / inline-color neutralization / table fixes apply identically to artifacts. Drive backup unchanged. Removed the redundant "HTML" type-icon pill from the artifact list (every artifact is HTML; the badge added visual noise without info). |
 | Viewer v2.39 | 2026-05-20 | Claude Code | Email table-cell border CSS relaxed. v2.37's article-html styles put 1px borders on every td/th, intending to style data tables — but HTML emails (Substack, Mailchimp) use deeply-nested layout tables, turning their invisible structure into visible empty boxes (most obvious on truncated rows). Now: borders only when the table has `border="1"`+ attribute. Cells use vertical-align: top. Also tables capped at max-width 100% instead of stretched to 100% width |
 | v2.55 | 2026-05-20 | Claude Code | content_html cap raised 80KB → 150KB. The 80K limit was truncating long newsletters (Maria Sharapova test row hit it exactly at 80000 chars), leaving the body cut mid-tag with broken HTML. 150K × 3000 rolling-cap ceiling = 450MB worst-case storage, within Supabase free-tier 500MB. Comment updated in sanitizeContentHtml_ |
 | v2.54 | 2026-05-20 | Claude Code | **Critical bugfix** — Gmail ingestion was silently failing since v2.47. `buildGmailUrl(id)` returns `https://mail.google.com/mail/u/0/#all/<id>` with the message ID in the URL fragment, but `cleanUrl` was stripping fragments — collapsing every Gmail email to the same URL `https://mail.google.com/mail/u/0`. After v2.47 added the cache-warm exact URL check, the first Gmail email ingested became a permanent dedup blocker for all subsequent Gmail emails. Fix: `cleanUrl` now preserves the fragment for `mail.google.com` URLs (where the fragment IS the unique identifier). Existing colliding rows remain in DB but new ingests work |
