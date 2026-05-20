@@ -17,6 +17,14 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-20 - Claude Code (Viewer v2.41 — hotfix v2.40 artifact zero-height bug)
+- Request: User reported artifacts not rendering after v2.40 ("not getting the full article").
+- Root cause: in v2.40 I replaced the artifact iframe with a `<div class="artifact-viewer-body reading-body article-html">`. The parent `.artifact-viewer` is `display:flex; flex-direction:column; overflow:hidden`. The iframe had `flex:1` from the existing `.artifact-viewer-frame` CSS, so it filled the pane and scrolled internally. My new div had NO size rules at all — collapsed to zero height in the column flex. Content was injected but invisible.
+- Fix: added `.artifact-viewer-body { flex:1; overflow-y:auto; overflow-x:hidden; padding:28px 32px 60px; background:var(--bg); width:100%; box-sizing:border-box; }`. Now the artifact body fills the available vertical space and scrolls.
+- Files touched: Viewer/index.html (CSS block), Viewer/Code.js (version), CONTEXT.md, AUDIT_TRAIL.md.
+- Deployment: clasp push + Apps Script redeploy required.
+- Lesson: when replacing an iframe with flowing content in a flex layout, the replacement needs explicit sizing. Should have included this CSS as part of v2.40.
+
 ### 2026-05-20 - Claude Code (Viewer v2.40 — artifacts use standard reading-pane render)
 - Request: When clicking an artifact, use the same render path / styling as a regular article. Keep the Drive folder. Also remove the redundant HTML type-icon from the artifact list.
 - Implementation:
