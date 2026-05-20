@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.53
+ * Version: 2.54
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -972,7 +972,14 @@ function cleanUrl(url) {
     url = url.replace(/^https?:\/\/youtu\.be\/([^?&]+)/i, 'https://www.youtube.com/watch?v=$1');
     url = url.replace(/^https?:\/\/www\.youtube\.com\/shorts\/([^?&/]+)/i, 'https://www.youtube.com/watch?v=$1');
     url = url.replace(/^https?:\/\/(?:old|np|new|m)\.reddit\.com\//i, 'https://www.reddit.com/');
-    url = url.replace(/#.*$/, '');
+    // v2.54 — Don't strip fragment from Gmail URLs. The message ID lives in the
+    // fragment (`#all/<id>` or `#inbox/<id>`); stripping it collapses every Gmail
+    // email to https://mail.google.com/mail/u/0 — which then dedup-blocks every
+    // subsequent Gmail ingest after v2.47's cache-warm URL check kicked in.
+    var isGmailUrl = /^https?:\/\/mail\.google\.com\//i.test(url);
+    if (!isGmailUrl) {
+      url = url.replace(/#.*$/, '');
+    }
     var tracking = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','utm_name','ref','_bhiiv','bhcl_id','si','feature','fbclid','gclid','context','rdt','share_id'];
     var parts = url.split('?');
     var cleaned = parts[0];
