@@ -11,7 +11,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `BACKLOG.md` - operational queue of unscheduled work, held items, and horizon ideas
 
 ## Current Version
-Ingestion: v2.52 | Viewer: v2.38
+Ingestion: v2.53 | Viewer: v2.38
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -118,6 +118,7 @@ Items that used to live in this section are now tracked there. Don't duplicate �
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
 | Viewer v2.38 | 2026-05-20 | Claude Code | Slop cleanup — removed dead `body.nav-icons` (hide-entirely) path: CSS rules, toggleNav() function, LAYOUT_PREFS_ entry, storage key. Removed dormant `archived` field references throughout: --archived CSS var, .card.archived-card rule, archived-card class, Archived tag, 14 guard checks across filter/render/nav/counter. Removed doArchive() + applyArchiveLocal() functions (no UI callers). Single chokepoint filter added in fetchBatch_ to drop any pre-v2.13 archived=true rows at the data layer. LAYOUT_PREFS_ now keyed by name (getLayoutPref_) instead of fragile array indices |
+| v2.53 | 2026-05-20 | Claude Code | Bugfix completing v2.51 Option A — Tier 2 inbox emails (processInboxTier, line ~1185) was missed. This is the path most newsletters take (every Substack NOT in CONFIG.GMAIL.NEWSLETTER_SENDERS, plus general inbox traffic). Added `content_html: htmlBody` to the Tier 2 record. Without it, Email-category articles in the Viewer fell back to the short summary instead of rendering the full email body inline |
 | v2.52 | 2026-05-20 | Claude Code | Slop cleanup — `enrichTORArticle_` simplified from double-pass to single. Was calling finalizeSummaryForRecord_ twice (once with empty category to produce a cleaned summary for normalizeCategory, then again with the determined category). But basic.category was already determined in mapTORArticleBasic_ from identical inputs (enrichArticleFromUrl disabled, so no new signal). One formatter call with basic.category is sufficient — same output, half the work |
 | Viewer v2.37 | 2026-05-19 | Claude Code | Reading pane now renders full article HTML from new `content_html` column (Ingestion v2.50+). New `.reading-body.article-html` styles preserve typography/links/images/lists/quotes/code while neutralizing inline colors. Defense-in-depth sanitization: strips scripts/iframes/onclick + rewrites links to target=_blank. Falls back to summary for older articles or feeds without content:encoded |
 | v2.51 | 2026-05-20 | Claude Code | Option A — newsletters become first-class inline-readable. `processNewsletterEmail` no longer returns early when `EXTRACT_NEWSLETTER_ARTICLES=false`; instead creates ONE Supabase record per newsletter with `content_html` populated from the email HTML body. Drive artifact still saved as durable backup. Reading-pane CSS from v2.37 picks it up automatically. Also fixed a regression where the v2.50 `sanitizeContentHtml_` regex contained a literal NUL byte that made the file binary-rejected by grep tooling |

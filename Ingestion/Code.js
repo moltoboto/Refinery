@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.52
+ * Version: 2.53
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1188,6 +1188,11 @@ function processInboxTier(label) {
         category: 'Email', status: 'unread',
         title:   subject.substring(0, 250),
         summary: buildEmailSummary(subject, body, buildGmailUrl(msgId)),
+        content_html: htmlBody,  // v2.53 — Tier 2 was missed in v2.51's Option A;
+                                 // this is the path most newsletters take (every
+                                 // Substack not in NEWSLETTER_SENDERS, plus general
+                                 // inbox traffic). Without it, the Viewer falls
+                                 // back to the short summary blurb.
         signal:  '',
         url:     buildGmailUrl(msgId),
         archived: false, kept: false,
