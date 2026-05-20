@@ -11,7 +11,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `BACKLOG.md` - operational queue of unscheduled work, held items, and horizon ideas
 
 ## Current Version
-Ingestion: v2.55 | Viewer: v2.41
+Ingestion: v2.55 | Viewer: v2.42
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -118,6 +118,7 @@ Items that used to live in this section are now tracked there. Don't duplicate �
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
 | Viewer v2.38 | 2026-05-20 | Claude Code | Slop cleanup — removed dead `body.nav-icons` (hide-entirely) path: CSS rules, toggleNav() function, LAYOUT_PREFS_ entry, storage key. Removed dormant `archived` field references throughout: --archived CSS var, .card.archived-card rule, archived-card class, Archived tag, 14 guard checks across filter/render/nav/counter. Removed doArchive() + applyArchiveLocal() functions (no UI callers). Single chokepoint filter added in fetchBatch_ to drop any pre-v2.13 archived=true rows at the data layer. LAYOUT_PREFS_ now keyed by name (getLayoutPref_) instead of fragile array indices |
+| Viewer v2.42 | 2026-05-20 | Claude Code | Perf hotfix — `renderArticleHtml_` now adds `loading="lazy" decoding="async"` to every img tag. v2.40's switch from iframe to direct DOM render made artifact open feel slow because the iframe's isolated context was hiding the cost of fetching 10-30 images at once. With lazy loading, only images near the viewport fetch initially; the rest defer until scroll. Applies to both content_html articles and artifact HTML |
 | Viewer v2.41 | 2026-05-20 | Claude Code | Hotfix for v2.40 artifact rendering. The new `.artifact-viewer-body` div was injected into a column-flex parent (.artifact-viewer with overflow:hidden) but had no `flex:1` or `overflow:auto` — collapsed to zero height so artifact content was invisible. Added explicit CSS: flex:1, overflow-y:auto, padding 28px/32px, box-sizing border-box. Artifacts now scroll and fill the pane same as a regular reading pane |
 | Viewer v2.40 | 2026-05-20 | Claude Code | Artifacts now render through the standard reading-pane path. `renderArtifactLocal` HTML branch was using `<iframe srcdoc>` (isolated, Substack's raw email styling); now injects the sanitized HTML into a `<div class="reading-body article-html">` so v2.39's Lora typography / link colors / inline-color neutralization / table fixes apply identically to artifacts. Drive backup unchanged. Removed the redundant "HTML" type-icon pill from the artifact list (every artifact is HTML; the badge added visual noise without info). |
 | Viewer v2.39 | 2026-05-20 | Claude Code | Email table-cell border CSS relaxed. v2.37's article-html styles put 1px borders on every td/th, intending to style data tables — but HTML emails (Substack, Mailchimp) use deeply-nested layout tables, turning their invisible structure into visible empty boxes (most obvious on truncated rows). Now: borders only when the table has `border="1"`+ attribute. Cells use vertical-align: top. Also tables capped at max-width 100% instead of stretched to 100% width |

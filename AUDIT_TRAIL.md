@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-20 - Claude Code (Viewer v2.42 — perf hotfix: lazy-load images)
+- Request: User reported artifact opening is slow after v2.40-41 switch from iframe to direct DOM injection.
+- Root cause: iframes parse + load in an isolated browsing context. When we switched to direct DOM injection, every newsletter's images (typically 10-30 from Substack CDN) started fetching in parallel on the main thread the moment innerHTML was set. The HTML parse itself is fast (<100ms for 100KB) but the cascade of HTTP requests + image decoding + layout shifts blocks the perceived render.
+- Fix: `renderArticleHtml_` now rewrites every img tag to include `loading="lazy" decoding="async"`. Only images that scroll into view fetch initially; the rest defer until the user scrolls down. The `decoding="async"` hint tells the browser to decode images off the main thread.
+- Same benefit applies to content_html articles too — `renderArticleHtml_` is the shared sanitizer.
+- Files touched: Viewer/index.html (one regex addition in renderArticleHtml_), Viewer/Code.js (version), CONTEXT.md, AUDIT_TRAIL.md.
+- Deployment: clasp push + Apps Script redeploy.
+- If still slow after this lands, fallback is reverting to iframe approach but injecting our article-html CSS into the srcdoc — both worlds.
+
 ### 2026-05-20 - Claude Code (Viewer v2.41 — hotfix v2.40 artifact zero-height bug)
 - Request: User reported artifacts not rendering after v2.40 ("not getting the full article").
 - Root cause: in v2.40 I replaced the artifact iframe with a `<div class="artifact-viewer-body reading-body article-html">`. The parent `.artifact-viewer` is `display:flex; flex-direction:column; overflow:hidden`. The iframe had `flex:1` from the existing `.artifact-viewer-frame` CSS, so it filled the pane and scrolled internally. My new div had NO size rules at all — collapsed to zero height in the column flex. Content was injected but invisible.

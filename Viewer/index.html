@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.41</title>
+<title>Refinery V2.42</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -1015,7 +1015,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.41
+    Refinery V2.42
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -1031,7 +1031,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.41
+      Refinery V2.42
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1907,6 +1907,14 @@ function renderArticleHtml_(raw) {
   s = s.replace(/<a\s+([^>]*?)>/gi, function(_, attrs) {
     if (/target\s*=/.test(attrs)) return '<a ' + attrs + '>';
     return '<a ' + attrs + ' target="_blank" rel="noopener noreferrer">';
+  });
+  // v2.42 — lazy-load images. Newsletters have 10-30 images each; without lazy
+  // loading they all fetch in parallel on the main thread, making the artifact
+  // open feel slow. With loading="lazy", only images near the viewport load
+  // initially; the rest defer until scroll. Skip imgs that already declare loading.
+  s = s.replace(/<img\s+([^>]*?)>/gi, function(_, attrs) {
+    if (/\bloading\s*=/.test(attrs)) return '<img ' + attrs + '>';
+    return '<img ' + attrs + ' loading="lazy" decoding="async">';
   });
   return s;
 }
