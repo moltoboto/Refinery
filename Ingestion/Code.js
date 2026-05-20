@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.54
+ * Version: 2.55
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1303,7 +1303,7 @@ function sanitizeRecord(record) {
     status: sanitizeText(record.status || 'unread', 20),
     title: sanitizeText(record.title, 250),
     summary: sanitizeSummaryText(record.summary, 4000),
-    content_html: sanitizeContentHtml_(record.content_html, 80000),  // v2.50
+    content_html: sanitizeContentHtml_(record.content_html, 150000),  // v2.50 (80K) → v2.55 (150K)
     signal: sanitizeText(record.signal, 500),
     url: cleanUrl(record.url || ''),
     archived: !!record.archived,
@@ -1314,7 +1314,8 @@ function sanitizeRecord(record) {
 
 // v2.50 — Sanitize full article HTML for storage. Strips script/style/iframe/
 // object/embed tags + on* event attributes + javascript: URLs. Caps at maxLen
-// chars (default 80KB — Supabase free tier headroom: 80K × 3000 rolling cap ≈ 240MB).
+// chars (v2.55: 150KB — long newsletters were truncating at the old 80K cap.
+// 150K × 3000 rolling cap ≈ 450MB worst case, within Supabase free tier 500MB).
 // Less aggressive than stripHtml — preserves <p> <a> <img> <h2> <ul> <blockquote>
 // etc so the Viewer can render it as styled article body.
 function sanitizeContentHtml_(value, maxLen) {

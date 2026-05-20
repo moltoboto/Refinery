@@ -17,6 +17,35 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-20 - Claude Code (Ingestion v2.55 + Viewer v2.39 — table CSS + content_html cap)
+- Request: Session-closing bundle after diagnosing newsletter rendering issues.
+
+- **Diagnostic conclusion from the SQL count query + rendered screenshots:**
+  - Maven newsletter (59KB content_html, 7 imgs): rendered beautifully — title, body typography, Maven logo image, "Recommended for you" cards all displayed correctly. Confirms inline-rendering pipeline works end-to-end for newsletters under the cap.
+  - Maria Sharapova newsletter (exactly 80000 chars — hit the cap, 19 imgs): rendered with empty bordered boxes where layout tables were. Root cause: HTML emails nest tables for layout (since 1990s); v2.37 article-html CSS gave every td/th a 1px border thinking they were data tables. Compounded by truncation cutting body mid-content.
+  - 5 older Email-category rows with NULL content_html: visible only when user toggles Unread chip OFF (they have status='read' from past sessions). Not a bug.
+
+- **Viewer v2.39:**
+  - Relaxed table cell CSS in `.reading-body.article-html` scope. Default: no cell borders, padding-only. Borders only when the table has `border="1"+` attribute (a hint the email author actually wants visible borders for a data table).
+  - Tables max-width: 100% instead of width: 100%, so Substack's centered narrower layout tables aren't stretched.
+  - Cells use `vertical-align: top` for cleaner multi-row newsletter card layouts.
+
+- **Ingestion v2.55:**
+  - `sanitizeContentHtml_` cap raised 80,000 → 150,000 chars. Sharapova hit the old cap exactly and was getting truncated mid-tag.
+  - Storage math: 150K × 3000 rolling row cap = 450MB worst case, within Supabase free tier (500MB).
+  - Updated the function's comment to reflect the new ceiling.
+
+- Versions: Ingestion v2.55 (1 place), Viewer v2.39 (5 places).
+- Files touched: Ingestion/Code.js, Viewer/Code.js, Viewer/index.html, CONTEXT.md, AUDIT_TRAIL.md.
+- Deployment: clasp push both apps + Apps Script redeploy for Viewer to go live.
+
+- **Session wrap.** From this session: Viewer v2.34 → v2.39, Ingestion v2.46 → v2.55. Major themes:
+  - Inline article HTML reading (v2.50, v2.51, v2.53 Tier 1 + Tier 2 newsletters)
+  - Dedup hardening (v2.47 F8 Gmail cache, v2.48 Phase 1 R1-R3, v2.49 Phase 2 R4 synonyms)
+  - UI overhaul (v2.34 iconized chips, v2.35 cleanup, v2.36 SVG chip icons + real category icons, v2.37 article-html CSS, v2.38 slop cleanup, v2.39 table fix)
+  - Critical bugs found: v2.47 Gmail dedup gap, v2.54 Gmail URL fragment collision, v2.55 cap truncation. All resolved.
+  - Backlog re-ranked by value; Phase 3 dedup deprioritized as low ROI.
+
 ### 2026-05-20 - Claude Code (session checkpoint — newsletter inline reading, open diagnostics)
 - Context: end-of-session checkpoint before conversation compression. Captures what was tested today and what remains open.
 - **Shipped this session (in order):**

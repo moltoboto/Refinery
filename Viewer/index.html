@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.38</title>
+<title>Refinery V2.39</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -665,9 +665,17 @@ body.font-xlarge .summary-prompt        { font-size: 16px; line-height: 1.6; }
   padding: 12px 14px; border-radius: 6px; overflow-x: auto;
 }
 .reading-body.article-html hr { border: none; border-top: 1px solid var(--border); margin: 1.4em 0; }
-.reading-body.article-html table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+/* v2.39 — Don't put borders on every cell. HTML emails (Substack, Mailchimp,
+   etc.) use deeply-nested layout tables; default-bordering every cell turns
+   their invisible layout into visible empty boxes. Borders only when the
+   table explicitly asks via the border="1" attribute. width: auto so Substack's
+   centered layout tables aren't stretched. */
+.reading-body.article-html table { border-collapse: collapse; margin: 1em 0; max-width: 100%; }
 .reading-body.article-html th,
-.reading-body.article-html td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+.reading-body.article-html td { padding: 4px 8px; text-align: left; vertical-align: top; }
+.reading-body.article-html table[border]:not([border="0"]) { border: 1px solid var(--border); }
+.reading-body.article-html table[border]:not([border="0"]) th,
+.reading-body.article-html table[border]:not([border="0"]) td { border: 1px solid var(--border); }
 .reading-body.article-html [style*="color"],
 .reading-body.article-html [style*="background"] { color: inherit !important; background: transparent !important; }
 
@@ -1001,7 +1009,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.38
+    Refinery V2.39
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -1017,7 +1025,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.38
+      Refinery V2.39
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
