@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend - Viewer v2.37
+// REFINERY - Google Apps Script Backend - Viewer v2.38
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.37')
+    .setTitle('Refinery V2.38')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -838,7 +838,13 @@ function fetchBatch_(query, select, offset, limit) {
     throw new Error('Supabase fetch error ' + code + ': ' + response.getContentText());
   }
 
-  return safeJsonParse_(response.getContentText(), 'offset=' + offset).map(normalizeArticleForViewer_);
+  // v2.38 — drop dormant archived=true rows at the data layer. The field was
+  // repurposed and then dropped in v2.13 (status='deleted' took its place), but
+  // pre-v2.13 rows could still carry archived=true and confuse the Viewer. Single
+  // chokepoint filter so no downstream code needs to check article.archived.
+  return safeJsonParse_(response.getContentText(), 'offset=' + offset)
+    .filter(function(row) { return row && !row.archived; })
+    .map(normalizeArticleForViewer_);
 }
 
 function supabaseRequest_(path, options) {

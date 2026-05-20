@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.51
+ * Version: 2.52
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -678,21 +678,23 @@ function mapTORArticleBasic_(article) {
 // HTTP enrichment via enrichArticleFromUrl() is intentionally disabled here —
 // any slow destination URL could hang UrlFetchApp; RSS title/summary/image
 // is sufficient for all categories. Gmail tier still uses enrichArticleFromUrl().
+//
+// v2.52 — Simplified from double finalizeSummaryForRecord_/normalizeCategory
+// pass. The basic mapping already determined the category from the same inputs;
+// since enrichArticleFromUrl is disabled there's no new signal to recompute from.
+// One formatter call with the already-determined category is sufficient.
 function enrichTORArticle_(basic) {
   var imageUrl = basic._rssImageUrl || '';
   var finalTitle = basic.title;
-  var rssSummary = basic.summary;
-  var finalSummary = finalizeSummaryForRecord_(rssSummary, '', basic.url, basic._rawTitle);
-  var finalCategory = normalizeCategory('', basic.source, finalTitle, finalSummary, basic.url, basic._torFolders);
-  finalSummary = finalizeSummaryForRecord_(finalSummary, finalCategory, basic.url, finalTitle);
+  var finalSummary = finalizeSummaryForRecord_(basic.summary, basic.category, basic.url, finalTitle);
   return {
     source:     basic.source,
     issue:      basic.issue,
-    category:   finalCategory,
+    category:   basic.category,
     status:     'unread',
     title:      finalTitle,
-    summary:    prependImageMarker(finalSummary, imageUrl, finalCategory).substring(0, 2000),
-    content_html: basic.content_html || '',   // v2.50 — pass full body through
+    summary:    prependImageMarker(finalSummary, imageUrl, basic.category).substring(0, 2000),
+    content_html: basic.content_html || '',
     signal:     deriveSignal(finalTitle, finalSummary),
     url:        basic.url,
     archived:   false,

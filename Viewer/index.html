@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.37</title>
+<title>Refinery V2.38</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -24,7 +24,6 @@
   --muted2:      #b8b5ae;
   --unread-dot:  #cc4b00;
   --kept:        #1a6b3c;
-  --archived:    #6b6864;
   --sidebar-w:   200px;
   --list-w:      360px;
   --header-h:    56px;
@@ -391,7 +390,6 @@ body.nav-iconic .nav-icon {
 .card:hover { background: #fafaf8; }
 .card.selected { background: var(--accent-soft); }
 .card.read { opacity: 0.6; }
-.card.archived-card { opacity: 0.5; }
 
 .card-eyebrow {
   display: flex;
@@ -503,7 +501,9 @@ body.no-reading-pane .list-pane {
 /* Nav toggle = hide left rail entirely. The original "collapse to icons"
    never had real icons populated, so a 60px empty stub was just dead space.
    Hiding the aside reclaims the full sidebar width for the list pane. */
-body.nav-icons aside { display: none; }
+/* v2.38 — Hide-nav-entirely path removed. The chip that activated this was
+   dropped in v2.36 (NAV now means "iconize to rail", not "hide entirely").
+   The body.nav-iconic mode below is the only nav-collapse mode now. */
 
 /* Iconized nav mode — aside collapses to a 60px rail with letter glyphs only.
    Labels, counts, section headers hidden. List pane butts up automatically
@@ -517,13 +517,6 @@ body.nav-iconic .nav-item    { justify-content: center; padding: 10px 0; gap: 0;
 /* Hide-list toggle — focus on reading pane (or nothing, if reading is also off). */
 body.list-hidden .list-pane  { display: none; }
 
-/* When BOTH nav and reading pane are off, list fills the full viewport with
-   a narrow margin on each side. Overrides the clamp/variable width from the
-   base no-reading-pane rule — no sidebar math needed when aside is gone. */
-body.nav-icons.no-reading-pane .list-pane {
-  margin-left: var(--sidebar-w);
-  margin-right: 280px;
-}
 
 /* Compact density — actual class names this time. Card class is `.card`,
    summary is `.card-snippet`, etc. The previous v2.12 rules targeted classes
@@ -1008,7 +1001,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.37
+    Refinery V2.38
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -1024,7 +1017,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.37
+      Refinery V2.38
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1650,12 +1643,12 @@ function updateSearchScopeChips() {
 }
 
 function matchesViewFilter(article) {
+  // v2.38 — `archived` field is dormant since v2.13; rows are filtered out at
+  // the data layer in fetchBatch_, so no archived=true ever reaches here.
   if (view === 'kept') {
-    if (!article.kept || article.archived) return false;
-  } else if (view === 'archive') {
-    if (!article.archived) return false;
+    if (!article.kept) return false;
   } else {
-    if (article.kept || article.archived) return false;
+    if (article.kept) return false;
     if (view.indexOf('cat:') === 0 && normalizeCategory(article.category) !== view.slice(4)) return false;
     if (view.indexOf('src:') === 0 && article.source !== view.slice(4)) return false;
     if (unreadOnly && article.status === 'read' && !PRESERVED_READ_IDS[article.id]) return false;
@@ -1745,7 +1738,7 @@ function loadMoreArticles() {
   loadingMore = true;
   updateMoreButton();
   var excludeIds = ARTICLES.filter(function(a) {
-    return !a.kept && !a.archived;
+    return !a.kept;
   }).map(function(a) {
     return a.id;
   });
@@ -1800,7 +1793,7 @@ function renderList() {
     var summaryText = cleanSummaryText(a.summary);
     var summarySnippet = escapeHtml(summaryText.replace(/\s+/g, ' ').trim());
     return `
-      <div class="card ${a.status === 'read' ? 'read' : ''} ${a.archived ? 'archived-card' : ''} ${selectedId === a.id ? 'selected' : ''}"
+      <div class="card ${a.status === 'read' ? 'read' : ''} ${selectedId === a.id ? 'selected' : ''}"
            id="card-${a.id}" onclick="selectArticle(${a.id})">
         ${a.status !== 'read' ? '<div class="unread-indicator"></div>' : ''}
         ${a.url ? `<a class="card-open-link" href="${a.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open original in new tab">↗</a>` : ''}
@@ -1822,7 +1815,7 @@ function selectArticle(id, autoMarkRead) {
   var article = ARTICLES.find(function(a) { return a.id === id; });
   if (!article) return;
 
-  if (autoMarkRead && !article.archived && !article.kept && article.status !== 'read') {
+  if (autoMarkRead && !article.kept && article.status !== 'read') {
     markArticleReadLocal(article, true);
     serverMarkRead(id);
     buildSidebar();
@@ -1862,7 +1855,6 @@ function renderArticle(a) {
     <div class="reading-meta">
       <span class="tag">${normCat}</span>
       ${a.kept ? '<span class="tag kept-tag">Kept</span>' : ''}
-      ${a.archived ? '<span class="tag" style="color:var(--archived)">Archived</span>' : ''}
     </div>
 
     <hr class="reading-divider">
@@ -1938,21 +1930,12 @@ function toggleKeep(id) {
     .keepArticle(id, article.kept);
 }
 
-function doArchive(id) {
-  var article = ARTICLES.find(function(a) { return a.id === id; });
-  if (!article) return;
-
-  applyArchiveLocal(article);
-  delete PRESERVED_READ_IDS[id];
-  buildSidebar();
-  applyFilters();
-  google.script.run.withSuccessHandler(function() {}).archiveArticle(id);
-  toast('Archived');
-}
+// v2.38 — doArchive() removed (no UI callers; server-side archiveArticle()
+// just sets status='read', so this was pretending to do something it didn't).
 
 function toggleReadStatus(id) {
   var article = ARTICLES.find(function(a) { return a.id === id; });
-  if (!article || article.archived) return;
+  if (!article) return;
 
   if (article.status === 'read') {
     markArticleUnreadLocal(article, true);
@@ -1970,7 +1953,7 @@ function toggleReadStatus(id) {
 
 function markAllVisible() {
   filtered.forEach(function(article) {
-    if (!article.kept && !article.archived && article.status !== 'read') {
+    if (!article.kept && article.status !== 'read') {
       markArticleReadLocal(article, true);
       serverMarkRead(article.id);
     }
@@ -2022,7 +2005,7 @@ URL: ${a.url || 'N/A'}`;
     <div class="summary-prompt" id="summaryPromptMain">${escapeHtml(prompt)}</div>`;
 
   filtered.forEach(function(article) {
-    if (!article.kept && !article.archived && article.status !== 'read') {
+    if (!article.kept && article.status !== 'read') {
       markArticleReadLocal(article, true);
       serverMarkRead(article.id);
     }
@@ -2054,13 +2037,21 @@ function escapeHtml(str) {
 // ── Layout toggles ─────────────────────────────────────────────────────────
 // Three independent body-class toggles, each persisted in localStorage so the
 // choice sticks across reloads (and per-device, since localStorage is per-browser).
+// v2.38 — Dropped the `nav-icons` (hide-entirely) entry. v2.36 removed the chip
+// that activated it; nav-iconic (collapse-to-rail) replaced it.
 var LAYOUT_PREFS_ = [
   { key: 'no-reading-pane', storageKey: 'refinery.hideReadingPane', btnId: 'toggleReadingBtn' },
-  { key: 'nav-icons',       storageKey: 'refinery.iconsNav',        btnId: 'toggleNavBtn' },
   { key: 'compact-density', storageKey: 'refinery.compactDensity',  btnId: 'toggleDensityBtn' },
   { key: 'nav-iconic',      storageKey: 'refinery.navIconic',       btnId: 'toggleIconNavBtn' },
   { key: 'list-hidden',     storageKey: 'refinery.listHidden',      btnId: 'toggleListBtn' }
 ];
+
+function getLayoutPref_(key) {
+  for (var i = 0; i < LAYOUT_PREFS_.length; i++) {
+    if (LAYOUT_PREFS_[i].key === key) return LAYOUT_PREFS_[i];
+  }
+  return null;
+}
 
 function applyLayoutPref_(pref) {
   var on = localStorage.getItem(pref.storageKey) === '1';
@@ -2075,11 +2066,11 @@ function toggleLayoutPref_(pref) {
   applyLayoutPref_(pref);
 }
 
-function toggleReading() { toggleLayoutPref_(LAYOUT_PREFS_[0]); }
-function toggleNav()     { toggleLayoutPref_(LAYOUT_PREFS_[1]); }
-function toggleDensity() { toggleLayoutPref_(LAYOUT_PREFS_[2]); }
-function toggleIconNav() { toggleLayoutPref_(LAYOUT_PREFS_[3]); }
-function toggleList()    { toggleLayoutPref_(LAYOUT_PREFS_[4]); }
+// v2.38 — key-based lookup instead of fragile array indices.
+function toggleReading() { toggleLayoutPref_(getLayoutPref_('no-reading-pane')); }
+function toggleDensity() { toggleLayoutPref_(getLayoutPref_('compact-density')); }
+function toggleIconNav() { toggleLayoutPref_(getLayoutPref_('nav-iconic')); }
+function toggleList()    { toggleLayoutPref_(getLayoutPref_('list-hidden')); }
 
 // Font size cycle: normal → large → xlarge → normal. Persisted to localStorage.
 function applyFontSize_() {
@@ -2179,7 +2170,7 @@ function navigate(dir) {
 
     if (dir > 0) {
       var current = ARTICLES.find(function(a) { return a.id === selectedId; });
-      if (current && !current.kept && !current.archived && current.status !== 'read') {
+      if (current && !current.kept && current.status !== 'read') {
         markArticleReadLocal(current, true);
         serverMarkRead(current.id);
         buildSidebar();
@@ -2209,7 +2200,7 @@ function scrollCardIntoView(id) {
 
 function markArticleReadLocal(article, preserveVisible) {
   if (!article || article.status === 'read') return;
-  if (!article.kept && !article.archived) adjustUnreadCounters(article, -1);
+  if (!article.kept) adjustUnreadCounters(article, -1);
   article.status = 'read';
   if (preserveVisible) PRESERVED_READ_IDS[article.id] = true;
 }
@@ -2217,7 +2208,7 @@ function markArticleReadLocal(article, preserveVisible) {
 function markArticleUnreadLocal(article, preserveVisible) {
   if (!article || article.status !== 'read') return;
   article.status = 'unread';
-  if (!article.kept && !article.archived) adjustUnreadCounters(article, 1);
+  if (!article.kept) adjustUnreadCounters(article, 1);
   if (preserveVisible) PRESERVED_READ_IDS[article.id] = true;
 }
 
@@ -2225,26 +2216,16 @@ function applyKeepLocal(article, nextKept) {
   if (!article || article.kept === nextKept) return;
   if (nextKept) {
     VIEWER_STATS.keptArticles += 1;
-    if (!article.archived && article.status !== 'read') adjustUnreadCounters(article, -1);
+    if (article.status !== 'read') adjustUnreadCounters(article, -1);
   } else {
     VIEWER_STATS.keptArticles = Math.max(0, VIEWER_STATS.keptArticles - 1);
-    if (!article.archived && article.status !== 'read') adjustUnreadCounters(article, 1);
+    if (article.status !== 'read') adjustUnreadCounters(article, 1);
   }
   article.kept = nextKept;
   delete PRESERVED_READ_IDS[article.id];
 }
 
-function applyArchiveLocal(article) {
-  if (!article || article.archived) return;
-  if (article.kept) {
-    VIEWER_STATS.keptArticles = Math.max(0, VIEWER_STATS.keptArticles - 1);
-  } else if (article.status !== 'read') {
-    adjustUnreadCounters(article, -1);
-  }
-  VIEWER_STATS.deletedArticles += 1;
-  article.archived = true;
-  article.status = 'read';
-}
+// v2.38 — applyArchiveLocal() removed alongside doArchive(). No UI calls it.
 
 function adjustUnreadCounters(article, delta) {
   VIEWER_STATS.unreadArticles = Math.max(0, VIEWER_STATS.unreadArticles + delta);

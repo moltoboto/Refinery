@@ -11,7 +11,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `BACKLOG.md` - operational queue of unscheduled work, held items, and horizon ideas
 
 ## Current Version
-Ingestion: v2.51 | Viewer: v2.37
+Ingestion: v2.52 | Viewer: v2.38
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -117,6 +117,8 @@ Items that used to live in this section are now tracked there. Don't duplicate �
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.38 | 2026-05-20 | Claude Code | Slop cleanup — removed dead `body.nav-icons` (hide-entirely) path: CSS rules, toggleNav() function, LAYOUT_PREFS_ entry, storage key. Removed dormant `archived` field references throughout: --archived CSS var, .card.archived-card rule, archived-card class, Archived tag, 14 guard checks across filter/render/nav/counter. Removed doArchive() + applyArchiveLocal() functions (no UI callers). Single chokepoint filter added in fetchBatch_ to drop any pre-v2.13 archived=true rows at the data layer. LAYOUT_PREFS_ now keyed by name (getLayoutPref_) instead of fragile array indices |
+| v2.52 | 2026-05-20 | Claude Code | Slop cleanup — `enrichTORArticle_` simplified from double-pass to single. Was calling finalizeSummaryForRecord_ twice (once with empty category to produce a cleaned summary for normalizeCategory, then again with the determined category). But basic.category was already determined in mapTORArticleBasic_ from identical inputs (enrichArticleFromUrl disabled, so no new signal). One formatter call with basic.category is sufficient — same output, half the work |
 | Viewer v2.37 | 2026-05-19 | Claude Code | Reading pane now renders full article HTML from new `content_html` column (Ingestion v2.50+). New `.reading-body.article-html` styles preserve typography/links/images/lists/quotes/code while neutralizing inline colors. Defense-in-depth sanitization: strips scripts/iframes/onclick + rewrites links to target=_blank. Falls back to summary for older articles or feeds without content:encoded |
 | v2.51 | 2026-05-20 | Claude Code | Option A — newsletters become first-class inline-readable. `processNewsletterEmail` no longer returns early when `EXTRACT_NEWSLETTER_ARTICLES=false`; instead creates ONE Supabase record per newsletter with `content_html` populated from the email HTML body. Drive artifact still saved as durable backup. Reading-pane CSS from v2.37 picks it up automatically. Also fixed a regression where the v2.50 `sanitizeContentHtml_` regex contained a literal NUL byte that made the file binary-rejected by grep tooling |
 | v2.50 | 2026-05-19 | Claude Code | Full article HTML in `content_html` column: mapTORArticleBasic_ now prefers RSS `content`/`content:encoded` over `summary` (longer body), passes raw HTML through to enrichTORArticle_. New `sanitizeContentHtml_(value, 80000)` strips dangerous tags (script/style/iframe/object/embed/noscript), event attributes (onclick=, onerror=), and javascript: URLs while preserving structural tags. Cap 80KB/article ≈ 240MB at 3000-row rolling cap. **Requires `ALTER TABLE articles ADD COLUMN content_html TEXT;` first — without it, all inserts fail with schema error** |
