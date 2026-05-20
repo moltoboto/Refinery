@@ -17,7 +17,7 @@ When something is done, delete the row and write the audit entry.
 
 | # | Item | Est. | Why high value |
 |---|------|------|----------------|
-| 1 | **Full article in reading pane** | 1–2 sessions | Highest-impact UX change available. Lets you read complete articles in-app — no more clicking out and getting trapped. Easy path: capture `<content:encoded>` from RSS into a new `content_html` column, render in reading pane. Hard path: on-demand fetch+extract for paywalled feeds (Motley Fool, Seeking Alpha, NYT). Re-uses `enrichArticleFromUrl()` infrastructure currently disabled in v2.34. |
+| 1a | **Full article in reading pane — hard path (paywalled / teaser feeds)** | 1 session | Easy path DONE 2026-05-19 (v2.50+v2.37). For feeds that only give a teaser in RSS (Motley Fool, Seeking Alpha, NYT), would need to re-enable `enrichArticleFromUrl()` on-demand — risk: slow URLs hanging UrlFetchApp. Deferred until easy path observed in production. |
 | 3a | **iPad "trapped" fix** | 1–2 hrs | Functional iPad blocker. Per-card ↗ icon uses `<a target="_blank">`; iPad Safari treats it as in-place navigation from the iframe sandbox. Combined with #1 above, this becomes less critical (you'd read in-app) but it's still a real escape hatch needed. Possible fixes: JS `window.open()`, persistent "← Refinery" floating badge, or Apps Script sandbox tweaks. |
 | 2 | **GitHub Models API for Summarize** | 1–2 sessions | Quality boost — better summaries could replace per-article reading for many items. Wire `UrlFetchApp` to GH Models endpoint with your token. Watch rate limits (~50 req/day personal). |
 
@@ -58,8 +58,8 @@ When something is done, delete the row and write the audit entry.
 
 ## Done — recent (last 5 entries, then prune)
 
+- 2026-05-19 — Full article HTML in reading pane (Ingestion v2.50 + Viewer v2.37) — closes #1 easy path
 - 2026-05-19 — Dedup Phase 2: R4 topic-synonym groups (Ingestion v2.49)
 - 2026-05-19 — Dedup Phase 1: R1+R2+R3 + minimal R5 Tier 2 (Ingestion v2.48)
 - 2026-05-19 — F8 dedup fix on Gmail path (Ingestion v2.47); dedup corpus test runner; safety audit
 - 2026-05-19 — Chip overhaul + real category icons (Viewer v2.36)
-- 2026-05-19 — Resize-handle cleanup + N/P artifact nav (Viewer v2.35)

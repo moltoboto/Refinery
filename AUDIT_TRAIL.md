@@ -17,6 +17,36 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-19 - Claude Code (Ingestion v2.50 + Viewer v2.37 — full article in reading pane)
+- Request: Backlog #1 (high value) — show full article HTML in the reading pane instead of truncated summary. Reduces (eliminates for most articles) the need to click ↗ Open original.
+- Implementation strategy: **easy path only** this session. Capture `<content:encoded>` (or RSS `content`) field that most modern feeds provide. Hard path (URL fetch + extraction for paywalled feeds) deferred.
+
+- **Supabase schema requirement (USER MUST RUN FIRST):**
+  ```sql
+  ALTER TABLE articles ADD COLUMN content_html TEXT;
+  ```
+  Until this column exists, all inserts will fail with schema error. Run in Supabase SQL editor.
+
+- **Ingestion v2.50:**
+  - `mapTORArticleBasic_` extended to prefer `article.content.content` (RSS content:encoded) over `article.summary` when present — typically the longer, full-body HTML. Falls back to summary for feeds that only provide it. Captured as `content_html` on the basic record.
+  - `enrichTORArticle_` passes `content_html` through to the final record.
+  - `sanitizeRecord` adds `content_html: sanitizeContentHtml_(record.content_html, 80000)`.
+  - New helper `sanitizeContentHtml_(value, maxLen)`: strips `<script>`, `<style>`, `<iframe>`, `<object>`, `<embed>`, `<noscript>` blocks; strips `on*=` event attributes (onclick/onerror/etc.); neuters `javascript:` URLs in href/src; preserves structural tags (p, a, img, h1-h6, ul/ol/li, blockquote, pre/code, table, figure). 80KB cap per article — at 3000-row rolling cap that's ~240MB worst case (within Supabase free tier).
+  - Gmail path untouched — newsletter cards aren't full articles.
+- **Viewer v2.37:**
+  - `renderArticle(a)` now checks `a.content_html` first. If present and >100 chars, renders it via new `renderArticleHtml_()` helper into a `.reading-body.article-html` div. If absent or short, falls back to existing `formatSummaryHtml(a.summary)` path.
+  - `renderArticleHtml_()`: defense-in-depth sanitization (same patterns as Ingestion's helper, in case anything slipped through or old records bypassed sanitize); rewrites every `<a>` to `target="_blank" rel="noopener noreferrer"`.
+  - New CSS scope `.reading-body.article-html` styles: serif (Lora) headings 17–22px; accent-color underlined links; images max-width 100% centered with rounded corners; bordered tables; orange-bordered blockquote; monospace pre/code on surface background; horizontal rules. `[style*="color"]` and `[style*="background"]` overrides neutralize inline colors so external article styles don't fight our cream/orange palette.
+  - "Read full article" button label changed to "Open original" since you're already reading the full article in-app.
+
+- Backward compatibility: articles ingested BEFORE v2.50 don't have `content_html`. They'll render with the existing summary path (the fallback). New articles ingested after v2.50 will progressively populate. No backfill needed; old articles age out via the rolling 3000-cap.
+
+- Versions: Ingestion v2.50 (1 place), Viewer v2.37 (5 places: Code.js header + setTitle, index.html title + 2 logos).
+- Files touched: Ingestion/Code.js, Viewer/Code.js, Viewer/index.html, CONTEXT.md, AUDIT_TRAIL.md
+- Deployment: clasp push both. Viewer needs Apps Script redeploy.
+- **CRITICAL deployment order: 1) Run the SQL, 2) Then clasp push. If you push before the schema is updated, Ingestion will start failing inserts.**
+- Follow-up: watch a Substack or Hodinkee article in the Viewer — should show full body with images. For Motley Fool / Seeking Alpha (paywalled), content_html will be the same teaser as summary — no regression, no win.
+
 ### 2026-05-19 - Claude Code (docs — backlog re-ranked by value, Phase 3 deprioritized)
 - Request: User directive — work by value-add, not order of discovery. Phase 3 dedup work analyzed as marginal/risky; demote.
 - Changes to BACKLOG.md:

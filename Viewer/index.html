@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.36</title>
+<title>Refinery V2.37</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -641,6 +641,43 @@ body.font-xlarge .summary-prompt        { font-size: 16px; line-height: 1.6; }
   color: var(--text2);
 }
 
+/* v2.37 — Full article HTML rendered when content_html exists (Ingestion v2.50+).
+   Scoped to .article-html so external article styles don't bleed into the rest of the UI.
+   Strips most inline color/background; preserves typography, links, images, lists, quotes. */
+.reading-body.article-html { font-size: 15.5px; line-height: 1.7; color: var(--text); }
+.reading-body.article-html p { margin: 0 0 1em; }
+.reading-body.article-html h1,
+.reading-body.article-html h2,
+.reading-body.article-html h3 { font-family: var(--ff-display, 'Lora', Georgia, serif); font-weight: 600; line-height: 1.25; margin: 1.4em 0 0.4em; color: var(--text); }
+.reading-body.article-html h1 { font-size: 22px; }
+.reading-body.article-html h2 { font-size: 19px; }
+.reading-body.article-html h3 { font-size: 17px; }
+.reading-body.article-html a  { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.reading-body.article-html a:hover { color: var(--accent-deep, var(--accent)); }
+.reading-body.article-html img,
+.reading-body.article-html video,
+.reading-body.article-html figure { max-width: 100%; height: auto; display: block; margin: 1em auto; border-radius: 6px; }
+.reading-body.article-html figcaption { font-size: 12.5px; color: var(--muted); text-align: center; margin-top: 0.4em; }
+.reading-body.article-html ul,
+.reading-body.article-html ol { margin: 0 0 1em; padding-left: 1.5em; }
+.reading-body.article-html li { margin: 0.25em 0; }
+.reading-body.article-html blockquote {
+  margin: 1em 0; padding: 0.4em 1em; border-left: 3px solid var(--accent);
+  color: var(--text2); font-style: italic;
+}
+.reading-body.article-html pre,
+.reading-body.article-html code { font-family: ui-monospace, 'IBM Plex Mono', 'Menlo', monospace; font-size: 13px; }
+.reading-body.article-html pre {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 12px 14px; border-radius: 6px; overflow-x: auto;
+}
+.reading-body.article-html hr { border: none; border-top: 1px solid var(--border); margin: 1.4em 0; }
+.reading-body.article-html table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+.reading-body.article-html th,
+.reading-body.article-html td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+.reading-body.article-html [style*="color"],
+.reading-body.article-html [style*="background"] { color: inherit !important; background: transparent !important; }
+
 .reading-photo {
   width: 100%;
   max-height: 320px;
@@ -971,7 +1008,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.36
+    Refinery V2.37
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -987,7 +1024,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.36
+      Refinery V2.37
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1809,6 +1846,14 @@ function renderArticle(a) {
   var summaryText = cleanSummaryText(a.summary);
   var normCat = normalizeCategory(a.category);
 
+  // v2.37 — Prefer full article HTML when present (Ingestion v2.50+).
+  // Falls back to formatted summary for older articles or feeds without content:encoded.
+  var hasFullContent = a.content_html && String(a.content_html).trim().length > 100;
+  var bodyHtml = hasFullContent
+    ? renderArticleHtml_(a.content_html)
+    : formatSummaryHtml(a.summary);
+  var bodyClass = hasFullContent ? 'reading-body article-html' : 'reading-body';
+
   content.innerHTML = `
     <div class="reading-eyebrow">
       ${a.source || ''} &nbsp;&nbsp; ${a.issue || ''}
@@ -1821,15 +1866,40 @@ function renderArticle(a) {
     </div>
 
     <hr class="reading-divider">
-    ${imageUrl ? `<img class="reading-photo" src="${imageUrl}" alt="">` : ''}
-    <div class="reading-body">${formatSummaryHtml(a.summary)}</div>
+    ${(imageUrl && !hasFullContent) ? `<img class="reading-photo" src="${imageUrl}" alt="">` : ''}
+    <div class="${bodyClass}">${bodyHtml}</div>
     <div class="reading-actions">
-      ${a.url ? `<a href="${a.url}" target="_blank" class="action-btn primary" style="text-decoration:none">Read full article</a>` : ''}
+      ${a.url ? `<a href="${a.url}" target="_blank" class="action-btn primary" style="text-decoration:none">Open original</a>` : ''}
       <button class="action-btn keep-btn ${a.kept ? 'active' : ''}" onclick="toggleKeep(${a.id})">${a.kept ? 'Kept' : 'Keep'}</button>
     </div>`;
 
   var pane = document.getElementById('readingPane');
   if (pane) pane.scrollTo(0, 0);
+}
+
+// v2.37 — Defense-in-depth HTML sanitization on the render side.
+// Ingestion v2.50 sanitizeContentHtml_ already strips dangerous tags before storage,
+// but we re-strip here in case anything slipped through or content was inserted
+// by an older code path. Also rewrites <a> to target="_blank" so links open externally.
+function renderArticleHtml_(raw) {
+  if (!raw) return '';
+  var s = String(raw);
+  s = s.replace(/<script\b[\s\S]*?<\/script\s*>/gi, '');
+  s = s.replace(/<style\b[\s\S]*?<\/style\s*>/gi, '');
+  s = s.replace(/<iframe\b[\s\S]*?<\/iframe\s*>/gi, '');
+  s = s.replace(/<object\b[\s\S]*?<\/object\s*>/gi, '');
+  s = s.replace(/<embed\b[\s\S]*?<\/embed\s*>/gi, '');
+  s = s.replace(/<noscript\b[\s\S]*?<\/noscript\s*>/gi, '');
+  s = s.replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, '');
+  s = s.replace(/\son[a-z]+\s*=\s*'[^']*'/gi, '');
+  s = s.replace(/(href|src)\s*=\s*"javascript:[^"]*"/gi, '$1="#"');
+  s = s.replace(/(href|src)\s*=\s*'javascript:[^']*'/gi, '$1="#"');
+  // Ensure outbound links open in new tab (iPad: still subject to the iframe trap)
+  s = s.replace(/<a\s+([^>]*?)>/gi, function(_, attrs) {
+    if (/target\s*=/.test(attrs)) return '<a ' + attrs + '>';
+    return '<a ' + attrs + ' target="_blank" rel="noopener noreferrer">';
+  });
+  return s;
 }
 
 function showEmptyReading() {

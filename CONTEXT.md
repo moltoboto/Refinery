@@ -11,7 +11,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `BACKLOG.md` - operational queue of unscheduled work, held items, and horizon ideas
 
 ## Current Version
-Ingestion: v2.49 | Viewer: v2.36
+Ingestion: v2.50 | Viewer: v2.37
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -117,6 +117,8 @@ Items that used to live in this section are now tracked there. Don't duplicate �
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.37 | 2026-05-19 | Claude Code | Reading pane now renders full article HTML from new `content_html` column (Ingestion v2.50+). New `.reading-body.article-html` styles preserve typography/links/images/lists/quotes/code while neutralizing inline colors. Defense-in-depth sanitization: strips scripts/iframes/onclick + rewrites links to target=_blank. Falls back to summary for older articles or feeds without content:encoded |
+| v2.50 | 2026-05-19 | Claude Code | Full article HTML in `content_html` column: mapTORArticleBasic_ now prefers RSS `content`/`content:encoded` over `summary` (longer body), passes raw HTML through to enrichTORArticle_. New `sanitizeContentHtml_(value, 80000)` strips dangerous tags (script/style/iframe/object/embed/noscript), event attributes (onclick=, onerror=), and javascript: URLs while preserving structural tags. Cap 80KB/article ≈ 240MB at 3000-row rolling cap. **Requires `ALTER TABLE articles ADD COLUMN content_html TEXT;` first — without it, all inserts fail with schema error** |
 | Viewer v2.36 | 2026-05-19 | Claude Code | Header chips overhauled: removed redundant "hide nav entirely" chip; kept the collapse-to-icons version, renamed to NAV. Chips reordered by column position (Unread, NAV, LIST, READER, Compact, Aa, Refresh). Replaced emoji with inline SVG monoline icons (from the Claude Design v3 package). Category nav-icon glyphs (was N/A/F/L/T/W/Y/R/E/D letters) replaced with real category SVGs — newspaper, AI node-graph, finance bars, graduation cap, microchip, watch face, play triangle, reddit head, envelope, overlapping squares. Tooltips on every chip now describe what each does |
 | Viewer v2.35 | 2026-05-19 | Claude Code | Removed v2.28 resize handles (cosmetic clutter after v2.32-33 fixed-gutter layout); N/P keyboard nav now works in artifact view via new branch in navigate(). Closes BACKLOG #4 + #9 |
 | v2.49 | 2026-05-19 | Claude Code | Dedup Phase 2 (R4 — topic-synonym groups): extended VERB_STEM_MAP_ with topic nouns (case, court, judgment, layoff, victory, defeat, deal, acquisition, merger, takeover, raid, debut, ban, block, prohibit, recruit, poach, deliver, defer, terminate, cut, triumph, loss). Added SYNONYM_GROUPS_ dictionary mapping ~50 stems into 10 canonical groups (lawsuit/strike/delay/launch/layoff/hire/ban/win/lose/deal). `extractStemmedVerbs_` now returns group keys instead of raw stems — so `attack`+`strike` both produce `strike`, `postpone`+`delay` both produce `delay`. Expected test impact: Cluster C 0/1 → 1/1 (closes the strike≡attack + postpone≡delay gap); Cluster B 6/15 → ~14/15 (every pair shares either `lose` or `lawsuit` group); Cluster D 0/1 → 1/1 (musk+openai+lawsuit) |

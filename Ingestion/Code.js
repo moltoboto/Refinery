@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.49
+ * Version: 2.50
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -635,8 +635,16 @@ function mapTORArticleBasic_(article) {
     (article.canonical && article.canonical[0] && article.canonical[0].href) ||
     (article.alternate  && article.alternate[0]  && article.alternate[0].href) || ''
   );
+  // v2.50 — RSS feeds provide article body in either `article.summary` (Atom) or
+  // `article.content` (RSS 2.0 + Atom content:encoded). TOR normalizes both into
+  // `summary`, but some feeds have richer HTML in `content`. Prefer `content`
+  // when present (longer body), fall back to `summary`. Both are HTML.
   var rawSummary = '';
-  if (typeof article.summary === 'string') {
+  if (article.content && typeof article.content.content === 'string' && article.content.content.length > 0) {
+    rawSummary = article.content.content;
+  } else if (typeof article.content === 'string' && article.content.length > 0) {
+    rawSummary = article.content;
+  } else if (typeof article.summary === 'string') {
     rawSummary = article.summary;
   } else if (article.summary && typeof article.summary.content === 'string') {
     rawSummary = article.summary.content;
@@ -657,6 +665,7 @@ function mapTORArticleBasic_(article) {
     _torFolders: torFolders,
     title:       title,
     summary:     cleanSummary,
+    content_html: rawSummary,   // v2.50 — full HTML body for in-app reading
     category:    category,
     date_added:  pubDate.toISOString(),
     issue:       Utilities.formatDate(pubDate, 'UTC', 'MMM d yyyy'),
@@ -683,6 +692,7 @@ function enrichTORArticle_(basic) {
     status:     'unread',
     title:      finalTitle,
     summary:    prependImageMarker(finalSummary, imageUrl, finalCategory).substring(0, 2000),
+    content_html: basic.content_html || '',   // v2.50 — pass full body through
     signal:     deriveSignal(finalTitle, finalSummary),
     url:        basic.url,
     archived:   false,
@@ -1263,12 +1273,41 @@ function sanitizeRecord(record) {
     status: sanitizeText(record.status || 'unread', 20),
     title: sanitizeText(record.title, 250),
     summary: sanitizeSummaryText(record.summary, 4000),
+    content_html: sanitizeContentHtml_(record.content_html, 80000),  // v2.50
     signal: sanitizeText(record.signal, 500),
     url: cleanUrl(record.url || ''),
     archived: !!record.archived,
     kept: !!record.kept,
     date_added: record.date_added || new Date().toISOString()
   };
+}
+
+// v2.50 — Sanitize full article HTML for storage. Strips script/style/iframe/
+// object/embed tags + on* event attributes + javascript: URLs. Caps at maxLen
+// chars (default 80KB — Supabase free tier headroom: 80K × 3000 rolling cap ≈ 240MB).
+// Less aggressive than stripHtml — preserves <p> <a> <img> <h2> <ul> <blockquote>
+// etc so the Viewer can render it as styled article body.
+function sanitizeContentHtml_(value, maxLen) {
+  if (value == null) return '';
+  var s = String(value);
+  // Drop dangerous tags entirely (open + content + close)
+  s = s.replace(/<script\b[\s\S]*?<\/script\s*>/gi, '');
+  s = s.replace(/<style\b[\s\S]*?<\/style\s*>/gi, '');
+  s = s.replace(/<iframe\b[\s\S]*?<\/iframe\s*>/gi, '');
+  s = s.replace(/<object\b[\s\S]*?<\/object\s*>/gi, '');
+  s = s.replace(/<embed\b[\s\S]*?<\/embed\s*>/gi, '');
+  s = s.replace(/<noscript\b[\s\S]*?<\/noscript\s*>/gi, '');
+  // Drop event-handler attributes (onclick=, onerror=, etc.)
+  s = s.replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, '');
+  s = s.replace(/\son[a-z]+\s*=\s*'[^']*'/gi, '');
+  s = s.replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, '');
+  // Neuter javascript: URLs in href / src
+  s = s.replace(/(href|src)\s*=\s*"javascript:[^"]*"/gi, '$1="#"');
+  s = s.replace(/(href|src)\s*=\s*'javascript:[^']*'/gi, '$1="#"');
+  // Normalize whitespace and trim
+  s = s.replace(/ /g, '').trim();
+  if (maxLen && s.length > maxLen) s = s.substring(0, maxLen);
+  return s;
 }
 
 function sanitizeText(value, maxLen) {
