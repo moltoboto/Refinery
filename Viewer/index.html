@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.42</title>
+<title>Refinery V2.43</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -881,19 +881,9 @@ body.font-xlarge .summary-prompt        { font-size: 16px; line-height: 1.6; }
   background: white;
 }
 
-/* v2.41 — Sizing for the artifact-as-article render path introduced in v2.40.
-   The parent .artifact-viewer is column-flex with overflow:hidden; without
-   flex:1 + overflow:auto here the div collapsed to zero height (the bug user
-   reported). Padding matches the regular reading pane. */
-.artifact-viewer-body {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 28px 32px 60px;
-  background: var(--bg);
-  width: 100%;
-  box-sizing: border-box;
-}
+/* v2.43 — .artifact-viewer-body removed alongside the iframe revert.
+   Artifact HTML once again renders via iframe (.artifact-viewer-frame) so
+   newsletter designs look the way their authors intended. */
 
 .artifact-empty {
   flex: 1;
@@ -1015,7 +1005,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.42
+    Refinery V2.43
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -1031,7 +1021,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.42
+      Refinery V2.43
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1545,13 +1535,15 @@ function renderArtifactLocal(artifact) {
         return;
       }
 
-      // v2.40 — Render artifact HTML via the standard article-html path instead
-      // of an isolated iframe. Picks up the same Lora/DM Sans typography, link
-      // styling, and inline-color overrides as content_html articles. Sanitized
-      // through renderArticleHtml_ as defense-in-depth.
-      var sanitized = renderArticleHtml_(result.html || '');
-      viewer.innerHTML = renderArtifactShell(artifact,
-        '<div class="artifact-viewer-body reading-body article-html">' + sanitized + '</div>');
+      // v2.43 — Reverted to iframe-based rendering. v2.40 tried the article-html
+      // CSS path (Lora typography, neutralized inline colors) but the resulting
+      // look was uglier than the original email design — newsletters lose their
+      // intended layout when fighting our styles. iframe keeps the email looking
+      // like it was meant to look. Performance was a secondary concern; readability
+      // is the priority. Drive backup unchanged.
+      viewer.innerHTML = renderArtifactShell(artifact, '<iframe id="artifactHtmlFrame" class="artifact-viewer-frame" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin" allowfullscreen></iframe>');
+      var frame = document.getElementById('artifactHtmlFrame');
+      if (frame) frame.srcdoc = result.html || '';
     })
     .withFailureHandler(function() {
       var viewer = document.getElementById('artifactViewer');

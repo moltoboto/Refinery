@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-20 - Claude Code (Viewer v2.43 — revert v2.40 artifact render approach)
+- Request: User feedback after testing — artifacts in the v2.40-42 rendering look uglier than the original. Our article-html CSS (Lora typography, accent-colored underlined links, inline-color neutralization, table border tweaks) fights newsletter designs that were deliberately styled for email. Substack newsletters lose their intentional visual hierarchy. Performance is a secondary concern (the Drive round-trip is acceptable for the use case); readability/fidelity to original design is the priority.
+- Fix: reverted `renderArtifactLocal` HTML branch to the pre-v2.40 iframe approach. Sets `srcdoc` on a sandboxed iframe (`<iframe class="artifact-viewer-frame" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin">`). Newsletter designs render in isolation, looking the way their authors intended.
+- Removed the orphan `.artifact-viewer-body` CSS block (no longer referenced).
+- Retained changes: v2.40's HTML type-icon removal from the artifact list (visual cleanup, no downside). v2.42's lazy-load image rewrite in `renderArticleHtml_` (still benefits content_html articles).
+- Files touched: Viewer/index.html (renderArtifactLocal HTML branch + CSS removal + version), Viewer/Code.js (version), CONTEXT.md, AUDIT_TRAIL.md.
+- Deployment: clasp push + Apps Script redeploy required.
+- **Open back-of-mind:** if you want the best of both worlds in the future, the path is iframe-based but inject a `<style>` tag at the top of srcdoc with selected article-html rules (Lora body font, accent links) WITHOUT the inline-color neutralization. That preserves Substack's intentional design while applying a thin Refinery layer. Not pursued in this session — current iframe approach is acceptable.
+
 ### 2026-05-20 - Claude Code (Viewer v2.42 — perf hotfix: lazy-load images)
 - Request: User reported artifact opening is slow after v2.40-41 switch from iframe to direct DOM injection.
 - Root cause: iframes parse + load in an isolated browsing context. When we switched to direct DOM injection, every newsletter's images (typically 10-30 from Substack CDN) started fetching in parallel on the main thread the moment innerHTML was set. The HTML parse itself is fast (<100ms for 100KB) but the cascade of HTTP requests + image decoding + layout shifts blocks the perceived render.
