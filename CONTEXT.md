@@ -11,7 +11,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `BACKLOG.md` - operational queue of unscheduled work, held items, and horizon ideas
 
 ## Current Version
-Ingestion: v2.50 | Viewer: v2.37
+Ingestion: v2.51 | Viewer: v2.37
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -118,6 +118,7 @@ Items that used to live in this section are now tracked there. Don't duplicate �
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
 | Viewer v2.37 | 2026-05-19 | Claude Code | Reading pane now renders full article HTML from new `content_html` column (Ingestion v2.50+). New `.reading-body.article-html` styles preserve typography/links/images/lists/quotes/code while neutralizing inline colors. Defense-in-depth sanitization: strips scripts/iframes/onclick + rewrites links to target=_blank. Falls back to summary for older articles or feeds without content:encoded |
+| v2.51 | 2026-05-20 | Claude Code | Option A — newsletters become first-class inline-readable. `processNewsletterEmail` no longer returns early when `EXTRACT_NEWSLETTER_ARTICLES=false`; instead creates ONE Supabase record per newsletter with `content_html` populated from the email HTML body. Drive artifact still saved as durable backup. Reading-pane CSS from v2.37 picks it up automatically. Also fixed a regression where the v2.50 `sanitizeContentHtml_` regex contained a literal NUL byte that made the file binary-rejected by grep tooling |
 | v2.50 | 2026-05-19 | Claude Code | Full article HTML in `content_html` column: mapTORArticleBasic_ now prefers RSS `content`/`content:encoded` over `summary` (longer body), passes raw HTML through to enrichTORArticle_. New `sanitizeContentHtml_(value, 80000)` strips dangerous tags (script/style/iframe/object/embed/noscript), event attributes (onclick=, onerror=), and javascript: URLs while preserving structural tags. Cap 80KB/article ≈ 240MB at 3000-row rolling cap. **Requires `ALTER TABLE articles ADD COLUMN content_html TEXT;` first — without it, all inserts fail with schema error** |
 | Viewer v2.36 | 2026-05-19 | Claude Code | Header chips overhauled: removed redundant "hide nav entirely" chip; kept the collapse-to-icons version, renamed to NAV. Chips reordered by column position (Unread, NAV, LIST, READER, Compact, Aa, Refresh). Replaced emoji with inline SVG monoline icons (from the Claude Design v3 package). Category nav-icon glyphs (was N/A/F/L/T/W/Y/R/E/D letters) replaced with real category SVGs — newspaper, AI node-graph, finance bars, graduation cap, microchip, watch face, play triangle, reddit head, envelope, overlapping squares. Tooltips on every chip now describe what each does |
 | Viewer v2.35 | 2026-05-19 | Claude Code | Removed v2.28 resize handles (cosmetic clutter after v2.32-33 fixed-gutter layout); N/P keyboard nav now works in artifact view via new branch in navigate(). Closes BACKLOG #4 + #9 |

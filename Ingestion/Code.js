@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.50
+ * Version: 2.51
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -810,25 +810,41 @@ function processNewsletterEmail(msg) {
     }
   }
 
+  // v2.51 — Option A: even in full-issue mode (EXTRACT_NEWSLETTER_ARTICLES=false),
+  // create a single Supabase record per newsletter with the full HTML body in
+  // content_html. The Drive artifact still saved above as durable backup. This
+  // makes newsletters first-class inline-readable in the Viewer reading pane —
+  // no more switching to artifact view to see the body.
+  var articles;
   if (CONFIG.GMAIL.EXTRACT_NEWSLETTER_ARTICLES === false) {
-    Logger.log("  -> article extraction skipped (full issue mode)");
-    return result;
-  }
-
-  var articles = extractArticlesFromBody(body, source, issue, date, subject, plainBody);
-  result.articlesExtracted = articles.length;
-  Logger.log("  -> " + articles.length + " articles extracted");
-
-  if (articles.length === 0) {
-    var canonUrl = extractCanonicalUrl(body) || buildGmailUrl(msg.getId());
+    var canonUrlFull = extractCanonicalUrl(body) || buildGmailUrl(msg.getId());
     articles = [{
       source: source, issue: issue,
       category: detectCategory(subject, ''), status: 'unread',
-      title: subject, summary: buildEmailSummary(subject, plainBody, canonUrl),
-      signal: '', url: canonUrl,
+      title: subject, summary: buildEmailSummary(subject, plainBody, canonUrlFull),
+      content_html: htmlBody,
+      signal: '', url: canonUrlFull,
       archived: false, kept: false, date_added: date.toISOString()
     }];
-    Logger.log("  -> fallback: 1 record");
+    result.articlesExtracted = 1;
+    Logger.log("  -> full-issue mode: 1 record with content_html (" + (htmlBody || '').length + " chars)");
+  } else {
+    articles = extractArticlesFromBody(body, source, issue, date, subject, plainBody);
+    result.articlesExtracted = articles.length;
+    Logger.log("  -> " + articles.length + " articles extracted");
+
+    if (articles.length === 0) {
+      var canonUrl = extractCanonicalUrl(body) || buildGmailUrl(msg.getId());
+      articles = [{
+        source: source, issue: issue,
+        category: detectCategory(subject, ''), status: 'unread',
+        title: subject, summary: buildEmailSummary(subject, plainBody, canonUrl),
+        content_html: htmlBody,
+        signal: '', url: canonUrl,
+        archived: false, kept: false, date_added: date.toISOString()
+      }];
+      Logger.log("  -> fallback: 1 record with content_html");
+    }
   }
 
   articles.forEach(function(record) {
@@ -1305,7 +1321,7 @@ function sanitizeContentHtml_(value, maxLen) {
   s = s.replace(/(href|src)\s*=\s*"javascript:[^"]*"/gi, '$1="#"');
   s = s.replace(/(href|src)\s*=\s*'javascript:[^']*'/gi, '$1="#"');
   // Normalize whitespace and trim
-  s = s.replace(/ /g, '').trim();
+  s = s.replace(/[\u0000-\u001F\u007F]/g, '').trim();
   if (maxLen && s.length > maxLen) s = s.substring(0, maxLen);
   return s;
 }
