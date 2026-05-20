@@ -84,6 +84,15 @@ Dev Tools, Research, Strategy, Watches, YouTube, Reddit, Email, Duplicate
 - `cleanUrl()` tracking param stripping - canonical URL logic is dedup-critical
 - `sanitizeRecord()` - called on every insert, field length limits enforced here
 
+## Article vs Artifact (post v2.51)
+
+Both render the same HTML the same way (v2.40+ uses the article-html CSS path), but they have different data sources:
+
+- **Article view** — `ARTICLES` array loaded into memory at Viewer start. Click → instant render. Source: `content_html` column in Supabase. Subject to 150KB cap and 3000-row rolling purge. **Use for: active newsletter reading.**
+- **Artifact view** — Drive file fetched on each click via `google.script.run.getArtifactContent`. ~500ms–2s round-trip. Source: `Refinery Artifacts/` Drive folder. No size cap, no purge — durable archive. **Use for: old content beyond the rolling cap, images/PDFs, anything not in the active inbox.**
+
+Post v2.51 every newsletter lands in both places automatically (Drive save + Supabase content_html row). The article path is preferred for speed; the artifact path is the backup.
+
 ## Known Patterns & Gotchas
 - Supabase REST silently caps at 1000 rows - use offset pagination
 - Apps Script deployment: always create a New Deployment when the URL breaks - "New version" on existing deployment is unreliable; new deployment changes the URL, update any bookmarks
