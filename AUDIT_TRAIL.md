@@ -17,6 +17,34 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-20 - Claude Code (session checkpoint — newsletter inline reading, open diagnostics)
+- Context: end-of-session checkpoint before conversation compression. Captures what was tested today and what remains open.
+- **Shipped this session (in order):**
+  - v2.50 + v2.37 — full article HTML in reading pane (RSS content:encoded → content_html → inline rendering)
+  - v2.51 — Option A: Tier 1 Gmail newsletters get content_html populated
+  - v2.52 + v2.38 — slop cleanup (nav-icons dead path, archived field, double formatter call)
+  - v2.53 — Tier 2 inbox newsletters get content_html populated (missed in v2.51)
+  - v2.54 — **critical** fix: cleanUrl was stripping Gmail message-ID from URL fragment, causing all Gmail emails to share a single URL `https://mail.google.com/mail/u/0` which became a permanent dedup blocker after v2.47's cache-warm check.
+
+- **Verification status:** v2.54 pushed but not yet confirmed working by user. Pre-v2.54 test showed:
+  - Tier 1: 1 thread (The Code newsletter) — was getting blocked by URL collision
+  - Tier 2: 3 threads — all blocked by URL collision
+  - After v2.54: user ran again, but result was 9 unread → only 3 visible in Email category.
+
+- **Open diagnostics (2026-05-20 EOD):**
+  1. **Email count discrepancy.** User had 9 unread, only 3 appeared in Email category. Hypothesis: Tier 1 newsletters (The Code, ChatAI, Ollama, Lonely Octopus) get categorized via `detectCategory(subject)` and often land in AI / Tech / Learning instead of Email. Other 6 may be in those categories, or filtered as noise, or unread but outside `in:inbox`. Need new execution log + sidebar count check across categories to confirm.
+  2. **Photos not rendering.** User reports no images in newsletter reading pane. Three possible causes: (a) `<img src="cid:...">` CID references that only work in Gmail (unfixable without MIME attachment parsing), (b) lazy-loaded images using `data-src` instead of `src`, (c) `<noscript>` blocks containing fallback `<img>` tags being stripped by `sanitizeContentHtml_`. Diagnostic pending — need user to paste the raw content_html from a recent Email row in Supabase to see what kind of img refs they are.
+
+- **Follow-up for next session:**
+  - Get a content_html sample from Supabase (the html_preview column from the SQL query in this thread).
+  - If imgs are direct CDN URLs → debug browser-side rendering (CSP, image-loading errors in devtools).
+  - If imgs are `cid:` references → consider extracting and uploading Gmail attachments to Drive, rewriting src to public Drive URLs. Larger feature.
+  - If imgs are inside `<noscript>` → relax sanitizeContentHtml_ to preserve noscript content.
+  - For the "3 of 9" question, look at category counts after a fresh run; possibly add explicit logging of which category each ingested newsletter received.
+
+- Files touched this session: Ingestion/Code.js (v2.50-54), Viewer/Code.js + Viewer/index.html (v2.37-38), CONTEXT.md, AUDIT_TRAIL.md, BACKLOG.md.
+- Deployment status: all Ingestion versions pushed via clasp. Viewer v2.38 pushed but **requires user redeploy** in Apps Script before the in-line article HTML rendering goes live at the URL.
+
 ### 2026-05-20 - Claude Code (Ingestion v2.54 — critical Gmail URL collision bug)
 - Request: User tested with marked-unread newsletters; log showed "DEDUP CACHE HIT (url): https://mail.google.com/mail/u/0" for every Gmail email, skipping all of them as duplicates. Investigated.
 - **Root cause (long-standing latent bug, surfaced by v2.47):**
