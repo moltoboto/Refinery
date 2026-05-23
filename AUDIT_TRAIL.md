@@ -17,6 +17,25 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-23 - Claude Cowork (doc + recovery: RefineryV2 restored from GitHub after OneDrive blank-out)
+- Request: User reported the Refinery project loaded in Claude Code with the title but blank contents. Wanted to recover from one of three copies (local OneDrive, Google Drive, GitHub).
+- Root cause / context: The OneDrive working folder at `C:\Users\ThomasCala\OneDrive - NewAmsterdam Pharma B.V\NewAmsterdam Pharma\[03] AI\PKB\RefineryV2` had its file contents silently emptied — only the two folder shells (`Ingestion/` and `Viewer/`) remained, both 0 bytes. Almost certainly a OneDrive sync collision (or possibly Files-On-Demand purging local copies). The Claude project was correctly pointed at this folder; there was just nothing in it to display.
+- Diagnostic findings:
+  - OneDrive folder: empty (32 files expected, 0 present).
+  - GitHub `moltoboto/Refinery`: full project, last commit `0ebb461` "Viewer v2.43: revert artifact rendering to iframe", dated 2026-05-20. Source of truth confirmed.
+  - Google Drive folder (per HOW_THIS_WORKS.md): supplementary email-artifact HTMLs only, gitignored, not needed for code restore.
+- Fix(es):
+  - Fresh-cloned `moltoboto/Refinery` from GitHub and copied entire repo (including `.git`) into the OneDrive RefineryV2 folder. 32 files restored, 23 MB, git on `main` at `0ebb461`.
+  - Updated `HOW_THIS_WORKS.md`: corrected stale version refs (was claiming Ingestion v2.12 / Viewer v2.8 — actuals are v2.55 / v2.43), updated the working-folder path to match OneDrive reality, added a **Best Practices & Auto-Backup** section codifying the 3-5x-per-session push rhythm, the "line 1 of Code.js is ground truth" rule, and the recovery playbook used today.
+  - Updated `HANDOFF_PROMPT.md`: added a **SESSION HEALTH CHECK** block at the top (verifies folder isn't blank, key files exist, line-1 versions present, git in sync with origin/main), plus woven into the paste-block as step 0 with instruction to re-run 3-5x per session.
+- Files touched: HOW_THIS_WORKS.md, HANDOFF_PROMPT.md, AUDIT_TRAIL.md. No code changes — `Ingestion/Code.js` and `Viewer/Code.js` are byte-identical to GitHub.
+- Deployment: none. Documentation + recovery only; no clasp push, no Apps Script redeploy required.
+- Versions: unchanged. Ingestion v2.55, Viewer v2.43 confirmed as current.
+- Follow-up / open questions:
+  - **Path drift between docs and reality:** `HANDOFF_PROMPT.md` and `CONTEXT.md` (likely) reference `C:\Users\ThomasCala\Refinery\` as the working folder. The actual working folder is the OneDrive path above. Either move to the documented path (and delete OneDrive) or update all docs to point at the OneDrive path. Pending Thomas's call.
+  - **Multi-account use (Pro + Team):** Thomas wanted to use the same project from two Claude accounts. Plan: clone the same GitHub repo to a non-OneDrive folder on the personal account; both accounts ride `main`. Not implemented this session.
+  - **`HOW_THIS_WORKS.md` lagged code by 40+ versions.** Worth a `ship.ps1` step that rewrites the version line by scraping `head -1` of each `Code.js` so docs can't drift this far again.
+
 ### 2026-05-20 - Claude Code (Viewer v2.43 — revert v2.40 artifact render approach)
 - Request: User feedback after testing — artifacts in the v2.40-42 rendering look uglier than the original. Our article-html CSS (Lora typography, accent-colored underlined links, inline-color neutralization, table border tweaks) fights newsletter designs that were deliberately styled for email. Substack newsletters lose their intentional visual hierarchy. Performance is a secondary concern (the Drive round-trip is acceptable for the use case); readability/fidelity to original design is the priority.
 - Fix: reverted `renderArtifactLocal` HTML branch to the pre-v2.40 iframe approach. Sets `srcdoc` on a sandboxed iframe (`<iframe class="artifact-viewer-frame" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin">`). Newsletter designs render in isolation, looking the way their authors intended.

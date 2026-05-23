@@ -17,19 +17,20 @@ There are two separate mini-apps that run on Google's servers:
 ## Where Everything Lives
 
 ```
-Your laptop (P16)
-└── C:\Users\exact\Refinery\          ← all your source code lives here
+Your laptop (working folder)
+└── C:\Users\ThomasCala\OneDrive - NewAmsterdam Pharma B.V\
+        NewAmsterdam Pharma\[03] AI\PKB\RefineryV2\   ← all source code lives here
     ├── Ingestion\                     ← the fetcher app
-    │   └── Code.js                    ← the actual code (v2.12)
+    │   └── Code.js                    ← the actual code (v2.55)
     ├── Viewer\                        ← the reader app
-    │   ├── Code.js                    ← backend code (v2.8)
+    │   ├── Code.js                    ← backend code (v2.43)
     │   └── index.html                 ← the UI you see in the browser
     ├── CONTEXT.md                     ← project brain — full state and history
     ├── AUDIT_TRAIL.md                 ← log of every session
     ├── HANDOFF_PROMPT.md              ← how to start any AI session
     └── PROCESS.md                     ← step-by-step workflow
 
-GitHub (cloud backup + sync point)
+GitHub (cloud backup + sync point — source of truth)
 └── github.com/moltoboto/Refinery      ← copy of everything above, always in sync
     └── branch: main                   ← always use this one
 
@@ -45,6 +46,8 @@ Supabase (the database)
 Google Drive (moltoboto account)
 └── My Drive > Refinery                ← doc backups + email artifact HTML files
 ```
+
+**Note on sync reliability:** GitHub + OneDrive are the two reliable copies. `clasp push` to Google Apps Script has been flaky — when it fails, the live app drifts behind the source. Treat Apps Script as a separate "live deployment" step, not part of the sync chain.
 
 ---
 
@@ -71,7 +74,7 @@ Google Drive (moltoboto account)
 ## How to Switch Between Claude Code and Codex
 
 ### Starting fresh with Claude Code (after Codex was last used)
-1. Open Claude Code in `C:\Users\exact\Refinery\`
+1. Open Claude Code in your RefineryV2 folder (OneDrive path above)
 2. Run: `git pull` — gets the latest from GitHub
 3. Start your session — I read the files directly, no uploads needed
 
@@ -108,11 +111,11 @@ Think of it like "git push, but for Google's servers instead of GitHub."
 
 ```bash
 # From the Ingestion folder:
-cd C:\Users\exact\Refinery\Ingestion
-clasp push --force
+cd <RefineryV2>\Ingestion
+clasp push --force   # NOTE: clasp has been flaky lately — if it errors, retry or push from another shell
 
 # From the Viewer folder:
-cd C:\Users\exact\Refinery\Viewer
+cd <RefineryV2>\Viewer
 clasp push --force
 ```
 
@@ -125,12 +128,12 @@ After clasp push, you still need to go into Apps Script and create a new deploym
 
 After any meaningful change:
 
-- [ ] Bump the version number in Code.js (e.g. v2.12 → v2.13)
+- [ ] Bump the version number on **line 1** of Code.js (e.g. Viewer v2.43 → v2.44, Ingestion v2.55 → v2.56). Line 1 is the ground-truth version reference.
 - [ ] Add a row to the Change Log in CONTEXT.md
 - [ ] Append an entry to AUDIT_TRAIL.md
 - [ ] `clasp push` in the relevant app folder
 - [ ] Deploy in Apps Script (new version or new deployment)
-- [ ] `git add -A && git commit -m "v2.13 - what changed" && git push`
+- [ ] `git add -A && git commit -m "<App> v2.XX - what changed" && git push`
 - [ ] Upload updated docs to Google Drive manually
 
 ---
@@ -139,8 +142,42 @@ After any meaningful change:
 
 | App | Version | Last changed | What changed |
 |-----|---------|-------------|--------------|
-| Ingestion | v2.12 | 2026-04-20 | Soft delete for old articles (reversible cleanup) |
-| Viewer | v2.8 | 2026-04-19 | Duplicate review queue |
+| Ingestion | v2.55 | 2026-05-20 | content_html cap raised to 150KB; relax email-table CSS (Viewer v2.39) |
+| Viewer | v2.43 | 2026-05-20 | Revert artifact rendering to iframe — fidelity over our styling |
+
+**Ground truth:** the version on **line 1** of `Ingestion/Code.js` and `Viewer/Code.js`. If this table disagrees with line 1, line 1 wins.
+
+---
+
+## Best Practices & Auto-Backup
+
+**The 3-5x-per-session rhythm.** Within any working session, the AI should commit + push to GitHub 3-5 times — after each meaningful change, not just at the end. This is your insurance against the kind of OneDrive blank-out that happened on 2026-05-23. If GitHub has it, you can always recover. If only OneDrive has it and OneDrive eats it, the work is gone.
+
+**Two sources of truth, in priority order.**
+
+1. **Line 1 of each `Code.js`** — version is whatever the file header says.
+2. **GitHub `main`** — file contents are whatever the latest commit on main says.
+
+OneDrive is a working copy, not a source of truth. `HOW_THIS_WORKS.md` and `CONTEXT.md` are narrative; if they disagree with the code or with GitHub, the code/GitHub wins.
+
+**Auto-backup health check.** A scheduled task runs daily to:
+
+1. Verify the OneDrive RefineryV2 folder still has content (catches the blank-out case)
+2. Verify the local git is in sync with `origin/main` (catches drift)
+3. Verify line-1 versions in both `Code.js` files match what GitHub has
+4. Surface anything wrong as a quick chat report you can act on
+
+If the health check fails, you'll get a clear message in Cowork telling you exactly what to fix.
+
+**Recovery playbook (if OneDrive goes blank again):**
+
+```bash
+cd "C:\Users\ThomasCala\OneDrive - NewAmsterdam Pharma B.V\NewAmsterdam Pharma\[03] AI\PKB\RefineryV2"
+git clone https://github.com/moltoboto/Refinery.git /tmp/refresh
+cp -a /tmp/refresh/. .
+```
+
+Or just ask Claude in Cowork: "Restore Refinery from GitHub." It's the recipe we used on 2026-05-23.
 
 ---
 

@@ -48,6 +48,45 @@ Claude Code (this tool) pushes via clasp. Working docs must be manually uploaded
 
 ---
 
+## SESSION HEALTH CHECK (run first — established 2026-05-23)
+
+Before any work, verify the working folder hasn't been silently emptied (this happened
+on 2026-05-23 — OneDrive kept the folder shells but the file contents were gone, so
+the Claude project loaded blank). Three quick checks:
+
+```bash
+# 1. File count and key files present
+ls Ingestion/Code.js Viewer/Code.js Viewer/index.html CONTEXT.md AUDIT_TRAIL.md
+
+# 2. Versions on line 1 of each Code.js — this is ground truth
+head -1 Ingestion/Code.js
+head -1 Viewer/Code.js
+
+# 3. Git in sync with origin/main
+git fetch origin && git status -sb
+```
+
+Expected: all five files exist, line 1 of each `Code.js` reports a version (e.g.
+`Ingestion v2.55`, `Viewer v2.43`), and `git status` shows `## main...origin/main`
+with no `behind` count.
+
+If anything fails: do NOT start editing. Restore from GitHub first:
+
+```bash
+cd "C:\Users\ThomasCala\OneDrive - NewAmsterdam Pharma B.V\NewAmsterdam Pharma\[03] AI\PKB\RefineryV2"
+# If folder is blank/missing files:
+git clone https://github.com/moltoboto/Refinery.git /tmp/refresh && cp -a /tmp/refresh/. .
+# If just behind origin:
+git pull origin main
+```
+
+Then re-run the three checks before continuing.
+
+**Also re-run these checks 3-5x per session** — on the same cadence as your commits
+to GitHub. They're 10 seconds and they catch corruption early.
+
+---
+
 ## HOW TO START A SESSION
 
 1. Read `CONTEXT.md` fully — current version, file map, gotchas, change log
@@ -68,6 +107,13 @@ Source files at C:\Users\ThomasCala\Refinery\
 - Working docs:  C:\Users\ThomasCala\Refinery\
 
 Before doing anything:
+  0. HEALTH CHECK — verify the folder isn't blank and git is current:
+       ls Ingestion/Code.js Viewer/Code.js Viewer/index.html CONTEXT.md AUDIT_TRAIL.md
+       head -1 Ingestion/Code.js   # should say Ingestion v2.XX
+       head -1 Viewer/Code.js      # should say Viewer v2.XX
+       git fetch origin && git status -sb
+     If anything's missing or git is behind, restore from GitHub before editing.
+     Re-run this check 3-5x per session on the same cadence as your commits.
   1. Read CONTEXT.md (current version + change log)
   2. Read the 2 most recent entries in AUDIT_TRAIL.md — this is the running
      project journal. Recent entries show why decisions were made, not just
