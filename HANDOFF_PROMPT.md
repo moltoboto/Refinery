@@ -51,33 +51,34 @@ Claude Code (this tool) pushes via clasp. Working docs must be manually uploaded
 ## SESSION HEALTH CHECK (run first — established 2026-05-23)
 
 Before any work, verify the working folder hasn't been silently emptied (this happened
-on 2026-05-23 — OneDrive kept the folder shells but the file contents were gone, so
-the Claude project loaded blank). Three quick checks:
+on 2026-05-23, while the working folder still lived in OneDrive — OneDrive kept the
+folder shells but the file contents were gone, so the Claude project loaded blank.
+The project was moved out of OneDrive on 2026-05-23; this check guards against any
+repeat). Three quick checks:
 
 ```bash
 # 1. File count and key files present
 ls Ingestion/Code.js Viewer/Code.js Viewer/index.html CONTEXT.md AUDIT_TRAIL.md
 
-# 2. Versions on line 1 of each Code.js — this is ground truth
-head -1 Ingestion/Code.js
-head -1 Viewer/Code.js
+# 2. Versions from each Code.js header — this is ground truth
+sed -n '4p' Ingestion/Code.js    # should say   * Version: 2.XX
+head -1 Viewer/Code.js           # should say   // REFINERY - ... - Viewer v2.XX
 
 # 3. Git in sync with origin/main
 git fetch origin && git status -sb
 ```
 
-Expected: all five files exist, line 1 of each `Code.js` reports a version (e.g.
-`Ingestion v2.55`, `Viewer v2.43`), and `git status` shows `## main...origin/main`
-with no `behind` count.
+Expected: all five files exist, the version markers report current values (Ingestion
+line 4 ` * Version: 2.XX`, Viewer line 1 `// ... Viewer v2.XX`), and `git status` shows
+`## main...origin/main` with no `behind` count.
 
 If anything fails: do NOT start editing. Restore from GitHub first:
 
-```bash
-cd "C:\Users\ThomasCala\OneDrive - NewAmsterdam Pharma B.V\NewAmsterdam Pharma\[03] AI\PKB\RefineryV2"
-# If folder is blank/missing files:
-git clone https://github.com/moltoboto/Refinery.git /tmp/refresh && cp -a /tmp/refresh/. .
+```powershell
+# If working folder is blank/missing files — re-clone fresh:
+git clone https://github.com/moltoboto/Refinery.git C:\Users\ThomasCala\Refinery
 # If just behind origin:
-git pull origin main
+cd C:\Users\ThomasCala\Refinery && git pull origin main
 ```
 
 Then re-run the three checks before continuing.
@@ -109,8 +110,8 @@ Source files at C:\Users\ThomasCala\Refinery\
 Before doing anything:
   0. HEALTH CHECK — verify the folder isn't blank and git is current:
        ls Ingestion/Code.js Viewer/Code.js Viewer/index.html CONTEXT.md AUDIT_TRAIL.md
-       head -1 Ingestion/Code.js   # should say Ingestion v2.XX
-       head -1 Viewer/Code.js      # should say Viewer v2.XX
+       sed -n '4p' Ingestion/Code.js   # should say   * Version: 2.XX
+       head -1 Viewer/Code.js          # should say   // ... Viewer v2.XX
        git fetch origin && git status -sb
      If anything's missing or git is behind, restore from GitHub before editing.
      Re-run this check 3-5x per session on the same cadence as your commits.

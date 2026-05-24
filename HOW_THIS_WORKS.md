@@ -18,8 +18,7 @@ There are two separate mini-apps that run on Google's servers:
 
 ```
 Your laptop (working folder)
-└── C:\Users\ThomasCala\OneDrive - NewAmsterdam Pharma B.V\
-        NewAmsterdam Pharma\[03] AI\PKB\RefineryV2\   ← all source code lives here
+└── C:\Users\ThomasCala\Refinery\        ← all source code lives here (moved out of OneDrive 2026-05-23)
     ├── Ingestion\                     ← the fetcher app
     │   └── Code.js                    ← the actual code (v2.55)
     ├── Viewer\                        ← the reader app
@@ -47,7 +46,7 @@ Google Drive (moltoboto account)
 └── My Drive > Refinery                ← doc backups + email artifact HTML files
 ```
 
-**Note on sync reliability:** GitHub + OneDrive are the two reliable copies. `clasp push` to Google Apps Script has been flaky — when it fails, the live app drifts behind the source. Treat Apps Script as a separate "live deployment" step, not part of the sync chain.
+**Note on sync reliability:** GitHub is the source of truth; your local working copy at `C:\Users\ThomasCala\Refinery\` is the working surface. Avoid putting the working folder inside OneDrive — sync collisions there caused a complete blank-out on 2026-05-23. `clasp push` to Google Apps Script has been flaky; when it fails the live app drifts behind the source. Treat Apps Script as a separate "live deployment" step, not part of the sync chain.
 
 ---
 
@@ -74,7 +73,7 @@ Google Drive (moltoboto account)
 ## How to Switch Between Claude Code and Codex
 
 ### Starting fresh with Claude Code (after Codex was last used)
-1. Open Claude Code in your RefineryV2 folder (OneDrive path above)
+1. Open Claude Code in `C:\Users\ThomasCala\Refinery\`
 2. Run: `git pull` — gets the latest from GitHub
 3. Start your session — I read the files directly, no uploads needed
 
@@ -111,11 +110,11 @@ Think of it like "git push, but for Google's servers instead of GitHub."
 
 ```bash
 # From the Ingestion folder:
-cd <RefineryV2>\Ingestion
+cd C:\Users\ThomasCala\Refinery\Ingestion
 clasp push --force   # NOTE: clasp has been flaky lately — if it errors, retry or push from another shell
 
 # From the Viewer folder:
-cd <RefineryV2>\Viewer
+cd C:\Users\ThomasCala\Refinery\Viewer
 clasp push --force
 ```
 
@@ -128,7 +127,7 @@ After clasp push, you still need to go into Apps Script and create a new deploym
 
 After any meaningful change:
 
-- [ ] Bump the version number on **line 1** of Code.js (e.g. Viewer v2.43 → v2.44, Ingestion v2.55 → v2.56). Line 1 is the ground-truth version reference.
+- [ ] Bump the version number in the file header — for Viewer this is **line 1** (`// REFINERY - Google Apps Script Backend - Viewer v2.XX`); for Ingestion it's **line 4** of the JSDoc block (` * Version: 2.XX`). These are the ground-truth version references.
 - [ ] Add a row to the Change Log in CONTEXT.md
 - [ ] Append an entry to AUDIT_TRAIL.md
 - [ ] `clasp push` in the relevant app folder
@@ -145,7 +144,7 @@ After any meaningful change:
 | Ingestion | v2.55 | 2026-05-20 | content_html cap raised to 150KB; relax email-table CSS (Viewer v2.39) |
 | Viewer | v2.43 | 2026-05-20 | Revert artifact rendering to iframe — fidelity over our styling |
 
-**Ground truth:** the version on **line 1** of `Ingestion/Code.js` and `Viewer/Code.js`. If this table disagrees with line 1, line 1 wins.
+**Ground truth:** the version markers in each Code.js header — line 1 of `Viewer/Code.js` (`// ... Viewer v2.XX`) and line 4 of `Ingestion/Code.js` (` * Version: 2.XX`). If this table disagrees with those markers, the code wins. The `ship.ps1` script auto-stamps this table from the code on every ship.
 
 ---
 
@@ -155,29 +154,28 @@ After any meaningful change:
 
 **Two sources of truth, in priority order.**
 
-1. **Line 1 of each `Code.js`** — version is whatever the file header says.
+1. **Header of each `Code.js`** — Viewer's version is on line 1 (`// ... Viewer v2.XX`); Ingestion's is on line 4 (` * Version: 2.XX`). Whatever those say is the version.
 2. **GitHub `main`** — file contents are whatever the latest commit on main says.
 
-OneDrive is a working copy, not a source of truth. `HOW_THIS_WORKS.md` and `CONTEXT.md` are narrative; if they disagree with the code or with GitHub, the code/GitHub wins.
+Your local `C:\Users\ThomasCala\Refinery\` is a working copy, not a source of truth. `HOW_THIS_WORKS.md` and `CONTEXT.md` are narrative; if they disagree with the code or with GitHub, the code/GitHub wins.
 
 **Auto-backup health check.** A scheduled task runs daily to:
 
-1. Verify the OneDrive RefineryV2 folder still has content (catches the blank-out case)
+1. Verify the local `C:\Users\ThomasCala\Refinery\` folder still has content (catches the blank-out case)
 2. Verify the local git is in sync with `origin/main` (catches drift)
 3. Verify line-1 versions in both `Code.js` files match what GitHub has
 4. Surface anything wrong as a quick chat report you can act on
 
 If the health check fails, you'll get a clear message in Cowork telling you exactly what to fix.
 
-**Recovery playbook (if OneDrive goes blank again):**
+**Recovery playbook (if the working folder goes blank or is lost):**
 
-```bash
-cd "C:\Users\ThomasCala\OneDrive - NewAmsterdam Pharma B.V\NewAmsterdam Pharma\[03] AI\PKB\RefineryV2"
-git clone https://github.com/moltoboto/Refinery.git /tmp/refresh
-cp -a /tmp/refresh/. .
+```powershell
+# Re-clone fresh from GitHub
+git clone https://github.com/moltoboto/Refinery.git C:\Users\ThomasCala\Refinery
 ```
 
-Or just ask Claude in Cowork: "Restore Refinery from GitHub." It's the recipe we used on 2026-05-23.
+Or just ask Claude in Cowork: "Restore Refinery from GitHub." It's the recipe we used on 2026-05-23, when the working copy lived in OneDrive and OneDrive silently emptied the folder. The move to `C:\Users\ThomasCala\Refinery\` (out of OneDrive) on 2026-05-23 is the long-term fix; this playbook is for the day GitHub-cloud rather than OneDrive becomes the failure mode.
 
 ---
 

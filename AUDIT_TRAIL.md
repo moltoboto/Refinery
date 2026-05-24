@@ -17,6 +17,27 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-05-23 - Claude Cowork (path canonicalization + ship.ps1 version-stamping hook)
+- Request: Close the three open follow-ups from the recovery session earlier today (path drift in docs, multi-account workflow, ship.ps1 version-stamping). Also: confirm whether any README was removed.
+- README check: nothing was removed. The repo has only ever had one README file, at `design/claude-design-v3/design_handoff_refinery_ipad/README.md`. `git log --all --diff-filter=D --name-only` shows no README has ever been deleted in this repo's history. There has never been a top-level README.md.
+- Canonical path decision: working folder moves OUT of OneDrive to **`C:\Users\ThomasCala\Refinery\`** — restores the original design documented in `CONTEXT.md` line 114 ("All working docs consolidated to `C:\Users\ThomasCala\Refinery\` previously split across OneDrive\Refinery and two separate clasp folders"). Drivers: OneDrive sync caused the 2026-05-23 morning blank-out; OneDrive paths contain `[03]` brackets that PowerShell `Set-Location` treats as wildcards, breaking copy-pastable doc commands; the docs already standardize on the simpler path everywhere.
+- Doc reverts (`HOW_THIS_WORKS.md`, `HANDOFF_PROMPT.md`): rolled back the OneDrive path references I'd written earlier in the session. Path is now `C:\Users\ThomasCala\Refinery\` in:
+  - "Where Everything Lives" tree block
+  - Sync-reliability note (now explicitly warns against putting working folder in OneDrive)
+  - "Starting fresh with Claude Code" step
+  - clasp push examples
+  - Best Practices "two sources of truth" list
+  - Health-check #1 ("verify the local folder still has content")
+  - Recovery playbook (now uses `git clone … C:\Users\ThomasCala\Refinery`)
+- Ground-truth correction: discovered my earlier "line 1 of Code.js is ground truth" claim was wrong for Ingestion. Ingestion uses a JSDoc block with version on **line 4** (` * Version: 2.55`); Viewer uses a one-line header on **line 1** (`// REFINERY - … - Viewer v2.43`). Both files have different conventions and both are now documented correctly in `HOW_THIS_WORKS.md` (End of Session Checklist, Current Versions footer, Best Practices "two sources of truth") and `HANDOFF_PROMPT.md` (SESSION HEALTH CHECK block + paste-block step 0). Health-check commands updated from `head -1 Ingestion/Code.js` to `sed -n '4p' Ingestion/Code.js`.
+- `ship.ps1` version-stamping hook added: between clasp push and git commit, reads both Code.js version markers and rewrites the `| App | version | date |` columns in the Current Versions table of `HOW_THIS_WORKS.md`. Leaves the "What changed" description column untouched (that still requires judgment). If parsing fails for either file, prints a warning and skips the stamp rather than committing bad data. Smoke-tested via Python regex against the actual files: correctly extracts `v2.55` and `v2.43`, would rewrite the table dates from 2026-05-20 to today. The hook closes the doc-drift gap that previously let `HOW_THIS_WORKS.md` lag the code by 40+ versions.
+- Multi-account follow-up: NOT addressed in this session. Punted until the path migration is complete — once the canonical folder is `C:\Users\ThomasCala\Refinery\` and GitHub is the source of truth, both personal and work Claude accounts can clone the same repo to their respective local paths and ride `main`. Will doc this in a future session.
+- New file: top-level `README.md` written for the GitHub repo front page — elevator-pitch length (what Refinery is, two-app structure, current versions, repo layout, working-copy locations, getting-started pointer to HANDOFF_PROMPT, shipping workflow). Complements `HOW_THIS_WORKS.md` (deep) and avoids duplication. Notes the OneDrive history and the canonical-path move.
+- Files touched: HOW_THIS_WORKS.md, HANDOFF_PROMPT.md, ship.ps1, README.md (new), AUDIT_TRAIL.md. No code changes — Ingestion v2.55 and Viewer v2.43 unchanged.
+- Deployment: none (docs + tooling only). No clasp push, no Apps Script redeploy.
+- Versions: unchanged. Ingestion v2.55, Viewer v2.43.
+- Follow-up: User to execute the migration from PowerShell — re-clone GitHub fresh to `C:\Users\ThomasCala\Refinery\`, repoint the Claude Code project at the new path, then delete the OneDrive `PKB\RefineryV2` folder. Commands provided in chat. Once migration is complete: open a new Claude session in the new folder and run the health check from `HANDOFF_PROMPT.md` to verify everything is wired correctly.
+
 ### 2026-05-23 - Claude Cowork (doc + recovery: RefineryV2 restored from GitHub after OneDrive blank-out)
 - Request: User reported the Refinery project loaded in Claude Code with the title but blank contents. Wanted to recover from one of three copies (local OneDrive, Google Drive, GitHub).
 - Root cause / context: The OneDrive working folder at `C:\Users\ThomasCala\OneDrive - NewAmsterdam Pharma B.V\NewAmsterdam Pharma\[03] AI\PKB\RefineryV2` had its file contents silently emptied — only the two folder shells (`Ingestion/` and `Viewer/`) remained, both 0 bytes. Almost certainly a OneDrive sync collision (or possibly Files-On-Demand purging local copies). The Claude project was correctly pointed at this folder; there was just nothing in it to display.
