@@ -9,3 +9,6 @@ Refinery Artifacts/
 
 # Claude Code local settings (per-machine overrides)
 .claude/settings.local.json
+
+# Node deps for the dedup eval harness (tools/dedup-eval) — reinstall with `npm install`
+node_modules/

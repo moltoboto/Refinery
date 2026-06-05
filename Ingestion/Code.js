@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.55
+ * Version: 2.56
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -516,6 +516,7 @@ function ingestFromTheOldReader() {
           // CRITICAL: add inserted article to fast dedup cache so a re-occurrence
           // later in the SAME run (e.g. same story from two feeds) is caught.
           addToFastDedupCache_(record.url, record.title);
+          addToFuzzyDedupCache_(record); // v2.56 — also feed the fuzzy candidate pool
         } else {
           stats.errors++;
         }
@@ -876,6 +877,7 @@ function processNewsletterEmail(msg) {
       // caught immediately without a Supabase round-trip. TOR has had this since v2.36;
       // Gmail was missing it — root cause of F8.
       addToFastDedupCache_(record.url, record.title);
+      addToFuzzyDedupCache_(record); // v2.56 — also feed the fuzzy candidate pool
       logToAuditTrail(record.source, record.url, record.title, duplicateResult.possibleDuplicate ? 'possible_duplicate' : 'ingested', null);
     } else {
       result.errors++;
@@ -2260,17 +2262,33 @@ var DEDUPE_STOPWORDS_ = {
 
 function dedupeTokens_(text, titleOnly) {
   var stopwords = DEDUPE_STOPWORDS_;
-  return String(text || '')
+  var minWordLen = titleOnly ? 4 : 3;
+  // v2.56 — Match alphanumeric runs but keep internal version separators so
+  // model/product identifiers survive the tokenizer instead of being split or
+  // dropped: "Opus 4.8", "M3", "27B", "LFM2.5-8B-A1B", "RTX-5090", "$80B", "70%".
+  // These are the distinguishing entities in AI / tech / finance clusters, where
+  // the old strip-to-words pass discarded every number and short token.
+  var matches = String(text || '')
     .toLowerCase()
     .replace(/[“”"']/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .split(/\s+/)
-    .filter(function(token) {
-      if (!token) return false;
-      if (/^\d+$/.test(token)) return false;
-      if (token.length < (titleOnly ? 4 : 3)) return false;
-      return !stopwords[token];
-    });
+    .match(/[a-z0-9]+(?:[.\-][a-z0-9]+)*/g) || [];
+  var tokens = [];
+  for (var i = 0; i < matches.length; i++) {
+    var token = matches[i].replace(/[.\-]/g, '');
+    if (!token || stopwords[token]) continue;
+    var hasLetter = /[a-z]/.test(token);
+    var hasDigit = /[0-9]/.test(token);
+    if (hasLetter && hasDigit) {
+      // model / version identifiers (m3, 4o, 27b, gpt5) — strong signal, keep short
+      if (token.length >= 2) tokens.push(token);
+    } else if (hasLetter) {
+      if (token.length >= minWordLen) tokens.push(token);
+    } else {
+      // bare numbers: keep 2-3 digit figures ($80B→80, 70%→70) but drop years/long ids
+      if (token.length >= 2 && token.length <= 3) tokens.push(token);
+    }
+  }
+  return tokens;
 }
 
 function cleanSummaryForDedupe_(summary) {
@@ -2399,7 +2417,6 @@ function findExactDuplicateCandidate_(record, candidates) {
   if (!candidates || !candidates.length) return null;
 
   var incomingUrl = cleanUrl(record && record.url || '');
-  var incomingSource = normalizeSourceForDedupe(record && record.source, incomingUrl);
   var incomingTitle = normalizeTitleForDedupe(record && record.title || '');
   if (!incomingTitle) return null;
 
@@ -2407,8 +2424,12 @@ function findExactDuplicateCandidate_(record, candidates) {
     var candidate = candidates[i];
     var candidateUrl = cleanUrl(candidate && candidate.url || '');
     if (incomingUrl && candidateUrl && incomingUrl === candidateUrl) return candidate;
-    if (normalizeTitleForDedupe(candidate && candidate.title || '') !== incomingTitle) continue;
-    if (normalizeSourceForDedupe(candidate && candidate.source, candidateUrl) === incomingSource) return candidate;
+    // v2.56 — An identical normalized title is a duplicate regardless of source.
+    // Article titles are specific enough that a cross-source match is a repost /
+    // syndication, not a coincidence (e.g. an NYT headline reposted to Reddit).
+    // Previously this path was source-gated, leaving a dead zone on the cold and
+    // Reddit fallbacks that the warm-cache title map (source-agnostic) does cover.
+    if (normalizeTitleForDedupe(candidate && candidate.title || '') === incomingTitle) return candidate;
   }
 
   return null;
@@ -2442,6 +2463,40 @@ function addToFastDedupCache_(url, title) {
       var norm = normalizeTitleForDedupe(title).toLowerCase();
       if (norm) DEDUP_TITLE_MAP_[norm] = true;
     }
+  } catch(e) { /* never let cache update break ingestion */ }
+}
+
+// v2.56 — Append a just-inserted article to the in-memory FUZZY candidate cache
+// so a NEAR-duplicate (same story, different headline) arriving later in the SAME
+// run is scored against it. addToFastDedupCache_ above only covers the exact
+// URL/title maps; the fuzzy path reads INGESTION_DEDUP_CACHE_, which was warmed
+// once at the start of the run and never updated — so two cross-outlet versions
+// of the same story arriving in one batch, neither yet in Supabase, could never
+// be fuzzy-matched against each other. Features are precomputed to match the
+// warm-cache rows (warmDedupCache_) and avoid per-candidate recompute downstream.
+function addToFuzzyDedupCache_(record) {
+  if (INGESTION_DEDUP_CACHE_ === null) return; // cold cache: per-article fetch already sees fresh rows
+  try {
+    var fullText = (record.title || '') + ' ' + cleanSummaryForDedupe_(record.summary || '');
+    INGESTION_DEDUP_CACHE_.push({
+      id: record.id || ('run-' + INGESTION_DEDUP_CACHE_.length),
+      source: record.source || '',
+      title: record.title || '',
+      url: record.url || '',
+      summary: record.summary || '',
+      category: record.category || '',
+      date_added: record.date_added || new Date().toISOString(),
+      status: record.status || 'unread',
+      kept: false,
+      archived: false,
+      _url:         cleanUrl(record.url || ''),
+      _titleNorm:   normalizeTitleForDedupe(record.title || ''),
+      _titleTokens: dedupeTokens_(record.title || '', true),
+      _topicTokens: dedupeTokens_(fullText, false),
+      _simhash:     simhashText_(fullText),
+      _properNouns: extractProperNouns_(record.title || ''),
+      _verbStems:   extractStemmedVerbs_(record.title || '')
+    });
   } catch(e) { /* never let cache update break ingestion */ }
 }
 

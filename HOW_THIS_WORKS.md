@@ -141,7 +141,7 @@ After any meaningful change:
 
 | App | Version | Last changed | What changed |
 |-----|---------|-------------|--------------|
-| Ingestion | v2.55 | 2026-05-20 | content_html cap raised to 150KB; relax email-table CSS (Viewer v2.39) |
+| Ingestion | v2.56 | 2026-06-04 | Dedup recall: in-run fuzzy cache append (catches same-run cross-feed near-dups); tokenizer keeps model/version IDs; identical-title match is source-agnostic |
 | Viewer | v2.43 | 2026-05-20 | Revert artifact rendering to iframe — fidelity over our styling |
 
 **Ground truth:** the version markers in each Code.js header — line 1 of `Viewer/Code.js` (`// ... Viewer v2.XX`) and line 4 of `Ingestion/Code.js` (` * Version: 2.XX`). If this table disagrees with those markers, the code wins. The `ship.ps1` script auto-stamps this table from the code on every ship.

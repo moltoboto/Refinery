@@ -17,6 +17,21 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-04 - Claude Code (Ingestion v2.56 — dedup recall + eval harness)
+- Request: The current version is still allowing duplicates through; improve the dedup service. Ship the cheap, tested wins now (Option 1) without a multi-day project.
+- Root cause / context: Built a Node eval harness (`tools/dedup-eval/`) that loads the REAL dedup functions out of `Code.js` in a sandbox and replays the 117 labeled groups in `dedup_articles.xlsx`. v2.55 title-only baseline: 76.1% pair recall, 87.8% fully-caught groups. Key finding — the fuzzy candidate cache (`INGESTION_DEDUP_CACHE_`) is warmed once per run and never updated, so two cross-outlet versions of the same story arriving in ONE batch (neither yet in Supabase) could never be fuzzy-matched against each other. That is the production leak.
+- Fix (Ingestion/Code.js):
+  - NEW `addToFuzzyDedupCache_(record)` — appends each just-inserted article (with precomputed simhash/token/noun/verb features, matching `warmDedupCache_`) to `INGESTION_DEDUP_CACHE_`. Wired into both insert sites (TOR ~line 519, Gmail ~line 880), right after the existing `addToFastDedupCache_` exact-map update.
+  - `dedupeTokens_` rewritten to preserve model/version identifiers and 2-3 digit figures (Opus 4.8, M3, 27B, $80B, 70%) instead of stripping all numbers/short tokens.
+  - `findExactDuplicateCandidate_` — identical normalized title is now a duplicate regardless of source (removed the source gate; warm-cache title map was already source-agnostic, so this only closes the cold-path + Reddit fallback dead zone).
+- Files touched: Ingestion/Code.js, CONTEXT.md (changelog), AUDIT_TRAIL.md, HOW_THIS_WORKS.md (version stamp), .gitignore, tools/dedup-eval/* (new harness), dedup_articles.xlsx (labeled eval set committed for reproducibility).
+- Validation: `node --check Ingestion/Code.js` passes. Harness title-only recall 76.1%→77.4%, fully-caught groups 87.8%→88.7%, cross-group FPs 137→139. Intra-batch fix proven via `test-intrabatch.js` (same-run near-dup NONE→0.71, routed to Duplicate review) — the group harness can't measure it because it compares every pair directly.
+- Deployment: clasp push Ingestion (push-only; runs on time triggers, picked up next run). No Apps Script redeploy needed.
+- Follow-up:
+  - PRECISION: 139 cross-group false positives are dominated by one YouTube channel (Megyn Kelly) where the channel name counts as 2 shared entities and trips the `sharedNouns>=3` tier at 0.66. Recommend discounting the source/channel name from proper-noun overlap. ~1-2 hrs, harness-measurable.
+  - TIER 3 (real recall lever): semantic cross-source dups (9-outlet Nvidia RTX Spark cluster) are unreachable by title-only lexical matching. Add an embedding per article (embedding API via UrlFetchApp) + Supabase pgvector cosine similarity fused into scoring. ~2-4 focused days; embedding cost negligible (~$0.00002/article).
+  - The `priceless-lovelace-UNSAVED.patch` (stale-branch dedup work) is now fully superseded by v2.55/v2.56 — safe to delete.
+
 ### 2026-05-23 - Claude Cowork (path canonicalization + ship.ps1 version-stamping hook)
 - Request: Close the three open follow-ups from the recovery session earlier today (path drift in docs, multi-account workflow, ship.ps1 version-stamping). Also: confirm whether any README was removed.
 - README check: nothing was removed. The repo has only ever had one README file, at `design/claude-design-v3/design_handoff_refinery_ipad/README.md`. `git log --all --diff-filter=D --name-only` shows no README has ever been deleted in this repo's history. There has never been a top-level README.md.
