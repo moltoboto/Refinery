@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.44</title>
+<title>Refinery V2.45</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -1019,7 +1019,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.44
+    Refinery V2.45
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -1035,7 +1035,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.44
+      Refinery V2.45
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -2166,21 +2166,23 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// ── v2.44 — Scroll-through article navigation (built for iPad) ────────────────
+// ── v2.44 — Scroll-through article navigation (iPad touch only) ───────────────
 // The menu bar + list can be hidden for clean reading, which left no on-screen way
 // to change articles on a touch device (N/P are keyboard-only). This turns the
 // reading pane itself into the control: at the BOTTOM edge, an extra upward drag
 // past a threshold advances to the next article; at the TOP edge, a downward drag
 // goes to the previous one. Reuses the existing navigate(±1) engine, so mark-read
-// and the navBusy guard come for free. Body is overflow:hidden (no native
-// pull-to-refresh to fight) and .reading-pane uses overscroll-behavior-y: contain.
+// (the outgoing article is marked read on advance) and the navBusy guard come for
+// free. Body is overflow:hidden (no native pull-to-refresh to fight) and
+// .reading-pane uses overscroll-behavior-y: contain.
+// v2.45 — Removed the desktop mouse-wheel path: it fired too eagerly on short
+// articles and confused mark-read on desktop. Desktop keeps normal scrolling + N/P;
+// this gesture is touch-only, which is where it's actually used (iPad).
 (function initScrollThroughNav() {
-  var EDGE = 4;             // px tolerance for treating the pane as at the top/bottom
-  var TRIGGER = 72;         // px of drag PAST the edge before we change article
-  var WHEEL_TRIGGER = 380;  // accumulated wheel delta past the edge (trackpad/mouse)
+  var EDGE = 4;       // px tolerance for treating the pane as at the top/bottom
+  var TRIGGER = 72;   // px of drag PAST the edge before we change article
 
   var startY = null, fired = false, edgeSide = 0, edgeY = 0;
-  var wheelAccum = 0, wheelCooldown = false, wheelTimer = null;
 
   function activePane() {
     if (typeof artView !== 'undefined' && artView) return null; // artifact view is an iframe — skip
@@ -2242,26 +2244,6 @@ document.addEventListener('keydown', function(e) {
   document.addEventListener('touchend', function() {
     startY = null; edgeSide = 0; hint(0);
   }, { passive: true });
-
-  // Trackpad / mouse-wheel equivalent — also lets the gesture be tried on desktop.
-  document.addEventListener('wheel', function(e) {
-    if (wheelCooldown) return;
-    var pane = activePane();
-    if (!pane) { wheelAccum = 0; return; }
-    var top = atTop(pane), bottom = atBottom(pane);
-    if (e.deltaY > 0 && bottom)        { wheelAccum = Math.max(0, wheelAccum) + e.deltaY; }
-    else if (e.deltaY < 0 && top)      { wheelAccum = Math.min(0, wheelAccum) + e.deltaY; }
-    else                               { wheelAccum = 0; }
-    if (wheelAccum >= WHEEL_TRIGGER)        { wheelAccum = 0; startCooldown(); navigate(1); }
-    else if (wheelAccum <= -WHEEL_TRIGGER)  { wheelAccum = 0; startCooldown(); navigate(-1); }
-    clearTimeout(wheelTimer);
-    wheelTimer = setTimeout(function() { wheelAccum = 0; }, 260);
-  }, { passive: true });
-
-  function startCooldown() {
-    wheelCooldown = true;
-    setTimeout(function() { wheelCooldown = false; }, 650);
-  }
 })();
 
 function navigate(dir) {

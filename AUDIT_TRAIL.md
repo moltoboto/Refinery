@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-11 - Claude Code (Viewer v2.45 — scroll-through gesture made touch-only)
+- Request: Testing v2.44 on the desktop, the wheel-driven scroll-through fired too easily ("if I scroll down it changes") and the article left behind didn't reliably show as read. Decision (user-approved): make the gesture iPad/touch-only and keep "mark read on leave".
+- Root cause: The v2.44 desktop `wheel` handler treated the reading pane as "at bottom" whenever content fit the viewport (short articles → `scrollHeight <= clientHeight`), so the very first scroll-down started accumulating toward an advance. That eager advancing on desktop is also what made mark-read look broken. The shared `navigate(1)` engine already marks the outgoing article read correctly; the touch path was never the problem.
+- Fix (Viewer/index.html): Removed the `wheel` event listener, its `wheelAccum`/`wheelCooldown`/`wheelTimer` state, `WHEEL_TRIGGER`, and the `startCooldown()` helper from `initScrollThroughNav()`. Touchstart/touchmove/touchend (the iPad gesture) and the hint pill are unchanged. Desktop returns to plain scrolling + N/P keyboard nav. Updated the module's header comment to document the v2.45 removal.
+- Files touched: Viewer/index.html (wheel removal + 3 version strings), Viewer/Code.js (header + setTitle version), CONTEXT.md (Current Version line + changelog row), AUDIT_TRAIL.md, BACKLOG.md (added stackbrief.tech reference URL to item 2b).
+- Deployment: clasp push Viewer + **Apps Script redeploy REQUIRED** (Deploy → Manage deployments → pencil → New version → Deploy).
+- Validation: Pending iPad Safari test. On desktop, confirm scrolling no longer changes articles and N/P still work. On iPad, confirm swipe-advance still works AND the article you leave is marked read (it should — `navigate(1)` handles it).
+- Follow-up: If the left-behind article still isn't marked read on iPad after this, it's a real bug in `navigate()`'s `idx === -1` early-return branch (the one dir>0 path that skips mark-read) — investigate then. TRIGGER (72px) still first-pass; tune to taste.
+
 ### 2026-06-11 - Claude Code (Viewer v2.44 — scroll-through article navigation for iPad)
 - Request: When the menu bar and article list are hidden for clean reading (focus mode) on the iPad, the article is readable but there's no easy way to move to the next article. User wanted the "index back and forth with standard scrolling" feel of another reader app.
 - Root cause / context: Article navigation already exists as `navigate(dir)` (index.html), driven only by the N/P **keyboard** shortcuts. iPad has no keyboard, and once the list pane is hidden there's no on-screen trigger — so the reader is a dead end. The reading pane (`.reading-pane`) is the scroll container (`overflow-y:auto`); `html,body` are `overflow:hidden`, so there is no native iOS pull-to-refresh to fight.
