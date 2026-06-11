@@ -17,6 +17,16 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-11 - Claude Code (Viewer v2.47 — standard-RSS mark-read; fix v2.46 "no difference")
+- Request: "Yes, I want standard RSS reader behavior." User reported that after v2.46 there was "no difference read or unread" in the Viewer — everything looked the same (grey). Also asked: if I hit P, does the (read) article still show?
+- Root cause: v2.46 landed on the target article with `selectArticle(id, true)` — marking the article you're VIEWING read on arrival. Combined with the outgoing-mark, navigating quickly turned every touched article read/grey, erasing the read/unread distinction.
+- Fix (Viewer/index.html `navigate()`): Land with `selectArticle(id, false)` again so the article in the reading pane stays unread (clear current/unread distinction). Keep marking the article you LEAVE read in both directions. Boundary case (`nextIdx` past either end) now returns early — no move, no mark. Read items stay greyed in the list this session via the existing `PRESERVED_READ_IDS` (so P navigates back to a just-read article — answer to the user's question: yes, it still shows), and clear on refresh for a clean unread queue.
+- Behavior summary: current article = unread (shown in pane); articles you've moved past = read/grey but still in the list this session; P returns to them; unread count drops as you read; refresh leaves only unread. Standard RSS feel.
+- Note for future: the read/unread visual cues are `.card.read { opacity:0.6 }` + normal-weight title + no unread dot (unread cards get a 5px `.unread-indicator`). If the user still finds read vs unread too subtle on iPad, strengthen these (stronger dim, keep/restore the unread dot prominence) rather than touching the mark logic again.
+- Files touched: Viewer/index.html (`navigate()` + 3 version strings), Viewer/Code.js (header + setTitle), CONTEXT.md (version line + changelog), AUDIT_TRAIL.md.
+- Deployment: clasp push Viewer + **Apps Script redeploy REQUIRED**.
+- Validation: Pending user test. Check: reading pane shows current as unread; pressing N greys the one you left and the unread count drops; P returns to the greyed article; refresh leaves a clean unread list.
+
 ### 2026-06-11 - Claude Code (Viewer v2.46 — fix navigate() mark-read for N/P and scroll-through)
 - Request: "I have the same issue with N/P — if I'm in the view window and press N or P, while it cycles back and forth it does not mark the articles read." Confirmed not gesture-specific; it's the shared `navigate()` engine.
 - Root cause (Viewer/index.html `navigate()`): (1) the mark-read block was gated behind `if (dir > 0)`, so **P (previous) never marked anything**; (2) navigation landed on the target article with `selectArticle(id, false)`, so the article **currently shown in the reading pane was never marked read** — only the one you left, and only when going forward. Clicking a card uses `autoMarkRead=true` (marks on open), hence the inconsistency the user felt. My earlier v2.45 recommendation to "keep mark-on-leave" was the wrong call — that behavior was the actual problem.

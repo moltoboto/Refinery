@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.46</title>
+<title>Refinery V2.47</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -1019,7 +1019,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.46
+    Refinery V2.47
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -1035,7 +1035,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.46
+      Refinery V2.47
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -2277,13 +2277,20 @@ function navigate(dir) {
     var idx = filtered.findIndex(function(a) { return a.id === selectedId; });
     if (idx === -1) {
       idx = dir > 0 ? 0 : filtered.length - 1;
-      selectArticle(filtered[idx].id, true);
+      selectArticle(filtered[idx].id, false);
       scrollCardIntoView(filtered[idx].id);
       return;
     }
 
-    // v2.46 — Mark the article you're LEAVING read, in BOTH directions (was N-only,
-    // which is why P never marked and the article in view stayed unread).
+    var nextIdx = idx + dir;
+    if (nextIdx < 0 || nextIdx >= filtered.length) return;  // at an end — don't move or mark
+
+    // v2.47 — Standard RSS feel. Mark the article you're LEAVING read (both N and P);
+    // the article you LAND ON stays unread, so the reading pane always shows your
+    // current item and there's a clear read/unread difference. (v2.46 also marked the
+    // landed article, which turned everything grey — "no difference read/unread".)
+    // The just-read article is kept greyed in the list this session (preserveVisible),
+    // so P still returns to it; read items clear on refresh for a clean unread queue.
     var current = ARTICLES.find(function(a) { return a.id === selectedId; });
     if (current && !current.kept && current.status !== 'read') {
       markArticleReadLocal(current, true);
@@ -2292,17 +2299,12 @@ function navigate(dir) {
       applyFilters();
       idx = filtered.findIndex(function(a) { return a.id === selectedId; });
       if (idx === -1) idx = dir > 0 ? 0 : filtered.length - 1;
+      nextIdx = idx + dir;
+      if (nextIdx < 0) nextIdx = 0;
+      if (nextIdx >= filtered.length) nextIdx = filtered.length - 1;
     }
 
-    var nextIdx = idx + dir;
-    if (nextIdx < 0) nextIdx = 0;
-    if (nextIdx >= filtered.length) nextIdx = filtered.length - 1;
-
-    // v2.46 — Land with autoMarkRead=true so the article now in the reading pane is
-    // marked read too (matches click behavior). When clamped at either end
-    // (nextIdx === idx) this still re-selects the current article, so the very
-    // last/first article also gets marked.
-    selectArticle(filtered[nextIdx].id, true);
+    selectArticle(filtered[nextIdx].id, false);
     scrollCardIntoView(filtered[nextIdx].id);
   } finally {
     setTimeout(function() { navBusy = false; }, 0);
