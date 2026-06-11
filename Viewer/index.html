@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.43</title>
+<title>Refinery V2.44</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -469,10 +469,24 @@ body.nav-iconic .nav-icon {
 .reading-pane {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior-y: contain;   /* v2.44 — keep overscroll inside the pane so scroll-through nav can read the edges */
   background: var(--surface);
   display: flex;
   flex-direction: column;
 }
+
+/* v2.44 — transient hint shown while overscrolling at an edge for scroll-through nav (iPad) */
+#scrollNavHint {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  z-index: 60; pointer-events: none;
+  background: var(--accent); color: #fff;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
+  padding: 6px 14px; border-radius: 999px;
+  opacity: 0; transition: opacity 0.1s ease;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.28);
+}
+#scrollNavHint.at-bottom { bottom: 20px; }
+#scrollNavHint.at-top    { top: 20px; }
 
 /* ── Layout toggle states (persisted in localStorage) ──────────────────────
    - body.no-reading-pane → reading pane hidden, list-pane fills the space
@@ -1005,7 +1019,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.43
+    Refinery V2.44
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -1021,7 +1035,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.43
+      Refinery V2.44
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1116,6 +1130,9 @@ kbd {
     <div class="kb-item"><kbd>K</kbd> Keep</div>    <div class="kb-item"><kbd>Enter</kbd> Open URL</div>
     <div class="kb-item"><kbd>M</kbd> Toggle read</div>
   </div>
+
+  <!-- v2.44 — transient overscroll hint for scroll-through article navigation (iPad) -->
+  <div id="scrollNavHint"></div>
 
 </div>
 
@@ -2148,6 +2165,104 @@ document.addEventListener('keydown', function(e) {
       break;
   }
 });
+
+// ── v2.44 — Scroll-through article navigation (built for iPad) ────────────────
+// The menu bar + list can be hidden for clean reading, which left no on-screen way
+// to change articles on a touch device (N/P are keyboard-only). This turns the
+// reading pane itself into the control: at the BOTTOM edge, an extra upward drag
+// past a threshold advances to the next article; at the TOP edge, a downward drag
+// goes to the previous one. Reuses the existing navigate(±1) engine, so mark-read
+// and the navBusy guard come for free. Body is overflow:hidden (no native
+// pull-to-refresh to fight) and .reading-pane uses overscroll-behavior-y: contain.
+(function initScrollThroughNav() {
+  var EDGE = 4;             // px tolerance for treating the pane as at the top/bottom
+  var TRIGGER = 72;         // px of drag PAST the edge before we change article
+  var WHEEL_TRIGGER = 380;  // accumulated wheel delta past the edge (trackpad/mouse)
+
+  var startY = null, fired = false, edgeSide = 0, edgeY = 0;
+  var wheelAccum = 0, wheelCooldown = false, wheelTimer = null;
+
+  function activePane() {
+    if (typeof artView !== 'undefined' && artView) return null; // artifact view is an iframe — skip
+    var pane = document.getElementById('readingPane');
+    if (!pane) return null;
+    var content = document.getElementById('readingContent');
+    if (!content || content.style.display === 'none') return null; // nothing open to scroll
+    return pane;
+  }
+  function atTop(p)    { return p.scrollTop <= EDGE; }
+  function atBottom(p) { return p.scrollTop + p.clientHeight >= p.scrollHeight - EDGE; }
+
+  function hint(side, progress) {
+    var el = document.getElementById('scrollNavHint');
+    if (!el) return;
+    if (!side) { el.style.opacity = '0'; return; }
+    el.className = side > 0 ? 'at-bottom' : 'at-top';
+    el.textContent = side > 0 ? 'Keep pulling for next ↑' : 'Keep pulling for previous ↓';
+    el.style.opacity = String(Math.min(1, Math.max(0.2, progress)));
+  }
+
+  document.addEventListener('touchstart', function(e) {
+    var pane = activePane();
+    if (!pane || e.touches.length !== 1 || !pane.contains(e.target)) { startY = null; return; }
+    startY = e.touches[0].clientY;
+    fired = false; edgeSide = 0; edgeY = startY;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (startY === null || fired) return;
+    var pane = activePane();
+    if (!pane) { startY = null; return; }
+    var y = e.touches[0].clientY;
+    var top = atTop(pane), bottom = atBottom(pane);
+
+    if (top && bottom) {
+      // article shorter than the pane (both edges at once): decide by drag direction
+      var d = y - startY;
+      hint(d < 0 ? 1 : (d > 0 ? -1 : 0), Math.abs(d) / TRIGGER);
+      if (d <= -TRIGGER)      { fired = true; hint(0); navigate(1); }
+      else if (d >= TRIGGER)  { fired = true; hint(0); navigate(-1); }
+      return;
+    }
+    if (bottom) {
+      if (edgeSide !== 1) { edgeSide = 1; edgeY = y; }   // anchor at the moment we reach the edge
+      var over = edgeY - y;                              // dragging up past the bottom
+      hint(over > 0 ? 1 : 0, over / TRIGGER);
+      if (over >= TRIGGER) { fired = true; hint(0); navigate(1); }
+    } else if (top) {
+      if (edgeSide !== -1) { edgeSide = -1; edgeY = y; }
+      var overP = y - edgeY;                             // dragging down past the top
+      hint(overP > 0 ? -1 : 0, overP / TRIGGER);
+      if (overP >= TRIGGER) { fired = true; hint(0); navigate(-1); }
+    } else {
+      edgeSide = 0; hint(0);
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', function() {
+    startY = null; edgeSide = 0; hint(0);
+  }, { passive: true });
+
+  // Trackpad / mouse-wheel equivalent — also lets the gesture be tried on desktop.
+  document.addEventListener('wheel', function(e) {
+    if (wheelCooldown) return;
+    var pane = activePane();
+    if (!pane) { wheelAccum = 0; return; }
+    var top = atTop(pane), bottom = atBottom(pane);
+    if (e.deltaY > 0 && bottom)        { wheelAccum = Math.max(0, wheelAccum) + e.deltaY; }
+    else if (e.deltaY < 0 && top)      { wheelAccum = Math.min(0, wheelAccum) + e.deltaY; }
+    else                               { wheelAccum = 0; }
+    if (wheelAccum >= WHEEL_TRIGGER)        { wheelAccum = 0; startCooldown(); navigate(1); }
+    else if (wheelAccum <= -WHEEL_TRIGGER)  { wheelAccum = 0; startCooldown(); navigate(-1); }
+    clearTimeout(wheelTimer);
+    wheelTimer = setTimeout(function() { wheelAccum = 0; }, 260);
+  }, { passive: true });
+
+  function startCooldown() {
+    wheelCooldown = true;
+    setTimeout(function() { wheelCooldown = false; }, 650);
+  }
+})();
 
 function navigate(dir) {
   if (navBusy) return;

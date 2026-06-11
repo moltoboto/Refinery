@@ -17,6 +17,21 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-11 - Claude Code (Viewer v2.44 — scroll-through article navigation for iPad)
+- Request: When the menu bar and article list are hidden for clean reading (focus mode) on the iPad, the article is readable but there's no easy way to move to the next article. User wanted the "index back and forth with standard scrolling" feel of another reader app.
+- Root cause / context: Article navigation already exists as `navigate(dir)` (index.html), driven only by the N/P **keyboard** shortcuts. iPad has no keyboard, and once the list pane is hidden there's no on-screen trigger — so the reader is a dead end. The reading pane (`.reading-pane`) is the scroll container (`overflow-y:auto`); `html,body` are `overflow:hidden`, so there is no native iOS pull-to-refresh to fight.
+- Fix (Viewer/index.html):
+  - NEW self-contained `initScrollThroughNav()` IIFE (inserted just above `navigate()`). Touch handlers on `document` (survive the `#mainArea` innerHTML re-renders) detect the reading pane's edges: at the BOTTOM, an upward drag past ~72px fires `navigate(1)` (next + auto-mark-read); at the TOP, a downward drag past ~72px fires `navigate(-1)` (previous). Overscroll is anchored at the moment the edge is reached, so reaching the bottom in one long swipe doesn't prematurely jump. Short-article case (both edges at once) decided by drag direction.
+  - Reuses the existing `navigate(±1)` engine untouched — `navBusy` guard + mark-on-advance inherited. `activePane()` skips artifact view (iframe) and returns null when nothing is open.
+  - Added a trackpad/mouse `wheel` handler (accumulate past edge → advance, 650ms cooldown) so the gesture is also usable/testable on desktop.
+  - Transient hint pill `#scrollNavHint` ("Keep pulling for next ↑ / previous ↓") fades in with overscroll progress; CSS added. `.reading-pane` got `overscroll-behavior-y: contain`.
+- Files touched: Viewer/index.html (feature + 3 version strings), Viewer/Code.js (header + setTitle version), CONTEXT.md (Current Version line + changelog row; also corrected stale Ingestion v2.55→v2.56 on the version line), AUDIT_TRAIL.md.
+- Deployment: clasp push Viewer + **Apps Script redeploy REQUIRED** (Deploy → Manage deployments → pencil → New version → Deploy) — pushed code is not live until redeployed.
+- Validation: Pending on-device iPad Safari test by user. Thresholds (TRIGGER 72px / WHEEL_TRIGGER 380 / cooldown 650ms) are first-pass and may need tuning to match the desired feel.
+- Follow-up:
+  - User to test on iPad and report feel; tune `TRIGGER` / hint wording if needed.
+  - Possible future polish: haptic-style snap or a progress arc instead of the text pill; optional setting to disable if it interferes with text selection.
+
 ### 2026-06-04 - Claude Code (Ingestion v2.56 — dedup recall + eval harness)
 - Request: The current version is still allowing duplicates through; improve the dedup service. Ship the cheap, tested wins now (Option 1) without a multi-day project.
 - Root cause / context: Built a Node eval harness (`tools/dedup-eval/`) that loads the REAL dedup functions out of `Code.js` in a sandbox and replays the 117 labeled groups in `dedup_articles.xlsx`. v2.55 title-only baseline: 76.1% pair recall, 87.8% fully-caught groups. Key finding — the fuzzy candidate cache (`INGESTION_DEDUP_CACHE_`) is warmed once per run and never updated, so two cross-outlet versions of the same story arriving in ONE batch (neither yet in Supabase) could never be fuzzy-matched against each other. That is the production leak.
