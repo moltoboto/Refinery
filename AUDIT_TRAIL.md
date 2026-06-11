@@ -61,6 +61,18 @@ This file is the running session-level audit trail for Refinery work.
   - User to test on iPad and report feel; tune `TRIGGER` / hint wording if needed.
   - Possible future polish: haptic-style snap or a progress arc instead of the text pill; optional setting to disable if it interferes with text selection.
 
+### 2026-06-11 - Claude Code (session start — GitHub TLS fix, worktree cleanup, skill hardening)
+- Request: "Review the audit trail and make sure we are on the correct Refinery version" before making changes; then "I need a clean way to do this — this has happened the last three times." (Recurring start-of-session friction: wrong version / worktree / can't sync.)
+- Context / root cause: (1) `git fetch`/`push` to GitHub failed with `CRYPT_E_NO_REVOCATION_CHECK`, then `self-signed certificate in certificate chain` — this machine is behind a corporate TLS-inspection proxy whose root CA git wasn't trusting. (2) The session was running inside a `…\.claude\worktrees\…` copy; investigation found NO config creates worktrees — the **Claude Code desktop app creates one for every session automatically** (no toggle). User uses the desktop app only (not the CLI), so every Refinery session will be a worktree.
+- What changed:
+  - **GitHub sync fixed (permanent):** set globally `http.sslBackend=schannel` + `http.schannelCheckRevoke=false` (use the Windows cert store, skip the unreachable revocation server). Confirmed local `main` == `origin/main` at `c04afcd` at the time.
+  - **Worktree cleanup:** removed the stale `festive-mirzakhani-7f5603` worktree (no uncommitted work; ancestor of HEAD). The current session's worktree can't be removed until the session closes; operated against the canonical folder `C:\Users\ThomasCala\Refinery` via absolute paths throughout.
+  - **Skill hardening (global `refinery` skill):** documented the one-time cert `git config`, put the working flags in the freshness-check `fetch` command, and recorded the desktop-app-always-creates-a-worktree reality with the "work against the canonical folder via absolute paths; don't suggest the CLI" operating rule. Wrote two memory files (desktop-worktree mode; reads-on-iPad).
+  - Version sanity at session start: Ingestion v2.56, Viewer v2.43 — correct, on `main`.
+- Files touched: none in this repo (machine-level `git config`; `C:\Users\ThomasCala\.claude\skills\refinery\SKILL.md` and memory files are outside the repo). Worktree removal is a git operation, not a file edit.
+- Status: done. Cert fix is permanent for all repos on this machine.
+- Follow-up: stale `priceless-lovelace-UNSAVED.patch` + untracked `dedup_examples.xlsx` still sitting in the canonical folder (audit notes the patch is safe to delete). The four Viewer changes that followed this session (v2.44→v2.47) are logged in their own entries above.
+
 ### 2026-06-04 - Claude Code (Ingestion v2.56 — dedup recall + eval harness)
 - Request: The current version is still allowing duplicates through; improve the dedup service. Ship the cheap, tested wins now (Option 1) without a multi-day project.
 - Root cause / context: Built a Node eval harness (`tools/dedup-eval/`) that loads the REAL dedup functions out of `Code.js` in a sandbox and replays the 117 labeled groups in `dedup_articles.xlsx`. v2.55 title-only baseline: 76.1% pair recall, 87.8% fully-caught groups. Key finding — the fuzzy candidate cache (`INGESTION_DEDUP_CACHE_`) is warmed once per run and never updated, so two cross-outlet versions of the same story arriving in ONE batch (neither yet in Supabase) could never be fuzzy-matched against each other. That is the production leak.
