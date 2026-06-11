@@ -17,6 +17,16 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-11 - Claude Code (Viewer v2.46 — fix navigate() mark-read for N/P and scroll-through)
+- Request: "I have the same issue with N/P — if I'm in the view window and press N or P, while it cycles back and forth it does not mark the articles read." Confirmed not gesture-specific; it's the shared `navigate()` engine.
+- Root cause (Viewer/index.html `navigate()`): (1) the mark-read block was gated behind `if (dir > 0)`, so **P (previous) never marked anything**; (2) navigation landed on the target article with `selectArticle(id, false)`, so the article **currently shown in the reading pane was never marked read** — only the one you left, and only when going forward. Clicking a card uses `autoMarkRead=true` (marks on open), hence the inconsistency the user felt. My earlier v2.45 recommendation to "keep mark-on-leave" was the wrong call — that behavior was the actual problem.
+- Fix: Mark the outgoing article read in **both** directions (removed the `dir > 0` gate). Land with `selectArticle(targetId, true)` so the article now in view is marked read (consistent with click). Dropped the `if (nextIdx === idx) return;` early-out so that at either end the current article is still re-selected and marked (covers the last/first article). Recompute idx via `selectedId` after the re-filter, with an `idx === -1` guard.
+- Net behavior: every article you view via N/P or the iPad scroll-through gesture is marked read (and persisted via `serverMarkRead`). This is intentionally aggressive marking — matches the user's expectation that navigating = reading.
+- Files touched: Viewer/index.html (`navigate()` + 3 version strings), Viewer/Code.js (header + setTitle), CONTEXT.md (version line + changelog), AUDIT_TRAIL.md.
+- Deployment: clasp push Viewer + **Apps Script redeploy REQUIRED**.
+- Validation: Pending user test on iPad + desktop. Check: pressing N and P both dim the article and drop the unread count; the article in the reading pane shows as read; reload confirms server persistence.
+- Follow-up: If "mark everything I pass" turns out too aggressive (e.g. skipping past unwanted articles marks them read), consider a dwell timer or marking only on dwell. kb-bar label still says "N Next / mark read" — could update "P" label to note it now marks too.
+
 ### 2026-06-11 - Claude Code (Viewer v2.45 — scroll-through gesture made touch-only)
 - Request: Testing v2.44 on the desktop, the wheel-driven scroll-through fired too easily ("if I scroll down it changes") and the article left behind didn't reliably show as read. Decision (user-approved): make the gesture iPad/touch-only and keep "mark read on leave".
 - Root cause: The v2.44 desktop `wheel` handler treated the reading pane as "at bottom" whenever content fit the viewport (short articles → `scrollHeight <= clientHeight`), so the very first scroll-down started accumulating toward an advance. That eager advancing on desktop is also what made mark-read look broken. The shared `navigate(1)` engine already marks the outgoing article read correctly; the touch path was never the problem.

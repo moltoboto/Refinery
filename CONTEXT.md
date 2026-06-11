@@ -11,7 +11,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `BACKLOG.md` - operational queue of unscheduled work, held items, and horizon ideas
 
 ## Current Version
-Ingestion: v2.56 | Viewer: v2.45
+Ingestion: v2.56 | Viewer: v2.46
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -127,6 +127,7 @@ Items that used to live in this section are now tracked there. Don't duplicate �
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.46 | 2026-06-11 | Claude Code | Fixed `navigate()` mark-read. Bug: it marked the **outgoing** article read only on `N` (the `if (dir > 0)` gate), so `P` never marked anything and — because it landed on the next article with `autoMarkRead=false` — the article actually showing in the reading pane was always left unread. Now: mark the article you're leaving read in **both** directions, and land with `autoMarkRead=true` so the article currently in view is marked read (matches click behavior). Clamped-at-end re-selects, so the first/last article also gets marked. Affects keyboard N/P and the iPad scroll-through (both call `navigate()`). |
 | Viewer v2.45 | 2026-06-11 | Claude Code | Made the v2.44 scroll-through gesture **touch-only** — removed the desktop mouse-wheel path (`wheel` listener + accumulator/cooldown). On desktop it fired too eagerly on short articles (pane is "at bottom" from the start, so any scroll-down advanced) and muddied mark-read; desktop now keeps normal scrolling + N/P. The iPad touch gesture and mark-on-leave behavior are unchanged. |
 | Viewer v2.44 | 2026-06-11 | Claude Code | Scroll-through article navigation, built for iPad. Hiding the menu bar + list pane for clean reading left no on-screen way to change articles on touch (N/P are keyboard-only). The reading pane is now the control: at the bottom edge an extra upward drag past ~72px advances to the next article; at the top edge a downward drag goes to previous. Reuses the existing `navigate(±1)` engine, so mark-read + the `navBusy` guard are inherited. Added `overscroll-behavior-y:contain` on `.reading-pane`, a transient "keep pulling" hint pill (`#scrollNavHint`), and a trackpad/wheel equivalent so it's testable on desktop. No change to `navigate()` logic or article ordering |
 | Ingestion v2.56 | 2026-06-04 | Claude Code | Dedup recall fixes. NEW `addToFuzzyDedupCache_` feeds each just-inserted article into the in-run fuzzy candidate pool, so same-run cross-feed near-duplicates are caught — previously `INGESTION_DEDUP_CACHE_` was warmed once at run start and never updated, a confirmed leak (proven: a same-run near-dup scored NONE→0.71). Tokenizer (`dedupeTokens_`) now preserves model/version IDs + short figures (Opus 4.8, 27B, $80B, 70%) instead of discarding them. `findExactDuplicateCandidate_` now treats an identical normalized title as a duplicate regardless of source (closes the cold-path/Reddit dead zone the warm-cache title map already covered). Added `tools/dedup-eval/` harness replaying 117 labeled groups from `dedup_articles.xlsx`; title-only pair recall 76.1%→77.4%. Remaining misses are semantic cross-source dups (e.g. 9-outlet Nvidia cluster) — needs embeddings (pgvector), tracked as Tier 3 |
