@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.56
+ * Version: 2.57
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -52,7 +52,8 @@ var CONFIG = {
 
   DEDUPE_REVIEW: {
     WINDOW_DAYS: 30,    // 30-day window for the in-memory dedup cache
-    MAX_CANDIDATES: 500, // 500 is enough now that mark-read works (v2.35); was 2000 during backlog
+    MAX_CANDIDATES: 500, // fuzzy candidate cap (features precomputed for each — keep bounded for speed)
+    MAX_EXACT_KEYS: 3000, // v2.57 — cheap url/title-only map covers a much wider newest-first window so recently-ingested exact dups are caught even past the fuzzy cap
     MIN_SCORE: 0.55,    // Lowered from 0.66 in v2.45 — better recall on same-topic articles with different headlines
     MIN_SHARED_TOKENS: 3
   },
@@ -519,6 +520,13 @@ function ingestFromTheOldReader() {
           addToFuzzyDedupCache_(record); // v2.56 — also feed the fuzzy candidate pool
         } else {
           stats.errors++;
+          if (insertResult.transient) {
+            // v2.57 — a transient insert failure (429/5xx) means Supabase is
+            // struggling; stop now (item stays unread → retried) rather than
+            // grinding the rest of the batch into failures.
+            Logger.log("TOR: stopping early due to transient Supabase insert failure");
+            break;
+          }
         }
       } catch(e) {
         Logger.log("TOR article error [" + i + "]: " + e);
@@ -632,6 +640,10 @@ function getTORUnreadArticles() {
 // Used for filtering and dedup. Only genuinely new articles proceed to phase 2.
 function mapTORArticleBasic_(article) {
   var pubDate = new Date(article.published * 1000);
+  // v2.57 — a missing/NaN `published` makes pubDate.toISOString() (below) throw,
+  // which counts the article as an error and never marks it read — so it returns
+  // and re-errors every run. Fall back to now.
+  if (isNaN(pubDate.getTime())) pubDate = new Date();
   var url = cleanUrl(
     (article.canonical && article.canonical[0] && article.canonical[0].href) ||
     (article.alternate  && article.alternate[0]  && article.alternate[0].href) || ''
@@ -771,10 +783,21 @@ function processNewsletterTier(label) {
   var threads = GmailApp.search(query, 0, CONFIG.GMAIL.MAX_EMAILS_PER_RUN);
   Logger.log("Tier 1: " + threads.length + " threads");
 
+  var aborted = false;
   threads.forEach(function(thread) {
     thread.getMessages().forEach(function(msg) {
-      if (!msg.isUnread()) return;
-      var result = processNewsletterEmail(msg);
+      if (aborted || !msg.isUnread()) return;
+      var result;
+      try {
+        result = processNewsletterEmail(msg);
+      } catch(e) {
+        // v2.57 — isolate a poison message so it can't abort the whole Gmail phase
+        // (previously one throw aborted all remaining tier-1 threads AND tier 2).
+        // Left unread → retried next run.
+        Logger.log("Tier 1 message error (skipped, left unread): " + e);
+        stats.emailsProcessed++;
+        return;
+      }
       stats.emailsProcessed++;
       stats.articlesExtracted  += result.articlesExtracted;
       stats.articlesInserted   += result.articlesInserted;
@@ -783,13 +806,19 @@ function processNewsletterTier(label) {
         msg.markRead();
         thread.addLabel(label);
       }
+      if (result.transient) {
+        // v2.57 — Supabase failing transiently; stop touching more messages (they
+        // stay unread and retry next run) instead of grinding through the inbox.
+        Logger.log("Tier 1: aborting on transient Supabase error");
+        aborted = true;
+      }
     });
   });
   return stats;
 }
 
 function processNewsletterEmail(msg) {
-  var result = {articlesExtracted:0, articlesInserted:0, duplicatesSkipped:0, completeIssuesSaved:0, errors:0, canMarkRead:true};
+  var result = {articlesExtracted:0, articlesInserted:0, duplicatesSkipped:0, completeIssuesSaved:0, errors:0, canMarkRead:true, transient:false};
   var from    = msg.getFrom();
   var subject = msg.getSubject();
   var date    = msg.getDate();
@@ -855,6 +884,7 @@ function processNewsletterEmail(msg) {
     if (duplicateResult.error) {
       result.errors++;
       result.canMarkRead = false;
+      if (duplicateResult.error === 'temporary') result.transient = true;
       return;
     }
     // v2.47 — On exact duplicate (URL or title), SKIP the insert entirely and
@@ -882,6 +912,7 @@ function processNewsletterEmail(msg) {
     } else {
       result.errors++;
       result.canMarkRead = false;
+      if (insertResult.transient) result.transient = true;
     }
   });
   return result;
@@ -1175,9 +1206,11 @@ function processInboxTier(label) {
   var threads  = GmailApp.search('in:inbox is:unread ' + excludes, 0, CONFIG.GMAIL.MAX_EMAILS_PER_RUN);
   Logger.log("Tier 2: " + threads.length + " threads");
 
+  var aborted = false;
   threads.forEach(function(thread) {
     thread.getMessages().forEach(function(msg) {
-      if (!msg.isUnread()) return;
+      if (aborted || !msg.isUnread()) return;
+      try {
       var msgId   = msg.getId();
       var subject = msg.getSubject();
       var from    = msg.getFrom();
@@ -1216,6 +1249,7 @@ function processInboxTier(label) {
       var duplicateResult = reviewDuplicateRecord_(record);
       if (duplicateResult.error) {
         Logger.log('Inbox duplicate review failed: ' + duplicateResult.error);
+        if (duplicateResult.error === 'temporary') aborted = true; // v2.57 — stop on transient
         return;
       }
       if (duplicateResult.duplicate) {
@@ -1246,6 +1280,13 @@ function processInboxTier(label) {
           msg.markRead();
           thread.addLabel(label);
         }
+      } else if (insertResult.transient) {
+        aborted = true; // v2.57 — stop the inbox tier on a transient Supabase failure
+      }
+      } catch(e) {
+        // v2.57 — isolate a poison message so one throw can't abort the rest of
+        // tier 2; left unread → retried next run.
+        Logger.log("Tier 2 message error (skipped, left unread): " + e);
       }
     });
   });
@@ -1282,7 +1323,7 @@ function insertToSupabase(record) {
         url: record && record.url,
         category: record && record.category
       }).substring(0,500));
-      return { ok:false, transient:isTransientSupabaseError_(resp.getContentText()) };
+      return { ok:false, transient:isTransientHttpStatus_(resp.getResponseCode()) };
     }
     return { ok:true };
   } catch(e) {
@@ -1821,6 +1862,11 @@ function reviewDuplicateRecord_(record) {
         + '&select=id,source,title,url,summary,category,date_added,status,kept,archived&limit=1',
         {headers: headers, muteHttpExceptions: true}
       );
+      // v2.57 — a non-200 here used to parse as "no rows" → "not a duplicate" → insert.
+      // Surface it as an error so the caller can stop (transient) or skip (permanent).
+      if (resp.getResponseCode() !== 200) {
+        return { duplicate:false, possibleDuplicate:false, error: isTransientHttpStatus_(resp.getResponseCode()) ? 'temporary' : 'permanent' };
+      }
       var exactUrlRows = JSON.parse(resp.getContentText()) || [];
       if (exactUrlRows.length > 0) {
         return {
@@ -1845,6 +1891,9 @@ function reviewDuplicateRecord_(record) {
         + '&select=id,source,title,url,summary,category,date_added,status,kept,archived&limit=25',
         {headers: headers, muteHttpExceptions: true}
       );
+      if (resp.getResponseCode() !== 200) {
+        return { duplicate:false, possibleDuplicate:false, error: isTransientHttpStatus_(resp.getResponseCode()) ? 'temporary' : 'permanent' };
+      }
       var exactTitleRows = JSON.parse(resp.getContentText()) || [];
       var exactTitleMatch = findExactDuplicateCandidate_(record, exactTitleRows);
       if (exactTitleMatch) {
@@ -1868,6 +1917,9 @@ function reviewDuplicateRecord_(record) {
           CONFIG.SUPABASE_URL + '/rest/v1/articles?select=id,source,title,url,summary,category,date_added,status,kept,archived&order=date_added.desc&limit=250',
           {headers: headers, muteHttpExceptions: true}
         );
+        if (resp.getResponseCode() !== 200) {
+          return { duplicate:false, possibleDuplicate:false, error: isTransientHttpStatus_(resp.getResponseCode()) ? 'temporary' : 'permanent' };
+        }
         redditCandidates = JSON.parse(resp.getContentText()) || [];
       }
       var redditMatch = findExactDuplicateCandidate_(record, redditCandidates);
@@ -1915,7 +1967,7 @@ function findPossibleDuplicateCandidate_(record, headers) {
         + '/rest/v1/articles?select=id,source,title,url,summary,category,date_added,status,kept,archived'
         + '&kept=eq.false&status=neq.deleted'
         + '&date_added=gte.' + encodeURIComponent(sinceIso)
-        + '&order=date_added.asc'
+        + '&order=date_added.desc'
         + '&limit=' + encodeURIComponent(maxCandidates),
       { headers: headers, muteHttpExceptions: true }
     );
@@ -2449,6 +2501,15 @@ function isTransientSupabaseError_(errorLike) {
   return /Address unavailable|timed out|Exception:\s*Service invoked too many times|Exception:\s*Request failed/i.test(text);
 }
 
+// v2.57 — Classify by HTTP status. Because all Supabase fetches use
+// muteHttpExceptions, a 429/5xx never throws — it returns a response we have to
+// inspect. 429 (rate limit), 408 (timeout) and 5xx are transient (worth an early
+// stop + retry next run); other non-2xx are treated as permanent.
+function isTransientHttpStatus_(code) {
+  code = parseInt(code, 10);
+  return code === 429 || code === 408 || (code >= 500 && code <= 599);
+}
+
 // Add a just-inserted (or just-confirmed-duplicate) article to the in-memory
 // fast dedup maps so any later occurrence in the same run is caught immediately
 // without a Supabase round-trip. Critical for cases where the same story shows
@@ -2506,17 +2567,34 @@ function warmDedupCache_(headers) {
   var windowDays = Math.max(1, parseInt(CONFIG.DEDUPE_REVIEW.WINDOW_DAYS, 10) || 7);
   var sinceIso = new Date(Date.now() - (windowDays * 24 * 60 * 60 * 1000)).toISOString();
   var maxCandidates = Math.max(25, parseInt(CONFIG.DEDUPE_REVIEW.MAX_CANDIDATES, 10) || 500);
+  var maxExactKeys  = Math.max(maxCandidates, parseInt(CONFIG.DEDUPE_REVIEW.MAX_EXACT_KEYS, 10) || 3000);
   try {
+    // v2.57 — Fuzzy candidate set: the NEWEST rows in the window (was order=asc,
+    // which loaded the OLDEST 500 and left recently-ingested articles out of the
+    // maps entirely — so a re-presented recent item, e.g. after a TOR mark-read
+    // failure, slipped past dedup and was re-inserted). Features are precomputed
+    // here, so this set stays bounded by MAX_CANDIDATES for speed.
     var response = UrlFetchApp.fetch(
       CONFIG.SUPABASE_URL
         + '/rest/v1/articles?select=id,source,title,url,summary,category,date_added,status,kept,archived'
         + '&kept=eq.false&status=neq.deleted'
         + '&date_added=gte.' + encodeURIComponent(sinceIso)
-        + '&order=date_added.asc'
+        + '&order=date_added.desc'
         + '&limit=' + encodeURIComponent(maxCandidates),
       { headers: headers, muteHttpExceptions: true }
     );
-    INGESTION_DEDUP_CACHE_ = JSON.parse(response.getContentText()) || [];
+    // v2.57 — validate the response: a non-200 or a non-array body (e.g. an RLS
+    // error object, or 200 [] from a key/policy change) must NOT silently warm an
+    // empty cache, because a warm cache disables the cold-path DB exact checks.
+    // Throw → caught below → cache nulled → reviewDuplicateRecord_ falls back to
+    // per-article DB queries.
+    if (response.getResponseCode() !== 200) {
+      throw new Error('warm fetch HTTP ' + response.getResponseCode() + ': ' + response.getContentText().substring(0, 200));
+    }
+    INGESTION_DEDUP_CACHE_ = JSON.parse(response.getContentText());
+    if (!Array.isArray(INGESTION_DEDUP_CACHE_)) {
+      throw new Error('warm fetch returned a non-array body');
+    }
     // Build O(1) lookup maps AND pre-compute fuzzy-dedup features ONCE.
     // Without precompute, scorePossibleDuplicateMatch_ recomputes simhash + tokens
     // for every candidate on every article — for N articles reaching fuzzy dedup
@@ -2536,7 +2614,37 @@ function warmDedupCache_(headers) {
       row._properNouns   = extractProperNouns_(row.title || '');
       row._verbStems     = extractStemmedVerbs_(row.title || '');  // v2.48 R3
     });
-    Logger.log('DEDUP CACHE: warmed with ' + INGESTION_DEDUP_CACHE_.length + ' candidates (' +
+
+    // v2.57 — Extend the EXACT-match maps cheaply (url/title only, no features) to
+    // a much wider newest-first window. Exact dedup then covers far more than the
+    // fuzzy cap can afford, which is the backstop for re-presented recent articles.
+    // Failure here is non-fatal: we keep the maps already built from the fuzzy set.
+    if (maxExactKeys > maxCandidates) {
+      try {
+        var exactResp = UrlFetchApp.fetch(
+          CONFIG.SUPABASE_URL
+            + '/rest/v1/articles?select=url,title'
+            + '&kept=eq.false&status=neq.deleted'
+            + '&date_added=gte.' + encodeURIComponent(sinceIso)
+            + '&order=date_added.desc'
+            + '&limit=' + encodeURIComponent(maxExactKeys),
+          { headers: headers, muteHttpExceptions: true }
+        );
+        if (exactResp.getResponseCode() === 200) {
+          var exactRows = JSON.parse(exactResp.getContentText());
+          if (Array.isArray(exactRows)) {
+            exactRows.forEach(function(row) {
+              if (row.url)   DEDUP_URL_MAP_[cleanUrl(row.url)]                             = true;
+              if (row.title) DEDUP_TITLE_MAP_[normalizeTitleForDedupe(row.title).toLowerCase()] = true;
+            });
+          }
+        }
+      } catch(exErr) {
+        Logger.log('DEDUP CACHE: exact-map extend failed (using fuzzy-set maps only) — ' + exErr);
+      }
+    }
+
+    Logger.log('DEDUP CACHE: warmed with ' + INGESTION_DEDUP_CACHE_.length + ' fuzzy candidates (' +
                Object.keys(DEDUP_URL_MAP_).length + ' URLs, ' +
                Object.keys(DEDUP_TITLE_MAP_).length + ' titles, features precomputed)');
   } catch(e) {

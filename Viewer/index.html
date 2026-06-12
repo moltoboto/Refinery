@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.47</title>
+<title>Refinery V2.49</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -236,18 +236,10 @@ aside {
   border-left-color: var(--accent);
 }
 
-/* Icon glyph shown only in iconized nav mode (body.nav-iconic). Hidden in
-   full nav mode to preserve original look. v2.34 resurrects this with real
-   letter glyphs after v2.21 deprecated it for being empty. */
+/* Category nav glyphs are hidden in the normal full-width nav. v2.48 retired the
+   iconized-rail nav mode (folded into the single Focus toggle), so the glyph is
+   never shown; the rule is kept so catIcoSvg_ output stays inert in the sidebar. */
 .nav-icon { display: none; }
-body.nav-iconic .nav-icon {
-  display: inline-block;
-  width: 100%;
-  font-weight: 700;
-  font-size: 14px;
-  text-align: center;
-  color: var(--accent);
-}
 
 /* No flex:1 — let label take its natural width so the count badge sits
    right next to it instead of being pushed to the far right edge. The space
@@ -469,67 +461,21 @@ body.nav-iconic .nav-icon {
 .reading-pane {
   flex: 1;
   overflow-y: auto;
-  overscroll-behavior-y: contain;   /* v2.44 — keep overscroll inside the pane so scroll-through nav can read the edges */
+  overscroll-behavior-y: contain;   /* keep overscroll inside the pane (no iOS pull-to-refresh fighting the reader) */
   background: var(--surface);
   display: flex;
   flex-direction: column;
 }
 
-/* v2.44 — transient hint shown while overscrolling at an edge for scroll-through nav (iPad) */
-#scrollNavHint {
-  position: fixed; left: 50%; transform: translateX(-50%);
-  z-index: 60; pointer-events: none;
-  background: var(--accent); color: #fff;
-  font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
-  padding: 6px 14px; border-radius: 999px;
-  opacity: 0; transition: opacity 0.1s ease;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.28);
-}
-#scrollNavHint.at-bottom { bottom: 20px; }
-#scrollNavHint.at-top    { top: 20px; }
-
 /* ── Layout toggle states (persisted in localStorage) ──────────────────────
-   - body.no-reading-pane → reading pane hidden, list-pane fills the space
-   - body.nav-icons       → left nav collapsed to icons (recovers ~190px)
+   - body.focus-mode      → v2.48 single "Focus" toggle: hides the left nav AND
+                            the middle article list so the reading pane fills the
+                            screen. Replaces the old NAV/LIST/READER trio — the
+                            common iPad flow is "read full-screen, swipe through".
    - body.compact-density → tighter padding/line-height for more cards on screen
    Active toggles get an .active class on the button via JS. */
-body.no-reading-pane .reading-pane { display: none; }
-/* Reading pane off → list pane sits flush against the left rail with a fixed
-   280px gutter on the right. v2.32-33 replaced the previous draggable-handle /
-   localStorage approach (v2.28-31) because it created off-center layout when
-   Nav was also hidden. v2.35 removed the now-unused handle code entirely. */
-body.no-reading-pane .list-pane {
-  flex: 1;
-  width: auto;
-  border-right: none;
-  margin-left: 0;
-  margin-right: 280px;
-  position: relative;
-}
-
-/* v2.35 — Resize handles removed. They were added in v2.28 to let the user
-   drag the list-pane width when Reading was off, but v2.32-33 switched the
-   list to a flush-left + fixed 280px right gutter layout that doesn't need
-   manual width adjustment. The handles became cosmetic clutter. */
-
-/* Nav toggle = hide left rail entirely. The original "collapse to icons"
-   never had real icons populated, so a 60px empty stub was just dead space.
-   Hiding the aside reclaims the full sidebar width for the list pane. */
-/* v2.38 — Hide-nav-entirely path removed. The chip that activated this was
-   dropped in v2.36 (NAV now means "iconize to rail", not "hide entirely").
-   The body.nav-iconic mode below is the only nav-collapse mode now. */
-
-/* Iconized nav mode — aside collapses to a 60px rail with letter glyphs only.
-   Labels, counts, section headers hidden. List pane butts up automatically
-   via flex layout (60px aside takes its own space in the row). */
-body.nav-iconic aside        { width: 60px; min-width: 60px; padding: 0; overflow: hidden; }
-body.nav-iconic .nav-label   { display: none; }
-body.nav-iconic .nav-count   { display: none; }
-body.nav-iconic .sidebar-section { display: none; }
-body.nav-iconic .nav-item    { justify-content: center; padding: 10px 0; gap: 0; }
-
-/* Hide-list toggle — focus on reading pane (or nothing, if reading is also off). */
-body.list-hidden .list-pane  { display: none; }
+body.focus-mode aside       { display: none; }
+body.focus-mode .list-pane  { display: none; }
 
 
 /* Compact density — actual class names this time. Card class is `.card`,
@@ -1019,7 +965,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.47
+    Refinery V2.49
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -1035,7 +981,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.47
+      Refinery V2.49
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1046,14 +992,13 @@ kbd {
         <div class="live-dot" id="liveDot"></div>
         <span id="statusText"></span>
       </div>
-      <!-- v2.36 — Chips reordered by column position: Unread filter, then NAV/LIST/READER matching
-           left/middle/right columns, then Compact/Aa/Refresh utilities. The previous "hide nav
-           entirely" chip was removed — the NAV chip now collapses to an icon rail (always-accessible)
-           which is the only behavior worth keeping. SVG icons replace emoji for visual consistency. -->
+      <!-- v2.48 — The separate NAV / LIST / READER toggles were folded into one
+           "Focus" chip: it hides the left nav + middle list so the reading pane
+           fills the screen, tap again to restore. Pairs with the horizontal
+           swipe-through nav for full-screen reading on iPad. Then Unread filter
+           and the Compact / Aa / Refresh utilities. -->
       <button class="chip" id="unreadChip"       onclick="toggleUnread()"   title="Unread — filter the list to unread articles only"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/><circle cx="9" cy="9" r="2.6" fill="currentColor" stroke="none"/></svg></button>
-      <button class="chip" id="toggleIconNavBtn" onclick="toggleIconNav()"  title="NAV — collapse the left navigation to an icon rail (left column)"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="13" height="12" rx="1.5"/><path d="M7 3v12"/><circle cx="4.6" cy="6" r="0.8" fill="currentColor" stroke="none"/><circle cx="4.6" cy="9" r="0.8" fill="currentColor" stroke="none"/><circle cx="4.6" cy="12" r="0.8" fill="currentColor" stroke="none"/></svg></button>
-      <button class="chip" id="toggleListBtn"    onclick="toggleList()"     title="LIST — hide the middle article list pane (focus on reading)"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="13" height="12" rx="1.5"/><path d="M7 3v12M11 3v12" stroke-dasharray="1.4 1.6"/></svg></button>
-      <button class="chip" id="toggleReadingBtn" onclick="toggleReading()"  title="READER — hide the right reading pane (list-only view)"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="13" height="12" rx="1.5"/><path d="M11 3v12"/><path d="M12.5 6.5h1.4M12.5 8.6h1.4M12.5 10.7h1"/></svg></button>
+      <button class="chip" id="toggleFocusBtn"   onclick="toggleFocus()"    title="Focus — hide nav + list for full-screen reading (tap again to restore)"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.5h-3a1 1 0 0 0-1 1v3M11.5 2.5h3a1 1 0 0 1 1 1v3M15.5 11.5v3a1 1 0 0 1-1 1h-3M6.5 15.5h-3a1 1 0 0 1-1-1v-3"/></svg></button>
       <button class="chip" id="toggleDensityBtn" onclick="toggleDensity()"  title="Compact — tighter density, more cards visible"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h12M3 8h12M3 11h12M3 14h12"/></svg></button>
       <button class="chip" id="toggleFontBtn"    onclick="cycleFontSize()"  title="Aa — cycle font size (normal / large / extra large)">Aa</button>
       <button class="chip"                       onclick="refreshAll()"     title="Refresh — reload articles"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 9a5.5 5.5 0 1 1-1.6-3.9"/><path d="M14.5 3.5V6h-2.5"/></svg></button>
@@ -1126,13 +1071,10 @@ kbd {
   <!-- Keyboard shortcut bar -->
   <div class="kb-bar">
     <div class="kb-item"><kbd>N</kbd> Next / mark read</div>
-    <div class="kb-item"><kbd>P</kbd> Previous</div>
+    <div class="kb-item"><kbd>P</kbd> Prev / mark read</div>
     <div class="kb-item"><kbd>K</kbd> Keep</div>    <div class="kb-item"><kbd>Enter</kbd> Open URL</div>
     <div class="kb-item"><kbd>M</kbd> Toggle read</div>
   </div>
-
-  <!-- v2.44 — transient overscroll hint for scroll-through article navigation (iPad) -->
-  <div id="scrollNavHint"></div>
 
 </div>
 
@@ -1560,7 +1502,10 @@ function renderArtifactLocal(artifact) {
       // is the priority. Drive backup unchanged.
       viewer.innerHTML = renderArtifactShell(artifact, '<iframe id="artifactHtmlFrame" class="artifact-viewer-frame" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin" allowfullscreen></iframe>');
       var frame = document.getElementById('artifactHtmlFrame');
-      if (frame) frame.srcdoc = result.html || '';
+      if (frame) {
+        frame.onload = applyArtifactZoomToOpenFrame_; // v2.49 — apply Aa zoom once the email HTML is in
+        frame.srcdoc = result.html || '';
+      }
     })
     .withFailureHandler(function() {
       var viewer = document.getElementById('artifactViewer');
@@ -2069,15 +2014,14 @@ function escapeHtml(str) {
 
 
 // ── Layout toggles ─────────────────────────────────────────────────────────
-// Three independent body-class toggles, each persisted in localStorage so the
-// choice sticks across reloads (and per-device, since localStorage is per-browser).
-// v2.38 — Dropped the `nav-icons` (hide-entirely) entry. v2.36 removed the chip
-// that activated it; nav-iconic (collapse-to-rail) replaced it.
+// Body-class toggles, each persisted in localStorage so the choice sticks across
+// reloads (and per-device, since localStorage is per-browser).
+// v2.48 — Collapsed the NAV / LIST / READER trio into one `focus-mode` toggle
+// (hides nav + list for full-screen reading). The old keys (refinery.navIconic,
+// refinery.listHidden, refinery.hideReadingPane) are simply ignored now.
 var LAYOUT_PREFS_ = [
-  { key: 'no-reading-pane', storageKey: 'refinery.hideReadingPane', btnId: 'toggleReadingBtn' },
-  { key: 'compact-density', storageKey: 'refinery.compactDensity',  btnId: 'toggleDensityBtn' },
-  { key: 'nav-iconic',      storageKey: 'refinery.navIconic',       btnId: 'toggleIconNavBtn' },
-  { key: 'list-hidden',     storageKey: 'refinery.listHidden',      btnId: 'toggleListBtn' }
+  { key: 'compact-density', storageKey: 'refinery.compactDensity', btnId: 'toggleDensityBtn' },
+  { key: 'focus-mode',      storageKey: 'refinery.focusMode',      btnId: 'toggleFocusBtn' }
 ];
 
 function getLayoutPref_(key) {
@@ -2101,10 +2045,8 @@ function toggleLayoutPref_(pref) {
 }
 
 // v2.38 — key-based lookup instead of fragile array indices.
-function toggleReading() { toggleLayoutPref_(getLayoutPref_('no-reading-pane')); }
 function toggleDensity() { toggleLayoutPref_(getLayoutPref_('compact-density')); }
-function toggleIconNav() { toggleLayoutPref_(getLayoutPref_('nav-iconic')); }
-function toggleList()    { toggleLayoutPref_(getLayoutPref_('list-hidden')); }
+function toggleFocus()   { toggleLayoutPref_(getLayoutPref_('focus-mode')); }
 
 // Font size cycle: normal → large → xlarge → normal. Persisted to localStorage.
 function applyFontSize_() {
@@ -2124,6 +2066,25 @@ function cycleFontSize() {
   var next = (n + 1) % 3;
   localStorage.setItem('refinery.fontSize', String(next));
   applyFontSize_();
+  applyArtifactZoomToOpenFrame_(); // v2.49 — live-update an open email artifact to match
+}
+
+// v2.49 — Email artifacts render in a style-isolated <iframe>, so the
+// body.font-large/xlarge CSS can't reach them. Mirror the Aa setting by zooming
+// the artifact document instead — `zoom` scales the email's px-based HTML
+// proportionally (supported in Safari/iOS + Chrome).
+function artifactZoomFactor_() {
+  var n = parseInt(localStorage.getItem('refinery.fontSize') || '0', 10);
+  if (isNaN(n) || n < 0 || n > 2) n = 0;
+  return n === 2 ? 1.3 : (n === 1 ? 1.15 : 1);
+}
+function applyArtifactZoomToOpenFrame_() {
+  var frame = document.getElementById('artifactHtmlFrame');
+  if (!frame) return;
+  try {
+    var doc = frame.contentDocument;
+    if (doc && doc.documentElement) doc.documentElement.style.zoom = artifactZoomFactor_();
+  } catch(e) { /* iframe not ready / cross-origin — ignore */ }
 }
 
 // v2.35 — Resize-handle infrastructure removed. v2.32-33 introduced a fixed
@@ -2166,83 +2127,78 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// ── v2.44 — Scroll-through article navigation (iPad touch only) ───────────────
-// The menu bar + list can be hidden for clean reading, which left no on-screen way
-// to change articles on a touch device (N/P are keyboard-only). This turns the
-// reading pane itself into the control: at the BOTTOM edge, an extra upward drag
-// past a threshold advances to the next article; at the TOP edge, a downward drag
-// goes to the previous one. Reuses the existing navigate(±1) engine, so mark-read
-// (the outgoing article is marked read on advance) and the navBusy guard come for
-// free. Body is overflow:hidden (no native pull-to-refresh to fight) and
-// .reading-pane uses overscroll-behavior-y: contain.
-// v2.45 — Removed the desktop mouse-wheel path: it fired too eagerly on short
-// articles and confused mark-read on desktop. Desktop keeps normal scrolling + N/P;
-// this gesture is touch-only, which is where it's actually used (iPad).
-(function initScrollThroughNav() {
-  var EDGE = 4;       // px tolerance for treating the pane as at the top/bottom
-  var TRIGGER = 72;   // px of drag PAST the edge before we change article
+// ── v2.48 — Horizontal swipe article navigation (iPad touch only) ─────────────
+// Replaces the v2.44–2.47 vertical "scroll-through" gesture, which (a) forced you
+// to scroll a long article all the way to an edge before it would arm (3–5 flicks
+// on a long article), and (b) fought the iOS rubber-band overscroll with passive
+// listeners, occasionally flashing a blank pane during the content swap. A
+// horizontal swipe is decoupled from scroll position — swipe anywhere in the
+// reading pane. Vertical scrolling is untouched: we only act on a net displacement
+// that is clearly horizontal, measured once at touchend.
+//   Swipe RIGHT (finger left → right) = NEXT article      (linear-timeline feel)
+//   Swipe LEFT  (finger right → left) = PREVIOUS article
+// Reuses navigate(±1), so mark-read + the navBusy guard come for free. Touch only;
+// desktop keeps N / P (a desktop mouse path was deliberately dropped in v2.45).
+(function initSwipeNav() {
+  var THRESHOLD = 60;   // min net horizontal px to count as a swipe
+  var RATIO = 1.3;      // horizontal travel must dominate vertical by this factor
 
-  var startY = null, fired = false, edgeSide = 0, edgeY = 0;
+  var startX = null, startY = null, lastX = 0, lastY = 0, tracking = false;
 
   function activePane() {
     if (typeof artView !== 'undefined' && artView) return null; // artifact view is an iframe — skip
     var pane = document.getElementById('readingPane');
     if (!pane) return null;
     var content = document.getElementById('readingContent');
-    if (!content || content.style.display === 'none') return null; // nothing open to scroll
+    if (!content || content.style.display === 'none') return null; // nothing open
     return pane;
   }
-  function atTop(p)    { return p.scrollTop <= EDGE; }
-  function atBottom(p) { return p.scrollTop + p.clientHeight >= p.scrollHeight - EDGE; }
 
-  function hint(side, progress) {
-    var el = document.getElementById('scrollNavHint');
-    if (!el) return;
-    if (!side) { el.style.opacity = '0'; return; }
-    el.className = side > 0 ? 'at-bottom' : 'at-top';
-    el.textContent = side > 0 ? 'Keep pulling for next ↑' : 'Keep pulling for previous ↓';
-    el.style.opacity = String(Math.min(1, Math.max(0.2, progress)));
+  // Don't hijack a horizontal drag that belongs to a scrollable child: wide code
+  // blocks (pre, overflow-x:auto) and layout tables in article HTML scroll sideways.
+  // The user is scrolling that element, not navigating articles.
+  function overHorizontalScroller(el, stop) {
+    for (var n = el; n && n !== stop; n = n.parentElement) {
+      if (n.scrollWidth > n.clientWidth + 2) {
+        var ox = getComputedStyle(n).overflowX;
+        if (ox === 'auto' || ox === 'scroll') return true;
+      }
+    }
+    return false;
   }
 
   document.addEventListener('touchstart', function(e) {
     var pane = activePane();
-    if (!pane || e.touches.length !== 1 || !pane.contains(e.target)) { startY = null; return; }
-    startY = e.touches[0].clientY;
-    fired = false; edgeSide = 0; edgeY = startY;
+    if (!pane || e.touches.length !== 1 || !pane.contains(e.target) ||
+        overHorizontalScroller(e.target, pane)) { tracking = false; return; }
+    tracking = true;
+    startX = lastX = e.touches[0].clientX;
+    startY = lastY = e.touches[0].clientY;
   }, { passive: true });
 
   document.addEventListener('touchmove', function(e) {
-    if (startY === null || fired) return;
-    var pane = activePane();
-    if (!pane) { startY = null; return; }
-    var y = e.touches[0].clientY;
-    var top = atTop(pane), bottom = atBottom(pane);
-
-    if (top && bottom) {
-      // article shorter than the pane (both edges at once): decide by drag direction
-      var d = y - startY;
-      hint(d < 0 ? 1 : (d > 0 ? -1 : 0), Math.abs(d) / TRIGGER);
-      if (d <= -TRIGGER)      { fired = true; hint(0); navigate(1); }
-      else if (d >= TRIGGER)  { fired = true; hint(0); navigate(-1); }
-      return;
-    }
-    if (bottom) {
-      if (edgeSide !== 1) { edgeSide = 1; edgeY = y; }   // anchor at the moment we reach the edge
-      var over = edgeY - y;                              // dragging up past the bottom
-      hint(over > 0 ? 1 : 0, over / TRIGGER);
-      if (over >= TRIGGER) { fired = true; hint(0); navigate(1); }
-    } else if (top) {
-      if (edgeSide !== -1) { edgeSide = -1; edgeY = y; }
-      var overP = y - edgeY;                             // dragging down past the top
-      hint(overP > 0 ? -1 : 0, overP / TRIGGER);
-      if (overP >= TRIGGER) { fired = true; hint(0); navigate(-1); }
-    } else {
-      edgeSide = 0; hint(0);
-    }
+    if (!tracking) return;
+    if (e.touches.length !== 1) { tracking = false; return; } // pinch / multi-touch — bail
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
   }, { passive: true });
 
-  document.addEventListener('touchend', function() {
-    startY = null; edgeSide = 0; hint(0);
+  document.addEventListener('touchcancel', function() { tracking = false; }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    if (!tracking) return;
+    tracking = false;
+    if (window.getSelection && String(window.getSelection())) return; // mid text-selection, not a swipe
+    // touchend carries the final point in changedTouches (touches is empty here).
+    // This beats the last touchmove for fast flicks, which emit few/no touchmove
+    // events on iOS Safari — reading touchmove alone could under-measure dx and
+    // silently drop a legitimate swipe.
+    var t = e.changedTouches && e.changedTouches[0];
+    var dx = (t ? t.clientX : lastX) - startX;
+    var dy = (t ? t.clientY : lastY) - startY;
+    if (Math.abs(dx) < THRESHOLD) return;             // too short — a tap or a scroll
+    if (Math.abs(dx) < Math.abs(dy) * RATIO) return;  // mostly vertical — it was a scroll
+    navigate(dx > 0 ? 1 : -1);                        // right = next, left = previous
   }, { passive: true });
 })();
 
