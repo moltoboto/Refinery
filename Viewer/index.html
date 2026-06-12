@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.49</title>
+<title>Refinery V2.51</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -525,6 +525,24 @@ body.font-xlarge .reading-title         { font-size: 30px; }
 body.font-xlarge .nav-item              { font-size: 16px; }
 body.font-xlarge .summary-prompt        { font-size: 16px; line-height: 1.6; }
 
+/* v2.51 — Inline executive-summary (Gemini), styled to the article-executive-summary
+   skill look: editorial title, consulting callout cards, big bottom-line box. */
+.exec-summary { padding: 8px 2px 48px; }
+.exec-eyebrow { font: 600 11px/1.4 'DM Sans',sans-serif; letter-spacing: 1.2px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+.exec-title { font-family: 'Lora',serif; font-size: 30px; line-height: 1.15; margin: 0 0 6px; color: var(--text,#1f1b16); }
+.exec-theme { color: var(--muted); font-size: 15px; line-height: 1.5; margin-bottom: 22px; }
+.exec-card { background: #fff; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+.exec-card-label { font: 600 11px/1.4 'DM Sans',sans-serif; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+.exec-card p { margin: 0; font-size: 15px; line-height: 1.6; }
+.exec-takeaways { margin: 6px 0 0; padding-left: 20px; }
+.exec-takeaways li { font-size: 15px; line-height: 1.55; margin-bottom: 6px; }
+.exec-bottom { background: var(--accent); color: #fff; border-radius: 10px; padding: 18px 20px; margin-top: 22px; }
+.exec-bottom-label { font: 700 12px/1.4 'DM Sans',sans-serif; letter-spacing: 1.4px; margin-bottom: 8px; opacity: 0.92; }
+.exec-bottom p { margin: 0; font-size: 17px; line-height: 1.5; font-weight: 500; }
+.exec-summary-loading { padding: 40px 24px; color: var(--muted); font-size: 14px; }
+body.font-large  .exec-card p, body.font-large  .exec-takeaways li { font-size: 16px; }
+body.font-xlarge .exec-card p, body.font-xlarge .exec-takeaways li { font-size: 18px; }
+
 .reading-empty {
   flex: 1;
   display: flex;
@@ -965,7 +983,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.49
+    Refinery V2.51
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -981,7 +999,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.49
+      Refinery V2.51
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1953,36 +1971,18 @@ function summarizeVisible() {
   }
 
   var count = filtered.length;
-  var label = view === 'all' ? 'All Unread' : view.indexOf('cat:') === 0 ? view.slice(4) : view.indexOf('src:') === 0 ? view.slice(4) : view;
-  if (!confirm(`Prepare summary for ${count} article${count !== 1 ? 's' : ''} in "${label}" and mark all as read?`)) return;
+  var label = view === 'all' ? (unreadOnly ? 'All Unread' : 'All Articles')
+    : view.indexOf('cat:') === 0 ? view.slice(4)
+    : view.indexOf('src:') === 0 ? view.slice(4) : view;
+  if (!confirm(`Summarize ${count} article${count !== 1 ? 's' : ''} in "${label}" and mark all as read?`)) return;
 
-  var articleDump = filtered.map(function(a, i) {
-    return `--- Article ${i + 1} ---
-Title: ${a.title}
-Source: ${a.source}
-Category: ${a.category || 'General'}
-Issue: ${a.issue || 'N/A'}
-Summary: ${cleanSummaryText(a.summary)}
+  // v2.51 — Capture article data BEFORE mark-read / re-filter mutates state.
+  var payloadArticles = filtered.map(function(a) {
+    return { title: a.title, source: a.source, category: a.category, summary: cleanSummaryText(a.summary), url: a.url };
+  });
 
-URL: ${a.url || 'N/A'}`;
-  }).join('\n\n');
-
-  var prompt = `Summarize the following ${count} articles from "${label}". Group by theme, write a narrative summary (2-3 paragraphs), and call out standout articles worth revisiting with their title and why they matter.\n\n${articleDump}`;
-
-  var empty = document.getElementById('readingEmpty');
-  var content = document.getElementById('readingContent');
-  if (!empty || !content) return;
-  empty.style.display = 'none';
-  content.style.display = 'block';
-  content.innerHTML = `
-    <div class="reading-eyebrow">SUMMARY PROMPT</div>
-    <h1 class="reading-title">${label} - ${count} article${count !== 1 ? 's' : ''}</h1>
-    <div class="summary-copy-bar">
-      <button class="copy-btn" onclick="copySummaryPrompt()">Copy Prompt</button>
-      <span class="copy-label">Copy and paste into any LLM</span>
-    </div>
-    <div class="summary-prompt" id="summaryPromptMain">${escapeHtml(prompt)}</div>`;
-
+  // Mark all read and re-render FIRST, so applyFilters() can't clobber the
+  // summary we drop into the reading pane below.
   filtered.forEach(function(article) {
     if (!article.kept && article.status !== 'read') {
       markArticleReadLocal(article, true);
@@ -1991,7 +1991,52 @@ URL: ${a.url || 'N/A'}`;
   });
   buildSidebar();
   applyFilters();
+
+  var empty = document.getElementById('readingEmpty');
+  var content = document.getElementById('readingContent');
+  if (!empty || !content) return;
+  empty.style.display = 'none';
+  content.style.display = 'block';
+  content.innerHTML = `<div class="exec-summary-loading">Generating executive summary of ${count} article${count !== 1 ? 's' : ''}…</div>`;
+
+  // v2.51 — Server calls Gemini (key in Script Properties) and returns a structured
+  // executive summary; we render it inline in the article-executive-summary look.
+  google.script.run
+    .withSuccessHandler(function(result) {
+      var c = document.getElementById('readingContent');
+      if (!c) return;
+      if (!result || result.error) {
+        c.innerHTML = `<div class="exec-summary-loading">Summary failed: ${escapeHtml(result && result.error || 'unknown error')}</div>`;
+        return;
+      }
+      c.innerHTML = renderExecSummaryHtml(result.summary);
+      var pane = document.getElementById('readingPane');
+      if (pane) pane.scrollTo(0, 0);
+    })
+    .withFailureHandler(function(err) {
+      var c = document.getElementById('readingContent');
+      if (c) c.innerHTML = `<div class="exec-summary-loading">Summary failed: ${escapeHtml(String(err))}</div>`;
+    })
+    .generateExecutiveSummary({ label: label, articles: payloadArticles });
+
   toast(count + ' articles marked read');
+}
+
+function renderExecSummaryHtml(s) {
+  s = s || {};
+  var takeaways = (s.keyTakeaways || []).map(function(t) {
+    return `<li>${escapeHtml(t)}</li>`;
+  }).join('');
+  return `
+    <div class="exec-summary">
+      <div class="exec-eyebrow">Executive Summary &middot; ${escapeHtml(s.label || '')} &middot; ${s.count || 0} article${s.count === 1 ? '' : 's'}</div>
+      <h1 class="exec-title">${escapeHtml(s.title || 'Summary')}</h1>
+      ${s.themeLine ? `<div class="exec-theme">${escapeHtml(s.themeLine)}</div>` : ''}
+      <div class="exec-card"><div class="exec-card-label">Core Message</div><p>${escapeHtml(s.coreMessage || '')}</p></div>
+      <div class="exec-card"><div class="exec-card-label">Why It Matters</div><p>${escapeHtml(s.whyItMatters || '')}</p></div>
+      <div class="exec-card"><div class="exec-card-label">Key Takeaways</div><ol class="exec-takeaways">${takeaways}</ol></div>
+      <div class="exec-bottom"><div class="exec-bottom-label">BOTTOM LINE</div><p>${escapeHtml(s.bottomLine || '')}</p></div>
+    </div>`;
 }
 
 function copySummaryPrompt() {

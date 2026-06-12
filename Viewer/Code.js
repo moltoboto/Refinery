@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend - Viewer v2.49
+// REFINERY - Google Apps Script Backend - Viewer v2.51
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.49')
+    .setTitle('Refinery V2.51')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -260,6 +260,91 @@ function markUnread(id) {
 }
 
 
+// v2.51 — Server-side LLM summary via the Gemini API. The key lives ONLY in Script
+// Properties (Project Settings → Script Properties → GEMINI_API_KEY), never in this
+// file (which is in git + served to the browser) and never reaches the client — the
+// Viewer only calls google.script.run.generateExecutiveSummary(...). Returns a
+// structured executive summary the Viewer renders inline (no PDF), in the look-and-
+// feel of the article-executive-summary skill: Core Message / Why It Matters /
+// Key Takeaways / Bottom Line.
+var GEMINI_MODEL = 'gemini-2.0-flash';  // change here if you want a different/free model
+
+function generateExecutiveSummary(payload) {
+  try {
+    var key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+    if (!key) return { error: 'No GEMINI_API_KEY set in Script Properties.' };
+
+    payload = payload || {};
+    var label = String(payload.label || 'Selected articles');
+    var articles = Array.isArray(payload.articles) ? payload.articles : [];
+    if (!articles.length) return { error: 'No articles to summarize.' };
+
+    var dump = articles.map(function(a, i) {
+      return '--- Article ' + (i + 1) + ' ---\n'
+        + 'Title: ' + (a.title || '') + '\n'
+        + 'Source: ' + (a.source || '') + '\n'
+        + 'Category: ' + (a.category || 'General') + '\n'
+        + 'Summary: ' + (a.summary || '') + '\n'
+        + 'URL: ' + (a.url || '');
+    }).join('\n\n');
+
+    var prompt = 'You are an executive content designer. Write ONE premium executive summary that synthesizes across the following '
+      + articles.length + ' articles from "' + label + '" — do not just list them one by one.\n'
+      + 'Style: clear, concise, direct; strong nouns and verbs; no academic boilerplate; no generic praise; preserve nuance.\n'
+      + 'Produce: a short punchy title; a one-line theme; a 2-3 sentence Core Message (the real story across these articles); '
+      + 'a short Why It Matters; 3-5 Key Takeaways (each actionable or conceptually important); and a 1-2 sentence Bottom Line memory hook.\n\n'
+      + dump;
+
+    var body = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            title:        { type: 'STRING' },
+            themeLine:    { type: 'STRING' },
+            coreMessage:  { type: 'STRING' },
+            whyItMatters: { type: 'STRING' },
+            keyTakeaways: { type: 'ARRAY', items: { type: 'STRING' } },
+            bottomLine:   { type: 'STRING' }
+          },
+          required: ['title', 'coreMessage', 'whyItMatters', 'keyTakeaways', 'bottomLine']
+        }
+      }
+    };
+
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL
+      + ':generateContent?key=' + encodeURIComponent(key);
+    var resp = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(body),
+      muteHttpExceptions: true
+    });
+
+    var code = resp.getResponseCode();
+    if (code !== 200) {
+      return { error: 'Gemini API error ' + code + ': ' + resp.getContentText().substring(0, 300) };
+    }
+
+    var data = safeJsonParse_(resp.getContentText(), 'gemini');
+    var text = data && data.candidates && data.candidates[0] && data.candidates[0].content
+      && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
+      && data.candidates[0].content.parts[0].text;
+    if (!text) return { error: 'Gemini returned no content.' };
+
+    var summary = safeJsonParse_(text, 'gemini-json');
+    if (!summary || !summary.coreMessage) return { error: 'Could not parse the Gemini summary.' };
+    summary.label = label;
+    summary.count = articles.length;
+    return { summary: summary };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
 function getArtifacts(limit) {
   try {
     limit = normalizePositiveInt_(limit, 0);
@@ -458,7 +543,12 @@ function sanitizeArtifactHtml_(html) {
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<base[^>]*>/gi, '')
     .replace(/\s(on[a-z]+)=("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/\shref=("|')javascript:[\s\S]*?\1/gi, ' href="#"');
+    .replace(/\shref=("|')javascript:[\s\S]*?\1/gi, ' href="#"')
+    // v2.50 — Drop the redundant in-content wrapper header (EMAIL eyebrow + duplicate
+    // title + source/date + "Open in Gmail") baked into saved email artifacts by the
+    // Ingestion wrapper. It duplicated the Viewer's own fixed header and scrolled away.
+    // Stripping at render fixes existing artifacts too; the Viewer's fixed header stays.
+    .replace(/<header class="header">[\s\S]*?<\/header>/i, '');
 }
 
 function buildArtifactHtmlDocument_(bodyHtml, title) {
