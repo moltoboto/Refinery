@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend - Viewer v2.52
+// REFINERY - Google Apps Script Backend - Viewer v2.53
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.52')
+    .setTitle('Refinery V2.53')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -287,7 +287,7 @@ function searchArticles(query, limit) {
 // structured executive summary the Viewer renders inline (no PDF), in the look-and-
 // feel of the article-executive-summary skill: Core Message / Why It Matters /
 // Key Takeaways / Bottom Line.
-var GEMINI_MODEL = 'gemini-2.0-flash';  // change here if you want a different/free model
+var GEMINI_MODEL = 'gemini-3.5-flash';  // current GA flash (v2.53 — 2.0/2.5-flash were retired → 404). Change here if you want a different model.
 
 function generateExecutiveSummary(payload) {
   try {

@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-12 - Claude Code (Viewer v2.53 — Gemini model 404, real 3-state Focus, Artifacts search)
+- Request: User reported (via a read-only side-session fork that couldn't push) three bugs: Summarize 404'd, Focus was only 2 states (asked for 3→2→1), and search didn't work in the Artifacts tab. Fixed all three from the main session.
+- (1) **Gemini 404**: `gemini-2.0-flash` was retired ("no longer available"). Verified via web search that `gemini-2.5-flash` is also removed and **`gemini-3.5-flash`** is the current GA flash model; set `GEMINI_MODEL = 'gemini-3.5-flash'`. (Can't call Gemini from here — user smoke-test confirms.)
+- (2) **Focus 3-state cycle** (was binary — the actual bug): replaced the `focus-mode` boolean pref + `toggleFocus` with `cycleFocus`/`applyFocusLevel_` + `refinery.focusLevel` (0/1/2). CSS now `body.focus-nav` (hide nav) and `body.focus-list` (also hide `.list-pane` + `.artifact-list`). Chip onclick → `cycleFocus()`; applied at startup. Removed old focus-mode CSS/pref.
+- (3) **Artifacts search**: the article path (`applyFilters` + `runServerSearch`) bails on `artView`, so artifact search did nothing. `handleSearchInput` + `clearSearch` now branch to `filterArtifactList()` when `artView`; `showArtifactsView` renders cards into `#artifactCards` via `artifactCardsHtml(filteredArtifacts_())`, filtered by name/source/subject/name/type, with a live sub-count.
+- Validation: `node --check` passes on Code.js + the index.html inline script; no orphan `toggleFocus`/`focus-mode` refs. NOT browser-tested.
+- Deployment: clasp push Viewer DONE (18:42 ET); `/dev` serves v2.53. `/exec` + iPad need the redeploy.
+- USER CHECKLIST: (a) **Summarize** now works (gemini-3.5-flash); (b) **Focus** chip cycles 3 states; (c) **search in Artifacts** filters the list; (d) redeploy `/exec` for iPad.
+
 ### 2026-06-12 - Claude Code (Viewer v2.52 — Focus/artifact-list, artifact header alignment, full-history search)
 - Request: User said "finish everything, I'll do my action when I get back" — autonomous batch with my stated defaults.
 - (1) **Focus** (`body.focus-mode`) now also hides `.artifact-list`, so the Artifacts view collapses like the Articles view. One CSS line.

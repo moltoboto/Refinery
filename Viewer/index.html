@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.52</title>
+<title>Refinery V2.53</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -468,15 +468,14 @@ aside {
 }
 
 /* ── Layout toggle states (persisted in localStorage) ──────────────────────
-   - body.focus-mode      → v2.48 single "Focus" toggle: hides the left nav AND
-                            the middle article list so the reading pane fills the
-                            screen. Replaces the old NAV/LIST/READER trio — the
-                            common iPad flow is "read full-screen, swipe through".
+   - Focus (v2.53) is a 3-STATE cycle (tap the Focus chip): level 0 = all panes,
+     level 1 = body.focus-nav (hide left nav), level 2 = +body.focus-list (also
+     hide the article/artifact list → reading pane only). Persisted as refinery.focusLevel.
    - body.compact-density → tighter padding/line-height for more cards on screen
    Active toggles get an .active class on the button via JS. */
-body.focus-mode aside        { display: none; }
-body.focus-mode .list-pane   { display: none; }
-body.focus-mode .artifact-list { display: none; }  /* v2.52 — Artifacts view behaves like Articles in Focus */
+body.focus-nav  aside          { display: none; }
+body.focus-list .list-pane,
+body.focus-list .artifact-list { display: none; }
 
 
 /* Compact density — actual class names this time. Card class is `.card`,
@@ -987,7 +986,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.52
+    Refinery V2.53
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -1003,7 +1002,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.52
+      Refinery V2.53
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1020,7 +1019,7 @@ kbd {
            swipe-through nav for full-screen reading on iPad. Then Unread filter
            and the Compact / Aa / Refresh utilities. -->
       <button class="chip" id="unreadChip"       onclick="toggleUnread()"   title="Unread — filter the list to unread articles only"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/><circle cx="9" cy="9" r="2.6" fill="currentColor" stroke="none"/></svg></button>
-      <button class="chip" id="toggleFocusBtn"   onclick="toggleFocus()"    title="Focus — hide nav + list for full-screen reading (tap again to restore)"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.5h-3a1 1 0 0 0-1 1v3M11.5 2.5h3a1 1 0 0 1 1 1v3M15.5 11.5v3a1 1 0 0 1-1 1h-3M6.5 15.5h-3a1 1 0 0 1-1-1v-3"/></svg></button>
+      <button class="chip" id="toggleFocusBtn"   onclick="cycleFocus()"     title="Focus — tap to cycle: all panes → hide nav → reading only"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.5h-3a1 1 0 0 0-1 1v3M11.5 2.5h3a1 1 0 0 1 1 1v3M15.5 11.5v3a1 1 0 0 1-1 1h-3M6.5 15.5h-3a1 1 0 0 1-1-1v-3"/></svg></button>
       <button class="chip" id="toggleDensityBtn" onclick="toggleDensity()"  title="Compact — tighter density, more cards visible"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h12M3 8h12M3 11h12M3 14h12"/></svg></button>
       <button class="chip" id="toggleFontBtn"    onclick="cycleFontSize()"  title="Aa — cycle font size (normal / large / extra large)">Aa</button>
       <button class="chip"                       onclick="refreshAll()"     title="Refresh — reload articles"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 9a5.5 5.5 0 1 1-1.6-3.9"/><path d="M14.5 3.5V6h-2.5"/></svg></button>
@@ -1395,24 +1394,15 @@ function showArticlesView() {
 
 function showArtifactsView() {
   var main = document.getElementById('mainArea');
+  var items = filteredArtifacts_();
   main.innerHTML = `
     <div class="artifacts-view" style="flex:1;overflow:hidden;display:flex;">
       <div class="artifact-list" id="artifactList">
         <div class="artifact-list-header">
           <div class="artifact-list-title">Artifacts</div>
-          <div class="artifact-list-sub">${ARTIFACTS.length} of ${formatNumber(VIEWER_STATS.artifactCount)} files</div>
+          <div class="artifact-list-sub" id="artifactListSub">${artifactSubLabel_(items)}</div>
         </div>
-        ${ARTIFACTS.length === 0
-          ? '<div class="no-articles" style="padding:40px 20px"><div class="no-articles-icon"></div><p>No files found in your Drive folder.</p></div>'
-          : ARTIFACTS.map(function(a) {
-              return `
-            <div class="artifact-card ${selectedArtifact && selectedArtifact.id === a.id ? 'selected' : ''}"
-                 id="acard-${a.id}" onclick="selectArtifact('${a.id}')">
-              <div class="artifact-info">
-                <div class="artifact-name" title="${escapeHtml(formatArtifactListTitle(a))}">${escapeHtml(formatArtifactListTitle(a))}</div>
-              </div>
-            </div>`;
-            }).join('')}
+        <div id="artifactCards">${artifactCardsHtml(items, items.length !== ARTIFACTS.length)}</div>
       </div>
       <div class="artifact-viewer" id="artifactViewer">
         <div class="artifact-empty">
@@ -1431,6 +1421,46 @@ function showArtifactsView() {
     ? selectedArtifact.id
     : ARTIFACTS[0].id;
   selectArtifact(nextId);
+}
+
+// v2.53 — Artifacts-tab search. The article search path bails on artView, so the
+// artifact list is filtered here by name / source / subject / type and re-rendered.
+function artifactMatchesQuery(a, q) {
+  var hay = ((a.displayTitle || '') + ' ' + (a.source || '') + ' ' + (a.subject || '') + ' ' +
+             (a.name || '') + ' ' + (a.typeLabel || '')).toLowerCase();
+  return hay.indexOf(q) !== -1;
+}
+function filteredArtifacts_() {
+  var input = document.getElementById('searchInput');
+  var q = ((input && input.value) || '').toLowerCase().trim();
+  return q ? ARTIFACTS.filter(function(a) { return artifactMatchesQuery(a, q); }) : ARTIFACTS;
+}
+function artifactSubLabel_(items) {
+  return items.length === ARTIFACTS.length
+    ? ARTIFACTS.length + ' of ' + formatNumber(VIEWER_STATS.artifactCount) + ' files'
+    : items.length + ' of ' + ARTIFACTS.length + ' match';
+}
+function artifactCardsHtml(items, isFiltered) {
+  if (!items.length) {
+    return '<div class="no-articles" style="padding:40px 20px"><div class="no-articles-icon"></div><p>'
+      + (isFiltered ? 'No files match your search.' : 'No files found in your Drive folder.') + '</p></div>';
+  }
+  return items.map(function(a) {
+    return `
+      <div class="artifact-card ${selectedArtifact && selectedArtifact.id === a.id ? 'selected' : ''}"
+           id="acard-${a.id}" onclick="selectArtifact('${a.id}')">
+        <div class="artifact-info">
+          <div class="artifact-name" title="${escapeHtml(formatArtifactListTitle(a))}">${escapeHtml(formatArtifactListTitle(a))}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+function filterArtifactList() {
+  var items = filteredArtifacts_();
+  var cards = document.getElementById('artifactCards');
+  if (cards) cards.innerHTML = artifactCardsHtml(items, items.length !== ARTIFACTS.length);
+  var sub = document.getElementById('artifactListSub');
+  if (sub) sub.textContent = artifactSubLabel_(items);
 }
 
 function getArtifactDisplayTitle(artifact) {
@@ -1662,6 +1692,7 @@ function matchesSearchQuery(article, query) {
 var SEARCH_TIMER = null;
 function handleSearchInput() {
   updateSearchClear();
+  if (artView) { filterArtifactList(); return; }  // v2.53 — search filters the Artifacts list
   applyFilters();  // instant client-side filter over the loaded set
   // v2.52 — also pull matches from the FULL history (server), debounced + additive.
   // Best-effort: if the server call fails, loaded-set search still works.
@@ -1702,7 +1733,7 @@ function clearSearch() {
   if (!input) return;
   input.value = '';
   updateSearchClear();
-  applyFilters();
+  if (artView) filterArtifactList(); else applyFilters();  // v2.53
   input.focus();
 }
 
@@ -2095,12 +2126,11 @@ function escapeHtml(str) {
 // ── Layout toggles ─────────────────────────────────────────────────────────
 // Body-class toggles, each persisted in localStorage so the choice sticks across
 // reloads (and per-device, since localStorage is per-browser).
-// v2.48 — Collapsed the NAV / LIST / READER trio into one `focus-mode` toggle
-// (hides nav + list for full-screen reading). The old keys (refinery.navIconic,
-// refinery.listHidden, refinery.hideReadingPane) are simply ignored now.
+// v2.53 — Focus is no longer a boolean pref here; it's a 3-state cycle (see
+// cycleFocus / applyFocusLevel_ below). LAYOUT_PREFS_ now only holds compact-density.
+// Old keys (refinery.focusMode, navIconic, listHidden, hideReadingPane) are ignored.
 var LAYOUT_PREFS_ = [
-  { key: 'compact-density', storageKey: 'refinery.compactDensity', btnId: 'toggleDensityBtn' },
-  { key: 'focus-mode',      storageKey: 'refinery.focusMode',      btnId: 'toggleFocusBtn' }
+  { key: 'compact-density', storageKey: 'refinery.compactDensity', btnId: 'toggleDensityBtn' }
 ];
 
 function getLayoutPref_(key) {
@@ -2125,7 +2155,23 @@ function toggleLayoutPref_(pref) {
 
 // v2.38 — key-based lookup instead of fragile array indices.
 function toggleDensity() { toggleLayoutPref_(getLayoutPref_('compact-density')); }
-function toggleFocus()   { toggleLayoutPref_(getLayoutPref_('focus-mode')); }
+
+// v2.53 — Focus is a 3-state cycle (the user asked for 3→2→1 panes, not on/off):
+//   0 = all panes · 1 = hide nav · 2 = hide nav + list (reading only). Persisted.
+function applyFocusLevel_() {
+  var n = parseInt(localStorage.getItem('refinery.focusLevel') || '0', 10);
+  if (isNaN(n) || n < 0 || n > 2) n = 0;
+  document.body.classList.toggle('focus-nav',  n >= 1);
+  document.body.classList.toggle('focus-list', n >= 2);
+  var btn = document.getElementById('toggleFocusBtn');
+  if (btn) btn.classList.toggle('active', n > 0);
+}
+function cycleFocus() {
+  var n = parseInt(localStorage.getItem('refinery.focusLevel') || '0', 10);
+  if (isNaN(n) || n < 0 || n > 2) n = 0;
+  localStorage.setItem('refinery.focusLevel', String((n + 1) % 3));
+  applyFocusLevel_();
+}
 
 // Font size cycle: normal → large → xlarge → normal. Persisted to localStorage.
 function applyFontSize_() {
@@ -2175,6 +2221,7 @@ function applyArtifactZoomToOpenFrame_() {
 // Apply saved prefs on first paint
 LAYOUT_PREFS_.forEach(applyLayoutPref_);
 applyFontSize_();
+applyFocusLevel_();
 
 let navBusy = false;
 document.addEventListener('keydown', function(e) {
