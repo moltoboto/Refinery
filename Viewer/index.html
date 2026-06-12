@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.51</title>
+<title>Refinery V2.52</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -474,8 +474,9 @@ aside {
                             common iPad flow is "read full-screen, swipe through".
    - body.compact-density → tighter padding/line-height for more cards on screen
    Active toggles get an .active class on the button via JS. */
-body.focus-mode aside       { display: none; }
-body.focus-mode .list-pane  { display: none; }
+body.focus-mode aside        { display: none; }
+body.focus-mode .list-pane   { display: none; }
+body.focus-mode .artifact-list { display: none; }  /* v2.52 — Artifacts view behaves like Articles in Focus */
 
 
 /* Compact density — actual class names this time. Card class is `.card`,
@@ -793,6 +794,9 @@ body.font-xlarge .exec-card p, body.font-xlarge .exec-takeaways li { font-size: 
   flex-shrink: 0;
 }
 
+/* v2.52 — article-style eyebrow on the artifact header */
+.artifact-viewer-eyebrow { font: 600 11px/1.4 'DM Sans',sans-serif; letter-spacing: 1.2px; text-transform: uppercase; color: var(--accent); margin-bottom: 2px; }
+
 .artifact-viewer-head {
   width: 100%;
   display: flex;
@@ -983,7 +987,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.51
+    Refinery V2.52
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -999,7 +1003,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.51
+      Refinery V2.52
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1457,13 +1461,17 @@ function selectArtifact(id) {
 }
 
 function renderArtifactShell(artifact, bodyHtml) {
+  // v2.52 — match the article reading header: SOURCE · DATE eyebrow + clean title.
+  var eyebrowSrc = artifact.source || artifact.typeLabel || 'File';
+  var eyebrow = (eyebrowSrc + (artifact.dateLabel ? ' · ' + artifact.dateLabel : '')).toUpperCase();
+  var cleanTitle = artifact.subject || getArtifactDisplayTitle(artifact);
   return `
     <div class="artifact-viewer-header">
       <div class="artifact-viewer-head">
         <div>
-          <div class="artifact-viewer-title">${escapeHtml(getArtifactDisplayTitle(artifact))}</div>
+          <div class="artifact-viewer-eyebrow">${escapeHtml(eyebrow)}</div>
+          <div class="artifact-viewer-title">${escapeHtml(cleanTitle)}</div>
           <div class="artifact-viewer-meta">
-            ${artifact.dateLabel ? `<span>${escapeHtml(artifact.dateLabel)}</span>` : ''}
             <span>${escapeHtml(artifact.typeLabel || 'File')}</span>
             ${artifact.size ? `<span>${escapeHtml(artifact.size)}</span>` : ''}
           </div>
@@ -1651,9 +1659,35 @@ function matchesSearchQuery(article, query) {
   return haystack.indexOf(query) !== -1;
 }
 
+var SEARCH_TIMER = null;
 function handleSearchInput() {
   updateSearchClear();
-  applyFilters();
+  applyFilters();  // instant client-side filter over the loaded set
+  // v2.52 — also pull matches from the FULL history (server), debounced + additive.
+  // Best-effort: if the server call fails, loaded-set search still works.
+  var input = document.getElementById('searchInput');
+  var q = ((input && input.value) || '').trim();
+  if (SEARCH_TIMER) clearTimeout(SEARCH_TIMER);
+  if (q.length < 2 || artView) return;
+  SEARCH_TIMER = setTimeout(function() { runServerSearch(q); }, 400);
+}
+
+function runServerSearch(q) {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || result.error || !Array.isArray(result.articles)) return;
+      var known = {};
+      ARTICLES.forEach(function(a) { known[a.id] = true; });
+      var added = 0;
+      result.articles.forEach(function(a) {
+        if (a && !known[a.id]) { ARTICLES.push(a); known[a.id] = true; added++; }
+      });
+      var input = document.getElementById('searchInput');
+      var cur = ((input && input.value) || '').trim();
+      if (added > 0 && cur === q) applyFilters();  // re-render with the newly-found articles
+    })
+    .withFailureHandler(function() { /* silent — loaded-set search still works */ })
+    .searchArticles(q, 200);
 }
 
 function updateSearchClear() {

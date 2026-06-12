@@ -17,6 +17,17 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-12 - Claude Code (Viewer v2.52 — Focus/artifact-list, artifact header alignment, full-history search)
+- Request: User said "finish everything, I'll do my action when I get back" — autonomous batch with my stated defaults.
+- (1) **Focus** (`body.focus-mode`) now also hides `.artifact-list`, so the Artifacts view collapses like the Articles view. One CSS line.
+- (2) **Artifact header** now mirrors the article reading header: `SOURCE · DATE` eyebrow (`.artifact-viewer-eyebrow`) + clean title using `subject` (no "source - " prefix). `buildArtifactRecord_` exposes `source`/`subject` from the artifact meta; non-email files fall back to typeLabel/displayTitle.
+- (3) **Full-history search**: new server `searchArticles(q, limit)` — PostgREST `or=(title.ilike.*q*,summary.ilike.*q*,source.ilike.*q*)` with the term URL-encoded (so spaces/commas/parens can't break the filter), via `fetchLimitedArticlesByQuery_`. Client `handleSearchInput` now debounces (400ms) a `runServerSearch` that merges new matches into ARTICLES (dedupe by id) and re-runs applyFilters. Additive + best-effort: a server failure is swallowed and loaded-set search still works, so search can't regress.
+- Validation: `node --check` passes on Code.js + the index.html inline script. **NOT live-tested.** Risk is isolated: the PostgREST `or()` query is the one unproven bit; if it's malformed, full-history search silently no-ops and loaded-set search is unaffected.
+- Deployment: clasp push Viewer DONE (15:21 ET); `/dev` serves v2.52. `/exec` + iPad need the redeploy.
+- Git: committing now.
+- USER CHECKLIST when back: (a) **redeploy `/exec`** (pencil → New version → Deploy) for iPad; (b) **smoke-test Summarize** (Gemini); (c) try **search** for an older/read article to confirm full-history works; (d) check the **artifact header** + **Focus in Artifacts**.
+- Deferred (untouched, need decisions): Compact-on-artifacts; the bigger Ingestion items (title-key divergence, constant-subject false-dedup, `doPost` auth/security). Permission allow-list for unattended runs not set (user didn't confirm).
+
 ### 2026-06-12 - Claude Code (Viewer v2.50–2.51 — artifact header rework + in-app LLM Summarize via Gemini)
 - Request: User stepped away and asked me to "do everything" autonomously — finish the email-artifact header (#3) and wire the in-app Summarize feature to a real LLM, styled like their separate "article-executive-summary" Claude skill but rendered inline (no PDF). Confirmed `GEMINI_API_KEY` is set in Script Properties (underscores). They have Claude Pro / ChatGPT Plus / Gemini Advanced — none grant API access; the free path is a Google AI Studio Gemini key, which they created.
 - v2.50 (#3 header): `sanitizeArtifactHtml_` (Viewer/Code.js) strips the baked-in `<header class="header">…</header>` wrapper from saved email artifacts at render — removes EMAIL eyebrow + duplicate title + source/date + "Open in Gmail" + the scroll-away duplicate. Fixes existing artifacts too; the Viewer's fixed header remains.

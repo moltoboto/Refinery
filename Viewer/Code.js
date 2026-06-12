@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend - Viewer v2.51
+// REFINERY - Google Apps Script Backend - Viewer v2.52
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.51')
+    .setTitle('Refinery V2.52')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -260,6 +260,26 @@ function markUnread(id) {
 }
 
 
+// v2.52 — Full-history article search. The client search only covers the loaded
+// working set (~1250); this queries Supabase directly so older/read articles are
+// findable. PostgREST or() over title/summary/source; the term is URL-encoded so
+// spaces/commas/parens in the query can't break the filter syntax. On any failure
+// the client silently falls back to loaded-set search — search can't get worse.
+function searchArticles(query, limit) {
+  try {
+    query = String(query || '').trim();
+    if (!query) return { articles: [] };
+    limit = normalizePositiveInt_(limit, 200);
+    var enc = encodeURIComponent('*' + query + '*');
+    var q = 'or=(title.ilike.' + enc + ',summary.ilike.' + enc + ',source.ilike.' + enc + ')'
+      + '&status=neq.deleted&category=neq.Duplicate'
+      + '&order=date_added.desc';
+    return { articles: fetchLimitedArticlesByQuery_(q, '*', limit) };
+  } catch (e) {
+    return { error: e.toString() };
+  }
+}
+
 // v2.51 — Server-side LLM summary via the Gemini API. The key lives ONLY in Script
 // Properties (Project Settings → Script Properties → GEMINI_API_KEY), never in this
 // file (which is in git + served to the browser) and never reaches the client — the
@@ -382,6 +402,8 @@ function buildArtifactRecord_(file, meta, artifactKind, effectiveMime, keepMap) 
     id: file.getId(),
     name: file.getName(),
     displayTitle: getArtifactDisplayTitle_(file.getName(), meta),
+    source: (meta && meta.source) || '',     // v2.52 — for the article-style eyebrow
+    subject: (meta && meta.subject) || '',    // v2.52 — clean title (no "source - " prefix)
     mimeType: effectiveMime,
     rawMimeType: file.getMimeType(),
     typeLabel: getMimeLabel(effectiveMime),
