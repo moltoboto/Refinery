@@ -22,9 +22,9 @@ Ingestion: v2.57 | Viewer: v2.53
 
 ## Local File Structure
 ```
-C:\Users\ThomasCala\Refinery\          ← git repo, tracked on origin/main
-  ├── Viewer\          (Code.js, index.html, appsscript.json, .clasp.json)
-  ├── Ingestion\       (Code.js, appsscript.json, .clasp.json)
+~/Refinery/            ← git repo, tracked on origin/main (resolves to /Users/thomascala/Refinery on Mac, C:\Users\ThomasCala\Refinery on Lenovo)
+  ├── Viewer/          (Code.js, index.html, appsscript.json, .clasp.json)
+  ├── Ingestion/       (Code.js, appsscript.json, .clasp.json)
   ├── CONTEXT.md
   ├── AUDIT_TRAIL.md
   ├── HANDOFF_PROMPT.md
@@ -53,6 +53,13 @@ C:\Users\ThomasCala\Refinery\          ← git repo, tracked on origin/main
 - **Refinery folder:** `1Ue36DjRLySHJ4jQvsSYQuRmtoor9BkJL` (My Drive > Refinery)
 - **Artifacts folder:** `1eO6n6MQKF7_cCwulGxhDkzrxT772M-Iz` (My Drive > Refinery > Refinery Artifacts)
 - Working docs live here: CONTEXT.md, AUDIT_TRAIL.md, HANDOFF_PROMPT.md, PROCESS.md, RefineryV2 Viewer.json, RefineryV2 Ingestion.json
+
+## Wisdomware integration (planned — design locked 2026-06-29, not yet built)
+Goal: read the Obsidian **Wisdomware** vault's summaries inside Refinery at night on iOS (Obsidian mobile is paywalled; Refinery already reads on iOS). Operating model: Refinery reads · Drive stores · Obsidian thinks · NotebookLM analyzes · Todoist executes.
+- **Sync:** `rclone` on the Mac (no Google Drive desktop) mirrors the local vault → Google Drive over the API. Reads the OneDrive-synced vault folder; one Google Drive remote. Syncthing was rejected (P2P, can't reach Drive without a bridge device). Scope: **`*.md` + `*.html` only**; PDFs are auto-moved by the filer LLM into `._PDF_Archive` and excluded.
+- **Drive layout (3 buckets):** rename the existing **Refinery Artifacts** folder (ID `1eO6n6MQKF7_cCwulGxhDkzrxT772M-Iz`) → **`Wisdomware`** (keeps the ID, Ingestion keeps working). `Wisdomware/Inbox/` = unsorted mail ingestion (mail routes here, not the folder root). `Wisdomware/<topic>/*.md` = filed summaries (the nightly reading queue). `Archive/` = source PDFs (browse/link-back only). Videos = link-only, never uploaded.
+- **Viewer reading:** render `.md` + clean `.html` summaries **inline** (no iframe) so they inherit the article swipe/N-P/mark-read flow; the `<iframe>` is the reason swipe can't work in the Artifacts view today (see Known Patterns). Decide inline-vs-iframe **by content**: full `<html>` document → iframe; markdown/fragment → inline. `Inbox` newsletters keep the iframe. Also planned: delete advances to next item (not the first article) + real delete via `DriveApp` write-back.
+- Tracked as a build item in BACKLOG.md. Full rationale + rejected options in AUDIT_TRAIL 2026-06-29.
 
 ## Supabase
 - **Project:** hwropcciwxzzukfcjlsr
@@ -110,8 +117,8 @@ Post v2.51 every newsletter lands in both places automatically (Drive save + Sup
 - Finance filter (`isFastFinanceFiltered_`, `isFinanceFiltered_`) is disabled — checks commented out in TOR loop. Re-enable by uncommenting both lines. See v2.34 in changelog.
 - UrlFetchApp daily quota: ~20,000 calls/day. Exhausted 2026-05-03 due to markTORArticlesAsRead batch bug (v2.35 fixed). Resets at midnight Pacific. Do not run ingestion multiple times/hour.
 - Kagi feeds in TOR use `allorigins.win` as a CORS proxy (e.g. `api.allorigins.win/raw?url=https://news.kagi.com/...`). This 3rd-party proxy can go down silently — if Kagi content disappears from the Viewer, check allorigins.win first
-- Source files live locally at `C:\Users\ThomasCala\Refinery\`; deployed to Apps Script via clasp
-- All working docs consolidated to `C:\Users\ThomasCala\Refinery\` (previously split across OneDrive\Refinery and two separate clasp folders)
+- Source files live locally at `~/Refinery/` (resolves per machine); deployed to Apps Script via clasp
+- All working docs consolidated to `~/Refinery/` (previously split across OneDrive\Refinery and two separate clasp folders)
 - **Supabase Data API grants (enforced on existing projects 2026-10-30):** new tables created in the `public` schema no longer get automatic Data API access by default. Existing `articles` and `audit_trail` tables are unaffected — their grants persist. But any NEW table added to project `hwropcciwxzzukfcjlsr` after 2026-10-30 must include explicit `GRANT` statements or PostgREST returns a 42501 error from `UrlFetchApp`. Template: `grant select, insert, update, delete on public.<table> to service_role; grant select on public.<table> to anon;` (anon only if Viewer needs read access via the anon key). Per Supabase email 2026-05-24.
 
 ## Current Disabled Features (intentional, easy to re-enable)

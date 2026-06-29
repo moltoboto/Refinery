@@ -82,14 +82,12 @@ git -C ~/Refinery status             # clean
 
 ## Claude Code on the Mac (optional, makes the assistant consistent)
 
-The Refinery playbook lives in Claude skills that are **local to each machine** (`~/.claude/skills/`), not in the repo. To get the same behavior:
+The Refinery playbook lives in two places, both already set up:
 
-- Copy these folders from the Windows machine, or ask Claude to **recreate** them:
-  - `~/.claude/skills/refinery/`
-  - `~/.claude/skills/refinery-sop/`
-- The `refinery` skill currently hardcodes the **Windows** canonical path (`C:\Users\ThomasCala\Refinery`). On the Mac, update it to `~/Refinery` (or have Claude do it).
+- The **`refinery`** skill is in your **shared Claude config** — `CLAUDE_CONFIG_DIR` points at `…/[03] AI/claude-config/.claude/skills/refinery/`, which syncs to **both** the Lenovo and the Mac via OneDrive. It is now **OS-aware**: it refers to the repo as `~/Refinery`, which resolves to `/Users/thomascala/Refinery` on the Mac and `C:\Users\ThomasCala\Refinery` on the Lenovo. No per-machine edit needed.
+- The **`refinery-sop`** skill lives **inside this repo** at `.claude/skills/refinery-sop/`, so it travels with GitHub. It uses the same `~/Refinery` convention.
 - **Worktree note:** the Claude Code **desktop app** creates a git worktree per session (same on Mac as Windows) — so work against the canonical `~/Refinery` via absolute paths. The **CLI** does not create worktrees, so it's simpler if you use it.
-- Project memory (under `~/.claude/projects/...`) is also machine-local; copying it is optional.
+- Project memory (under the config dir's `projects/...`) syncs via OneDrive too; nothing to copy.
 
 ---
 

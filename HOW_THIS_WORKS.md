@@ -18,7 +18,7 @@ There are two separate mini-apps that run on Google's servers:
 
 ```
 Your laptop (working folder)
-└── C:\Users\ThomasCala\Refinery\        ← all source code lives here (moved out of OneDrive 2026-05-23)
+└── ~/Refinery/        ← all source code lives here (moved out of OneDrive 2026-05-23)
     ├── Ingestion\                     ← the fetcher app
     │   └── Code.js                    ← the actual code (v2.55)
     ├── Viewer\                        ← the reader app
@@ -46,7 +46,7 @@ Google Drive (moltoboto account)
 └── My Drive > Refinery                ← doc backups + email artifact HTML files
 ```
 
-**Note on sync reliability:** GitHub is the source of truth; your local working copy at `C:\Users\ThomasCala\Refinery\` is the working surface. Avoid putting the working folder inside OneDrive — sync collisions there caused a complete blank-out on 2026-05-23. `clasp push` to Google Apps Script has been flaky; when it fails the live app drifts behind the source. Treat Apps Script as a separate "live deployment" step, not part of the sync chain.
+**Note on sync reliability:** GitHub is the source of truth; your local working copy at `~/Refinery/` is the working surface. Avoid putting the working folder inside OneDrive — sync collisions there caused a complete blank-out on 2026-05-23. `clasp push` to Google Apps Script has been flaky; when it fails the live app drifts behind the source. Treat Apps Script as a separate "live deployment" step, not part of the sync chain.
 
 ---
 
@@ -73,7 +73,7 @@ Google Drive (moltoboto account)
 ## How to Switch Between Claude Code and Codex
 
 ### Starting fresh with Claude Code (after Codex was last used)
-1. Open Claude Code in `C:\Users\ThomasCala\Refinery\`
+1. Open Claude Code in `~/Refinery/`
 2. Run: `git pull` — gets the latest from GitHub
 3. Start your session — I read the files directly, no uploads needed
 
@@ -110,11 +110,11 @@ Think of it like "git push, but for Google's servers instead of GitHub."
 
 ```bash
 # From the Ingestion folder:
-cd C:\Users\ThomasCala\Refinery\Ingestion
+cd ~/Refinery/Ingestion
 clasp push --force   # NOTE: clasp has been flaky lately — if it errors, retry or push from another shell
 
 # From the Viewer folder:
-cd C:\Users\ThomasCala\Refinery\Viewer
+cd ~/Refinery/Viewer
 clasp push --force
 ```
 
@@ -157,11 +157,11 @@ After any meaningful change:
 1. **Header of each `Code.js`** — Viewer's version is on line 1 (`// ... Viewer v2.XX`); Ingestion's is on line 4 (` * Version: 2.XX`). Whatever those say is the version.
 2. **GitHub `main`** — file contents are whatever the latest commit on main says.
 
-Your local `C:\Users\ThomasCala\Refinery\` is a working copy, not a source of truth. `HOW_THIS_WORKS.md` and `CONTEXT.md` are narrative; if they disagree with the code or with GitHub, the code/GitHub wins.
+Your local `~/Refinery/` is a working copy, not a source of truth. `HOW_THIS_WORKS.md` and `CONTEXT.md` are narrative; if they disagree with the code or with GitHub, the code/GitHub wins.
 
 **Auto-backup health check.** A scheduled task runs daily to:
 
-1. Verify the local `C:\Users\ThomasCala\Refinery\` folder still has content (catches the blank-out case)
+1. Verify the local `~/Refinery/` folder still has content (catches the blank-out case)
 2. Verify the local git is in sync with `origin/main` (catches drift)
 3. Verify line-1 versions in both `Code.js` files match what GitHub has
 4. Surface anything wrong as a quick chat report you can act on
@@ -172,10 +172,10 @@ If the health check fails, you'll get a clear message in Cowork telling you exac
 
 ```powershell
 # Re-clone fresh from GitHub
-git clone https://github.com/moltoboto/Refinery.git C:\Users\ThomasCala\Refinery
+git clone https://github.com/moltoboto/Refinery.git ~/Refinery
 ```
 
-Or just ask Claude in Cowork: "Restore Refinery from GitHub." It's the recipe we used on 2026-05-23, when the working copy lived in OneDrive and OneDrive silently emptied the folder. The move to `C:\Users\ThomasCala\Refinery\` (out of OneDrive) on 2026-05-23 is the long-term fix; this playbook is for the day GitHub-cloud rather than OneDrive becomes the failure mode.
+Or just ask Claude in Cowork: "Restore Refinery from GitHub." It's the recipe we used on 2026-05-23, when the working copy lived in OneDrive and OneDrive silently emptied the folder. The move to `~/Refinery/` (out of OneDrive) on 2026-05-23 is the long-term fix; this playbook is for the day GitHub-cloud rather than OneDrive becomes the failure mode.
 
 ---
 

@@ -45,14 +45,15 @@ Refinery/
 ├── HANDOFF_PROMPT.md           kickoff prompt + session health check
 ├── PROCESS.md                  step-by-step workflow rules
 ├── BACKLOG.md                  open items + backlog
-└── ship.ps1                    clasp push + version stamp + git push
+├── ship.sh                     clasp push + version stamp + git push (Mac + Lenovo, bash)
+└── ship.ps1                    same, Windows PowerShell
 ```
 
 ## Working copy & sync
 
 | Location | Role |
 |----------|------|
-| **`C:\Users\ThomasCala\Refinery\`** | Local working folder (the canonical path) |
+| **`~/Refinery/`** | Local working folder (the canonical path) |
 | **`github.com/moltoboto/Refinery`** | Cloud backup + source of truth, branch `main` |
 | **Google Apps Script** (moltoboto account) | Where the code actually runs |
 | **Supabase** (`hwropcciwxzzukfcjlsr`) | The `articles` table |
@@ -60,7 +61,7 @@ Refinery/
 
 History note: the working folder lived in OneDrive briefly. OneDrive silently
 emptied the folder on 2026-05-23. The working copy was moved out of OneDrive
-into `C:\Users\ThomasCala\Refinery\` the same day. Do not put the working folder
+into `~/Refinery/` the same day. Do not put the working folder
 back in OneDrive.
 
 ## Getting started in a new session

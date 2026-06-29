@@ -7,24 +7,29 @@ description: Onboarding for Refinery work — the GitHub setup, the audit-trail 
 
 Refinery is a personal news reader: two Google Apps Script apps (Viewer + Ingestion) talking to Supabase. The full project state lives in three docs at the repo root; this skill teaches you the workflow around those docs.
 
+## Machine note (dual-machine: Lenovo + Mac, synced via GitHub)
+
+The repo is worked on from both a Lenovo (Windows) and a Mac. **Always refer to the working copy as `~/Refinery`** — through the Bash tool, `~` resolves to `C:\Users\ThomasCala\Refinery` on the Lenovo and `/Users/thomascala/Refinery` on the Mac. Use `~/Refinery` and forward slashes in every command; do not hardcode an absolute or `C:\` path.
+
 ## 0. Read these FIRST — every session, in this order
 
 ```
-C:\Users\ThomasCala\Refinery\CONTEXT.md       # durable state, version, gotchas, change log
-C:\Users\ThomasCala\Refinery\AUDIT_TRAIL.md   # running session log — read the top entries
-C:\Users\ThomasCala\Refinery\PROCESS.md       # current workflow (rewritten 2026-05-10)
+~/Refinery/CONTEXT.md       # durable state, version, gotchas, change log
+~/Refinery/AUDIT_TRAIL.md   # running session log — read the top entries
+~/Refinery/PROCESS.md       # current workflow (rewritten 2026-05-10)
 ```
 
 Then read the relevant `Code.js` section before editing anything. Do not work from memory.
 
 ## 1. GitHub setup
 
-- **Repo:** https://github.com/moltoboto/Refinery
+- **Repo:** https://github.com/moltoboto/Refinery — **GitHub is the source of truth.** `~/Refinery` is the working copy on each machine.
 - **Default branch:** `main`. **Do NOT use `master`** — it's been deleted from origin (was 13 months stale at ~v2.8). If you ever see v2.8/v2.8 and no 2026-05-09 HOLD marker in the audit trail, you're reading the wrong branch — stop and run `git checkout main`.
-- **Auth:** gh CLI authenticated as `moltoboto` (HTTPS, Windows credential manager). If `git push` fails with auth errors on a new machine: `winget install --id GitHub.cli`, then `gh auth login` (GitHub.com / HTTPS / moltoboto).
+- **Auth:** gh CLI authenticated as `moltoboto` (HTTPS). If `git push` fails with auth errors on a new machine, install gh (`brew install gh` on Mac / `winget install --id GitHub.cli` on Windows) then `gh auth login` (GitHub.com / HTTPS / moltoboto).
 - **Identity:** git's automatic committer name/email may not be `moltoboto` — that's fine. GitHub attributes the push to whoever gh is authenticated as. Do **not** amend commits just to fix the committer email.
-- **Working copy:** `C:\Users\ThomasCala\Refinery\` on this machine. The repo may be cloned to other paths on other machines — the docs use this path for examples, not as a hard requirement.
-- **Branch hygiene:** `git pull --rebase origin main` at the start of any session if another machine may have pushed. Never force-push to main.
+- **Windows-only TLS:** on the Lenovo the corporate proxy needs `git config --global http.sslBackend schannel` and `http.schannelCheckRevoke false` (one-time). On the Mac, do not set these — git uses the macOS keychain.
+- **Never put the working copy inside OneDrive.** OneDrive silently emptied the folder on 2026-05-23. Keep `~/Refinery` in the home dir, out of any synced cloud folder; GitHub is the sync mechanism between machines.
+- **Branch hygiene:** `git -C ~/Refinery pull --rebase origin main` at the start of any session if another machine may have pushed. Never force-push to main.
 
 ## 2. The audit trail rule
 
@@ -48,7 +53,7 @@ For non-version-bump work (docs, refactors, infra), use a short tag in the heade
 
 **Date convention:** the file dates entries by calendar day, not commit time. Multiple entries on the same date are normal — list newest-first within the day.
 
-**Never:** rewrite historical entries. Paths and details in old entries describe state at the time and are intentionally preserved even when the project moves (e.g. old `C:\Users\exact\` paths in pre-2026-05-10 entries).
+**Never:** rewrite historical entries. Paths and details in old entries describe state at the time and are intentionally preserved even when the project moves (e.g. old `C:\Users\…` paths in pre-2026-05-10 entries stay as written).
 
 ## 3. The SOP loop — every meaningful change
 
@@ -64,8 +69,8 @@ In this order, no shortcuts:
 
 4. **clasp push** the affected app(s):
    ```
-   cd C:\Users\ThomasCala\Refinery\Ingestion && npx --yes @google/clasp push
-   cd C:\Users\ThomasCala\Refinery\Viewer    && npx --yes @google/clasp push
+   cd ~/Refinery/Ingestion && npx --yes @google/clasp push
+   cd ~/Refinery/Viewer    && npx --yes @google/clasp push
    ```
    - **Ingestion: push-only.** Runs via time triggers; new code picked up next run automatically.
    - **Viewer: push + redeploy.** Must redeploy in Apps Script: Deploy → Manage deployments → pencil icon → **New version** → Deploy. Keeps the same URL. The pushed code is NOT live until redeploy.
@@ -73,12 +78,12 @@ In this order, no shortcuts:
 
 5. **git commit + push:**
    ```
-   git -C C:/Users/ThomasCala/Refinery add -A
-   git -C C:/Users/ThomasCala/Refinery commit -m "vX.Y: short summary"
-   git -C C:/Users/ThomasCala/Refinery push origin main
+   git -C ~/Refinery add -A
+   git -C ~/Refinery commit -m "vX.Y: short summary"
+   git -C ~/Refinery push origin main
    ```
 
-There's a helper script at the repo root: `ship.ps1 ingestion|viewer|both` — automates step 4 + step 5 but deliberately does NOT do steps 1–3 (those need judgment).
+There's a cross-platform helper script at the repo root: `~/Refinery/ship.sh ingestion|viewer|both "message"` (bash; works on Mac + Lenovo). `ship.ps1` is the Windows-PowerShell equivalent. Both automate step 4 + step 5 but deliberately do NOT do steps 1–3 (those need judgment).
 
 ## 4. The "Do Not Touch" list
 
@@ -93,8 +98,8 @@ If any change touches these, surface it explicitly and confirm before editing.
 
 ## 5. Cross-machine handoff
 
-This project may be worked on from more than one machine. Before starting:
-- `git pull --rebase origin main` to absorb any commits from the other machine.
+This project is worked on from more than one machine (Lenovo + Mac). Before starting:
+- `git -C ~/Refinery pull --rebase origin main` to absorb any commits from the other machine.
 - If AUDIT_TRAIL.md conflicts on rebase (both sides inserted a new top entry): keep both, newest-first, both above the previous newest entry. Adjust dates if the user specifies.
 
 After finishing:

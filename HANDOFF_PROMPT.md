@@ -6,9 +6,9 @@ Use this at the start of any session with any LLM (Claude Code, Codex, Copilot, 
 
 ## WHERE EVERYTHING LIVES
 
-### Local files (P16 — C:\Users\ThomasCala\Refinery\)
+### Local files (P16 — ~/Refinery/)
 ```
-C:\Users\ThomasCala\Refinery\
+~/Refinery/
   ├── Viewer\          → Apps Script Viewer app (Code.js, index.html, appsscript.json, .clasp.json)
   ├── Ingestion\       → Apps Script Ingestion app (Code.js, appsscript.json, .clasp.json)
   ├── CONTEXT.md       → Project brain — read first every session
@@ -37,8 +37,8 @@ C:\Users\ThomasCala\Refinery\
 
 ### Push commands
 ```bash
-cd C:\Users\ThomasCala\Refinery\Ingestion && npx --yes @google/clasp push
-cd C:\Users\ThomasCala\Refinery\Viewer    && npx --yes @google/clasp push
+cd ~/Refinery/Ingestion && npx --yes @google/clasp push
+cd ~/Refinery/Viewer    && npx --yes @google/clasp push
 ```
 Viewer changes also need an Apps Script redeploy (pencil → New version → Deploy).
 Ingestion is push-only, no redeploy needed.
@@ -76,9 +76,9 @@ If anything fails: do NOT start editing. Restore from GitHub first:
 
 ```powershell
 # If working folder is blank/missing files — re-clone fresh:
-git clone https://github.com/moltoboto/Refinery.git C:\Users\ThomasCala\Refinery
+git clone https://github.com/moltoboto/Refinery.git ~/Refinery
 # If just behind origin:
-cd C:\Users\ThomasCala\Refinery && git pull origin main
+cd ~/Refinery && git pull origin main
 ```
 
 Then re-run the three checks before continuing.
@@ -102,10 +102,10 @@ to GitHub. They're 10 seconds and they catch corruption early.
 ```
 You are working on Refinery, a personal news reader built on Google Apps Script + Supabase.
 
-Source files at C:\Users\ThomasCala\Refinery\
-- Viewer app:    C:\Users\ThomasCala\Refinery\Viewer\
-- Ingestion app: C:\Users\ThomasCala\Refinery\Ingestion\
-- Working docs:  C:\Users\ThomasCala\Refinery\
+Source files at ~/Refinery/
+- Viewer app:    ~/Refinery/Viewer
+- Ingestion app: ~/Refinery/Ingestion
+- Working docs:  ~/Refinery/
 
 Before doing anything:
   0. HEALTH CHECK — verify the folder isn't blank and git is current:
@@ -122,8 +122,8 @@ Before doing anything:
   3. Read the relevant Code.js section before editing
 
 Push commands:
-  cd C:\Users\ThomasCala\Refinery\Ingestion && npx --yes @google/clasp push
-  cd C:\Users\ThomasCala\Refinery\Viewer    && npx --yes @google/clasp push
+  cd ~/Refinery/Ingestion && npx --yes @google/clasp push
+  cd ~/Refinery/Viewer    && npx --yes @google/clasp push
   Viewer ALSO needs Apps Script redeploy (pencil → New version → Deploy).
   Ingestion is push-only, no deploy step.
 
@@ -186,7 +186,7 @@ last writer wins and the other account won't know its read was stale.
 - [ ] Deploy → Manage Deployments → pencil icon → **New version** → Deploy (keeps same URL, no bookmark change)
 
 ### Switching tools:
-- **Codex → Claude Code:** make sure Codex pushed to GitHub, then `git pull` in `C:\Users\ThomasCala\Refinery\`
+- **Codex → Claude Code:** make sure Codex pushed to GitHub, then `git pull` in `~/Refinery/`
 - **Claude Code → Codex:** Claude Code pushes to GitHub; download latest files from GitHub in Codex
 
 ---

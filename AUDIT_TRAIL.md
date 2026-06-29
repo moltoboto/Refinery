@@ -17,6 +17,18 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-29 - Claude Code (Design session — Wisdomware→Refinery sync architecture; NO code change)
+- Request: Tom briefed a multi-tool operating model (Refinery reads · Drive stores · Obsidian thinks · NotebookLM analyzes · Todoist executes) and the goal of reading Obsidian "Wisdomware" summaries in Refinery at night on iOS. Design + scope only — "build tomorrow, no hours now."
+- Files touched: `BACKLOG.md` (added High-value D1 + S1, plus the Wisdomware inline-render build row). **No Viewer/Ingestion code touched.** This commit also lands previously-uncommitted 2026-06-19 Mac-setup doc work (see housekeeping note).
+- Decisions locked:
+  - **Sync = rclone on the Mac** (no Google Drive desktop; API-based) mirrors local Wisdomware → Google Drive. Syncthing rejected (P2P, can't reach Drive without a bridge). The Drive→Refinery hop is free — Ingestion Apps Script reads Drive in-cloud.
+  - **3-bucket storage model:** `Wisdomware/` (Drive) = reading layer = `Inbox/` (mail ingestion) + filed `*.md` summaries; `Archive/` = source PDFs; Videos = link-only, never uploaded. Single top-level folder named **Wisdomware** — rename the existing "Refinery Artifacts" Drive folder (ID `1eO6n6MQKF7_cCwulGxhDkzrxT772M-Iz`) to keep its ID. Mail ingestion → `Wisdomware/Inbox/`.
+  - **Sync scope:** rclone takes ONLY `*.md` + `*.html`. PDFs are auto-moved by the filer LLM into `._PDF_Archive` (excluded for free).
+  - **Viewer build (next session, ~1–2 hrs):** Root cause of "trapped in Artifacts" found — artifacts render inside an `<iframe>`, so a finger-swipe can't be captured (deliberate skip in `initSwipeNav`/`activePane`, index.html ~line 2275); `navigate(±1)` ALREADY branches for `artView` (N/P already cycle artifacts). FIX = render `.md` + clean `.html` INLINE (no iframe) so they inherit the article swipe/N-P/mark-read flow; decide inline-vs-iframe BY CONTENT (full `<html>` doc → iframe; markdown/fragment → inline); `Inbox` newsletters keep the iframe. Rejected adding a separate reader app (tool sprawl). Also wanted: delete advances to next (not first article) + real delete via `DriveApp` write-back.
+- Validation: none — design only, no code changed.
+- Follow-up: confirm the inline/iframe split, then implement (Viewer inline render + swipe → rclone config → Inbox routing). Braindump in `[100] Wisdomware/[102] LLM Memory/2026_Refinery_{Tech,Weq}.md`; Open Brain + Todoist updated.
+- Housekeeping: this commit also lands the 2026-06-19 Mac-setup changes left uncommitted in the tree — path conversions `C:\Users\ThomasCala\Refinery` → `~/Refinery` across CONTEXT/README/HANDOFF_PROMPT/HOW_THIS_WORKS/MAC_REFINERY_SETUP + the `refinery-sop` SKILL, and the new cross-platform `ship.sh`. Reviewed: doc/path-only + the bash ship helper; no secrets.
+
 ### 2026-06-12 - Claude Code (Viewer v2.53 — Gemini model 404, real 3-state Focus, Artifacts search)
 - Request: User reported (via a read-only side-session fork that couldn't push) three bugs: Summarize 404'd, Focus was only 2 states (asked for 3→2→1), and search didn't work in the Artifacts tab. Fixed all three from the main session.
 - (1) **Gemini 404**: `gemini-2.0-flash` was retired ("no longer available"). Verified via web search that `gemini-2.5-flash` is also removed and **`gemini-3.5-flash`** is the current GA flash model; set `GEMINI_MODEL = 'gemini-3.5-flash'`. (Can't call Gemini from here — user smoke-test confirms.)
