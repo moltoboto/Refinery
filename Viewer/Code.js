@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend - Viewer v2.56
+// REFINERY - Google Apps Script Backend - Viewer v2.57
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.56')
+    .setTitle('Refinery V2.57')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -368,19 +368,12 @@ function generateExecutiveSummary(payload) {
 function getArtifacts(limit) {
   try {
     limit = normalizePositiveInt_(limit, 0);
-    var folder = DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID);
-    var files = folder.getFiles();
-    var artifacts = [];
+    var root = DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID);
     var keepMap = getArtifactKeepMap_();
-
-    while (files.hasNext()) {
-      var file = files.next();
-      var mimeType = file.getMimeType();
-      var meta = parseArtifactMeta_(file.getDescription());
-      var artifactKind = inferArtifactKind_(file.getName(), meta);
-      var effectiveMime = normalizeArtifactMime_(mimeType, artifactKind, file.getName());
-      artifacts.push(buildArtifactRecord_(file, meta, artifactKind, effectiveMime, keepMap));
-    }
+    var artifacts = [];
+    // v2.57 — recurse subfolders so files under Inbox/ and topic folders surface; each
+    // artifact carries folderPath (relative to root) so the Viewer can build a tree.
+    collectArtifacts_(root, '', artifacts, keepMap, 0);
 
     artifacts.sort(function(a, b) {
       return new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime();
@@ -395,7 +388,30 @@ function getArtifacts(limit) {
   }
 }
 
-function buildArtifactRecord_(file, meta, artifactKind, effectiveMime, keepMap) {
+// v2.57 — depth-first walk of the artifacts folder. Caps depth + total to stay within
+// Apps Script limits; skips dot-folders (.obsidian/.smart-env/._PDF_Archive etc).
+// folderPath is '' at the root, else 'Sub' or 'Sub/Deeper'.
+function collectArtifacts_(folder, pathPrefix, artifacts, keepMap, depth) {
+  var MAX = 3000;
+  if (depth > 8 || artifacts.length >= MAX) return;
+  var files = folder.getFiles();
+  while (files.hasNext() && artifacts.length < MAX) {
+    var file = files.next();
+    var meta = parseArtifactMeta_(file.getDescription());
+    var artifactKind = inferArtifactKind_(file.getName(), meta);
+    var effectiveMime = normalizeArtifactMime_(file.getMimeType(), artifactKind, file.getName());
+    artifacts.push(buildArtifactRecord_(file, meta, artifactKind, effectiveMime, keepMap, pathPrefix));
+  }
+  var subs = folder.getFolders();
+  while (subs.hasNext() && artifacts.length < MAX) {
+    var sub = subs.next();
+    var name = sub.getName();
+    if (name.charAt(0) === '.') continue; // skip hidden/system folders
+    collectArtifacts_(sub, pathPrefix ? pathPrefix + '/' + name : name, artifacts, keepMap, depth + 1);
+  }
+}
+
+function buildArtifactRecord_(file, meta, artifactKind, effectiveMime, keepMap, folderPath) {
   var createdAt = file.getDateCreated();
   var effectiveDate = extractArtifactDate_(file.getName(), meta, createdAt);
   return {
@@ -415,6 +431,7 @@ function buildArtifactRecord_(file, meta, artifactKind, effectiveMime, keepMap) 
     size: formatBytes(file.getSize()),
     dateAdded: effectiveDate.toISOString(),
     dateLabel: Utilities.formatDate(effectiveDate, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+    folderPath: folderPath || '',  // v2.57 — relative path for the Artifacts tree view
     kept: !!keepMap[file.getId()]
   };
 }

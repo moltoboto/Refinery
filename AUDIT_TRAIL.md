@@ -17,6 +17,16 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-30 - Claude Code (Viewer v2.57 — Artifacts folder tree: subfolder recursion + collapsible groups)
+- Request: "add the tree" — surface Drive subfolders (Inbox + topic folders) in the Artifacts tab; today only root-level files show.
+- Files: Viewer/Code.js (`getArtifacts` → recursive `collectArtifacts_`; `buildArtifactRecord_` gains `folderPath`), Viewer/index.html (`artifactCardsHtml` groups by folder + `toggleArtifactFolder` + `.artifact-folder` CSS), version strings.
+- Actions:
+  - **Backend recursion:** `getArtifacts` now walks the folder tree (`collectArtifacts_`, depth ≤8, ≤3000 files, skips dot-folders like `.obsidian`/`.smart-env`/`._PDF_Archive`). Each artifact carries `folderPath` (relative to root). Previously `folder.getFiles()` saw ONLY root-level files — anything in a subfolder (e.g. `Inbox/`) was invisible. **This is what makes Inbox + topic folders readable.**
+  - **Frontend tree:** the Artifacts list groups into collapsible folder sections by `folderPath` (root files under "Files", then subfolders A–Z; tap header to collapse). Card markup unchanged → select/highlight/nav/delete still work. If everything is at root (current state), renders FLAT with no folder chrome — zero visible change until subfolders exist.
+- Validation: `node --check` on Code.js + extracted index.html inline script. clasp push DONE — `/dev` serves v2.57. NOT browser-tested; Drive recursion can't be unit-tested without Drive. Isolated to the Artifacts view (articles untouched).
+- Deployment: USER redeploy `/exec` for iPad. Note: bootstrap artifact limit is still 50 (`getViewerBootstrap`) — if the tree should show more than the 50 newest files across all folders, raise `ARTIFACT_LIMIT` later.
+- Follow-up: pairs with email→`[01] Inbox` routing (next) + the Wisdomware sync. Once subfolders land in Drive, the tree lights up.
+
 ### 2026-06-30 - Claude Code (Viewer v2.56 — Markdown front-matter + tables; VERIFIED vs real files)
 - Request: User reported v2.55 rendered all `.md` files well EXCEPT `2026_Why_Most_Enterprise_AI_Programs_Fail` and `2026_Playwright_MCP`.
 - Diagnosis: both are Obsidian "clippings" — found the originals locally in `[100] Wisdomware/[03] AI/...`. Two converter gaps: (1) **YAML front matter** (`--- title:/source:/tags: ---`) rendered as a stray `<hr>` + raw metadata text; (2) **Markdown tables** (Playwright's Quick Reference + Usage tables) rendered as literal `| … |` pipe lines. Enterprise file = front matter only (no tables); Playwright = both.
