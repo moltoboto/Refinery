@@ -17,6 +17,18 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-30 - Claude Code (Viewer v2.55 — Markdown artifacts render formatted; NOT yet verified)
+- Request: Autonomous session ("do whatever doesn't need my permission"). W1 increment: make `.md` summaries read like articles instead of raw source.
+- Files touched: Viewer/Code.js (`markdownToHtml_` added; `getArtifactContent` branch; `buildArtifactHtmlDocument_` CSS; version line + display strings), Viewer/index.html (display strings).
+- Actions:
+  - Added **`markdownToHtml_`** — a compact, dependency-free Markdown→HTML converter (Apps Script has no md lib). Handles headings, bold/italic, inline + fenced code, links/images, ordered/unordered lists, blockquotes, hr, paragraphs. **Security:** all raw text is HTML-escaped first; only generated tags are re-introduced, so a `<script>` in a note can't inject (verified — renders as escaped text).
+  - **`getArtifactContent`:** `text/plain` artifacts whose name ends in `.md`/`.markdown` (or mime `text/markdown`) now render via `markdownToHtml_`; other plain text (`.txt`/`.csv`/`.log`/`.json`) still renders verbatim in `<pre>`. Newsletter `text/html` path unchanged.
+  - Added `.md-body` reading CSS to `buildArtifactHtmlDocument_` (max-width column, heading/list/quote/code styling).
+  - Bug caught + fixed during a node unit-test: HTML-escaping turns `>`→`&gt;` before block parsing, so blockquotes were detected as paragraphs. Blockquote regexes now match `&gt;`.
+- Validation: `node --check` passes on Code.js. Converter **unit-tested in node** on a sample (headings/bold/italic/code/links/lists/blockquote/hr/script-escaping/code-fence) — output correct. clasp push Viewer DONE — `/dev` serves v2.55. **NOT browser-tested, and NO `.md` artifact exists in Drive yet** — verification deferred until Wisdomware content is synced in (ExpanDrive/rclone/CCC).
+- Deployment: USER must redeploy `/exec` for the iPad. **Blast radius is zero for current content** — only `.md`/`.markdown` files take the new path, and there are none live; newsletters are unaffected.
+- Follow-up: once a `.md` is in the Drive folder, open it in Artifacts and confirm it renders formatted (headings/bold/lists), not raw `#`/`**`. Optional later: render `.md` inline (no iframe) so swipe works on it too (arrows already work via v2.54).
+
 ### 2026-06-30 - Claude Code (Viewer v2.54 — Artifacts ←/→ nav + delete-advances; macOS clasp rootDir fix)
 - Request: Incremental build — one version per change. First increment of W1: fix the two Artifacts bugs that are verifiable on existing content — "trapped" (no swipe in Artifacts) and "delete jumps to the first file".
 - Files touched: Viewer/index.html (`renderArtifactShell` actions + `deleteArtifact`), Viewer/Code.js (version line), Viewer/.clasp.json (rootDir).

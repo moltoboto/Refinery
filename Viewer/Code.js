@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend - Viewer v2.54
+// REFINERY - Google Apps Script Backend - Viewer v2.55
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.54')
+    .setTitle('Refinery V2.55')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -432,9 +432,20 @@ function getArtifactContent(fileId) {
 
     if (viewerMode === 'html') {
       var raw = blob.getDataAsString('UTF-8');
-      var html = mimeType === 'text/plain'
-        ? buildArtifactHtmlDocument_('<pre class="artifact-text">' + escapeHtml_(raw) + '</pre>', title)
-        : buildArtifactHtmlDocument_(sanitizeArtifactHtml_(raw), title);
+      var html;
+      if (mimeType === 'text/plain') {
+        // v2.55 — render Markdown summaries as formatted HTML (not raw <pre>) so
+        // Wisdomware notes read like articles. Only true .md/.markdown files; other
+        // plain text (.txt/.csv/.log/.json) still renders verbatim in a <pre>.
+        var lowerName = (file.getName() || '').toLowerCase();
+        var isMarkdown = /\.(md|markdown)$/.test(lowerName)
+          || rawMimeType === 'text/markdown' || rawMimeType === 'text/x-markdown';
+        html = isMarkdown
+          ? buildArtifactHtmlDocument_(markdownToHtml_(raw), title)
+          : buildArtifactHtmlDocument_('<pre class="artifact-text">' + escapeHtml_(raw) + '</pre>', title);
+      } else {
+        html = buildArtifactHtmlDocument_(sanitizeArtifactHtml_(raw), title);
+      }
       return { success: true, mode: 'html', html: html, name: file.getName(), mimeType: mimeType, rawMimeType: rawMimeType };
     }
 
@@ -590,13 +601,106 @@ function buildArtifactHtmlDocument_(bodyHtml, title) {
     '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
     '<base target="_blank">',
     '<title>' + escapeHtml_(title || 'Artifact') + '</title>',
-    '<style>html,body{margin:0;padding:0;background:#f6f2ea;}body{font-family:Arial,sans-serif;color:#1f1b16;}img{max-width:100%;height:auto;}table{max-width:100% !important;}a{color:#b5551c;word-break:break-word;}.artifact-text{white-space:pre-wrap;font:14px/1.7 Arial,sans-serif;padding:20px;}</style>',
+    '<style>html,body{margin:0;padding:0;background:#f6f2ea;}body{font-family:Arial,sans-serif;color:#1f1b16;}img{max-width:100%;height:auto;}table{max-width:100% !important;}a{color:#b5551c;word-break:break-word;}.artifact-text{white-space:pre-wrap;font:14px/1.7 Arial,sans-serif;padding:20px;}'
+      + '.md-body{max-width:720px;margin:0 auto;padding:24px 20px;font:16px/1.7 -apple-system,Helvetica,Arial,sans-serif;color:#1f1b16;}'
+      + '.md-body h1,.md-body h2,.md-body h3,.md-body h4{line-height:1.25;margin:1.4em 0 .5em;}'
+      + '.md-body h1{font-size:1.7em;}.md-body h2{font-size:1.35em;}.md-body h3{font-size:1.1em;}'
+      + '.md-body p{margin:0 0 1em;}.md-body ul,.md-body ol{margin:0 0 1em 1.4em;padding:0;}.md-body li{margin:.25em 0;}'
+      + '.md-body code{background:#efe9dd;padding:.1em .35em;border-radius:4px;font:0.9em/1.4 ui-monospace,Menlo,monospace;}'
+      + '.md-body pre.md-code{background:#efe9dd;padding:12px 14px;border-radius:6px;overflow:auto;}.md-body pre.md-code code{background:none;padding:0;}'
+      + '.md-body blockquote{margin:0 0 1em;padding:.2em 1em;border-left:3px solid #b5551c;color:#4a443c;}'
+      + '.md-body hr{border:none;border-top:1px solid #d8cfbf;margin:1.5em 0;}.md-body a{color:#b5551c;}</style>',
     '</head>',
     '<body>',
     content,
     '</body>',
     '</html>'
   ].join('');
+}
+
+// v2.55 — Minimal Markdown → HTML for Wisdomware summary artifacts. Apps Script has no
+// markdown library. Summaries are our own (trusted) output, but we still HTML-escape all
+// raw text first and only re-introduce the tags we generate, so a stray '<' can't inject.
+// Handles headings, bold/italic, inline + fenced code, links/images, ordered/unordered
+// lists, blockquotes, hr and paragraphs — enough to read a summary like an article.
+function markdownToHtml_(md) {
+  var src = String(md || '').replace(/\r\n?/g, '\n');
+
+  // 1. Pull fenced code blocks out so their contents aren't markdown-processed.
+  var codeBlocks = [];
+  src = src.replace(/```[^\n]*\n([\s\S]*?)```/g, function(_, code) {
+    codeBlocks.push(escapeHtml_(code.replace(/\n$/, '')));
+    return ' CODE' + (codeBlocks.length - 1) + ' ';
+  });
+
+  // 2. Escape HTML on everything else.
+  src = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Inline spans — run on text content only, after block parsing.
+  function inline(s) {
+    return s
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g, '<img alt="$1" src="$2">')
+      .replace(/\[([^\]]+)\]\(([^)\s]+)[^)]*\)/g, '<a href="$2">$1</a>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+      .replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
+  }
+
+  var lines = src.split('\n');
+  var out = [];
+  var i = 0;
+  var listType = null; // 'ul' | 'ol'
+  function closeList() { if (listType) { out.push('</' + listType + '>'); listType = null; } }
+  function isSpecial(l) {
+    return /^\s*$/.test(l) || /^(#{1,6})\s+/.test(l) || /^\s*[-*+]\s+/.test(l) ||
+           /^\s*\d+\.\s+/.test(l) || /^\s*&gt;\s?/.test(l) || /^ CODE\d+ $/.test(l) ||
+           /^\s*([-*_])(\s*\1){2,}\s*$/.test(l);
+  }
+
+  while (i < lines.length) {
+    var line = lines[i];
+
+    var cb = line.match(/^ CODE(\d+) $/);
+    if (cb) { closeList(); out.push('<pre class="md-code"><code>' + codeBlocks[+cb[1]] + '</code></pre>'); i++; continue; }
+
+    if (/^\s*$/.test(line)) { closeList(); i++; continue; }
+
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { closeList(); out.push('<hr>'); i++; continue; }
+
+    var h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { closeList(); var lvl = h[1].length; out.push('<h' + lvl + '>' + inline(h[2].trim()) + '</h' + lvl + '>'); i++; continue; }
+
+    // NB: HTML-escaping above already turned '>' into '&gt;', so blockquote lines
+    // start with '&gt;' by the time we parse them.
+    if (/^\s*&gt;\s?/.test(line)) {
+      closeList();
+      var quote = [];
+      while (i < lines.length && /^\s*&gt;\s?/.test(lines[i])) { quote.push(inline(lines[i].replace(/^\s*&gt;\s?/, ''))); i++; }
+      out.push('<blockquote>' + quote.join('<br>') + '</blockquote>');
+      continue;
+    }
+
+    if (/^\s*[-*+]\s+/.test(line)) {
+      if (listType !== 'ul') { closeList(); out.push('<ul>'); listType = 'ul'; }
+      out.push('<li>' + inline(line.replace(/^\s*[-*+]\s+/, '')) + '</li>');
+      i++; continue;
+    }
+    if (/^\s*\d+\.\s+/.test(line)) {
+      if (listType !== 'ol') { closeList(); out.push('<ol>'); listType = 'ol'; }
+      out.push('<li>' + inline(line.replace(/^\s*\d+\.\s+/, '')) + '</li>');
+      i++; continue;
+    }
+
+    closeList();
+    var para = [];
+    while (i < lines.length && !isSpecial(lines[i])) { para.push(lines[i]); i++; }
+    out.push('<p>' + inline(para.join('\n').trim()).replace(/\n/g, '<br>') + '</p>');
+  }
+  closeList();
+
+  return '<div class="md-body">' + out.join('\n') + '</div>';
 }
 
 function escapeHtml_(value) {
