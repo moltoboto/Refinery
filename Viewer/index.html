@@ -1507,6 +1507,12 @@ function renderArtifactShell(artifact, bodyHtml) {
           </div>
         </div>
         <div class="artifact-viewer-actions">
+          <!-- v2.54 — on-screen prev/next. A finger-swipe can't be captured over the
+               artifact iframe, so these tap targets drive navigate(±1) (the same cycle
+               N/P use). They sit in the parent header (outside the iframe) so they work
+               on iPad and desktop alike — fixes "trapped in Artifacts". -->
+          <button class="artifact-icon-btn" onclick="navigate(-1)" title="Previous file" aria-label="Previous file">&#8592;</button>
+          <button class="artifact-icon-btn" onclick="navigate(1)" title="Next file" aria-label="Next file">&#8594;</button>
           <button class="artifact-icon-btn" onclick="openArtifactInNewWindow('${artifact.id}')" title="Open in new window" aria-label="Open in new window">&#8599;</button>
           <button class="artifact-icon-btn danger" onclick="deleteArtifact('${artifact.id}')" title="Delete artifact" aria-label="Delete artifact">&#128465;</button>
         </div>
@@ -1626,8 +1632,14 @@ function deleteArtifact(id) {
         toast('Artifact delete failed');
         return;
       }
+      // v2.54 — advance to the neighbouring file (the one that slides into this slot),
+      // not back to the first. Capture the index before removal; clamp to the new end.
+      var delIdx = ARTIFACTS.findIndex(function(a) { return a.id === id; });
       removeArtifactLocally(id);
       buildSidebar();
+      if (ARTIFACTS.length) {
+        selectedArtifact = ARTIFACTS[Math.min(delIdx, ARTIFACTS.length - 1)];
+      }
       showArtifactsView();
       toast('Artifact deleted');
     })

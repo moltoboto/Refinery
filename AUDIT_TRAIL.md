@@ -17,6 +17,17 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-30 - Claude Code (Viewer v2.54 — Artifacts ←/→ nav + delete-advances; macOS clasp rootDir fix)
+- Request: Incremental build — one version per change. First increment of W1: fix the two Artifacts bugs that are verifiable on existing content — "trapped" (no swipe in Artifacts) and "delete jumps to the first file".
+- Files touched: Viewer/index.html (`renderArtifactShell` actions + `deleteArtifact`), Viewer/Code.js (version line), Viewer/.clasp.json (rootDir).
+- Actions:
+  - **←/→ nav arrows:** added two tap buttons to `.artifact-viewer-actions` wired to `navigate(±1)` (which already cycles `ARTIFACTS` via N/P). They sit in the parent header, OUTSIDE the artifact iframe, so they work on iPad where a finger-swipe over the iframe can't be captured. Desktop gets click-nav too.
+  - **delete advances:** `deleteArtifact` now captures the deleted item's index and re-selects the neighbour at that index (clamped to the new list end) before `showArtifactsView`, instead of letting `selectedArtifact=null` fall back to `ARTIFACTS[0]`.
+  - **clasp rootDir fix:** Viewer/.clasp.json `rootDir` `""` → `"."`. Empty rootDir threw `ENOENT scandir ''` on macOS — this was the first Mac clasp push; `""` had only ever run on the Lenovo (Windows). `"."` works on both. Ingestion/.clasp.json likely needs the same fix when next pushed (left untouched — not testing it now).
+- Validation: `node --check` passes on Code.js and the extracted index.html inline script. clasp push Viewer DONE — `/dev` serves v2.54. NOT browser-tested.
+- Deployment: USER must redeploy `/exec` (Deploy → Manage deployments → pencil → New version → Deploy) for the iPad.
+- Follow-up: USER verify — (a) ←/→ arrows cycle files in Artifacts; (b) deleting a middle file lands on the next file, not the first. Next increment: v2.55 inline render of `.md`/`.html` (needs Wisdomware content in Drive to verify).
+
 ### 2026-06-29 - Claude Code (Design session — Wisdomware→Refinery sync architecture; NO code change)
 - Request: Tom briefed a multi-tool operating model (Refinery reads · Drive stores · Obsidian thinks · NotebookLM analyzes · Todoist executes) and the goal of reading Obsidian "Wisdomware" summaries in Refinery at night on iOS. Design + scope only — "build tomorrow, no hours now."
 - Files touched: `BACKLOG.md` (added High-value D1 + S1, plus the Wisdomware inline-render build row). **No Viewer/Ingestion code touched.** This commit also lands previously-uncommitted 2026-06-19 Mac-setup doc work (see housekeeping note).
