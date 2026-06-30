@@ -17,6 +17,17 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-30 - Claude Code (Viewer v2.56 — Markdown front-matter + tables; VERIFIED vs real files)
+- Request: User reported v2.55 rendered all `.md` files well EXCEPT `2026_Why_Most_Enterprise_AI_Programs_Fail` and `2026_Playwright_MCP`.
+- Diagnosis: both are Obsidian "clippings" — found the originals locally in `[100] Wisdomware/[03] AI/...`. Two converter gaps: (1) **YAML front matter** (`--- title:/source:/tags: ---`) rendered as a stray `<hr>` + raw metadata text; (2) **Markdown tables** (Playwright's Quick Reference + Usage tables) rendered as literal `| … |` pipe lines. Enterprise file = front matter only (no tables); Playwright = both.
+- Files touched: Viewer/Code.js (`markdownToHtml_` — front-matter strip + table parsing + `.md-table` CSS; version line + display strings), Viewer/index.html (display strings).
+- Actions:
+  - **Front-matter strip:** `markdownToHtml_` now drops a leading `^﻿?---\n … \n---\n` block before parsing.
+  - **Tables:** a `|pipe|` header row followed by a `|---|` separator becomes `<table class="md-table">` (thead/tbody, cells run through inline()); added `splitRow_`/`isTableSep_` helpers + a table-row case to `isSpecial` so paragraphs don't swallow tables. `.md-table` CSS (collapsed borders, header shading).
+- Validation: `node --check` OK. **Verified by running the live `markdownToHtml_` (loaded from Code.js via a node VM) against BOTH real files** — front matter no longer leaks, no stray `---`, Playwright's 2 tables render (0 leftover pipe rows), Enterprise renders clean. clasp push Viewer DONE — `/dev` serves v2.56.
+- Deployment: USER redeploy `/exec` for iPad. Known minor: a clipping that prints an image caption line repeats the alt text (source artifact, not the converter); degenerate single-cell tables with inline ``` fences render imperfectly (rare).
+- Follow-up: none required — re-open the two files to confirm. Optional future: nested lists, `[[wikilinks]]`.
+
 ### 2026-06-30 - Claude Code (Viewer v2.55 — Markdown artifacts render formatted; NOT yet verified)
 - Request: Autonomous session ("do whatever doesn't need my permission"). W1 increment: make `.md` summaries read like articles instead of raw source.
 - Files touched: Viewer/Code.js (`markdownToHtml_` added; `getArtifactContent` branch; `buildArtifactHtmlDocument_` CSS; version line + display strings), Viewer/index.html (display strings).

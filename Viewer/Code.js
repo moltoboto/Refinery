@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend - Viewer v2.55
+// REFINERY - Google Apps Script Backend - Viewer v2.56
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.55')
+    .setTitle('Refinery V2.56')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -609,7 +609,10 @@ function buildArtifactHtmlDocument_(bodyHtml, title) {
       + '.md-body code{background:#efe9dd;padding:.1em .35em;border-radius:4px;font:0.9em/1.4 ui-monospace,Menlo,monospace;}'
       + '.md-body pre.md-code{background:#efe9dd;padding:12px 14px;border-radius:6px;overflow:auto;}.md-body pre.md-code code{background:none;padding:0;}'
       + '.md-body blockquote{margin:0 0 1em;padding:.2em 1em;border-left:3px solid #b5551c;color:#4a443c;}'
-      + '.md-body hr{border:none;border-top:1px solid #d8cfbf;margin:1.5em 0;}.md-body a{color:#b5551c;}</style>',
+      + '.md-body hr{border:none;border-top:1px solid #d8cfbf;margin:1.5em 0;}.md-body a{color:#b5551c;}'
+      + '.md-body table.md-table{border-collapse:collapse;width:100%;margin:0 0 1em;font-size:.95em;}'
+      + '.md-body table.md-table th,.md-body table.md-table td{border:1px solid #d8cfbf;padding:6px 10px;text-align:left;vertical-align:top;}'
+      + '.md-body table.md-table th{background:#efe9dd;}</style>',
     '</head>',
     '<body>',
     content,
@@ -625,6 +628,10 @@ function buildArtifactHtmlDocument_(bodyHtml, title) {
 // lists, blockquotes, hr and paragraphs — enough to read a summary like an article.
 function markdownToHtml_(md) {
   var src = String(md || '').replace(/\r\n?/g, '\n');
+
+  // v2.56 — strip a leading YAML front-matter block (Obsidian "clippings" start with
+  // --- title:/source:/tags: --- ). Without this it renders as a stray <hr> + raw metadata.
+  src = src.replace(/^\uFEFF?---\n[\s\S]*?\n---[ \t]*\n/, '');
 
   // 1. Pull fenced code blocks out so their contents aren't markdown-processed.
   var codeBlocks = [];
@@ -653,10 +660,13 @@ function markdownToHtml_(md) {
   var i = 0;
   var listType = null; // 'ul' | 'ol'
   function closeList() { if (listType) { out.push('</' + listType + '>'); listType = null; } }
+  // v2.56 — table helpers: split cells on '|' (drop leading/trailing pipe); detect a |---| separator row.
+  function splitRow_(row) { return row.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(function(c) { return c.trim(); }); }
+  function isTableSep_(l) { return /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(l); }
   function isSpecial(l) {
     return /^\s*$/.test(l) || /^(#{1,6})\s+/.test(l) || /^\s*[-*+]\s+/.test(l) ||
            /^\s*\d+\.\s+/.test(l) || /^\s*&gt;\s?/.test(l) || /^ CODE\d+ $/.test(l) ||
-           /^\s*([-*_])(\s*\1){2,}\s*$/.test(l);
+           /^\s*([-*_])(\s*\1){2,}\s*$/.test(l) || /^\s*\|.*\|\s*$/.test(l);
   }
 
   while (i < lines.length) {
@@ -691,6 +701,19 @@ function markdownToHtml_(md) {
       if (listType !== 'ol') { closeList(); out.push('<ol>'); listType = 'ol'; }
       out.push('<li>' + inline(line.replace(/^\s*\d+\.\s+/, '')) + '</li>');
       i++; continue;
+    }
+
+    // table: a |pipe| header row immediately followed by a |---|---| separator
+    if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && isTableSep_(lines[i + 1])) {
+      closeList();
+      var header = splitRow_(line);
+      i += 2; // consume header + separator
+      var rows = [];
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { rows.push(splitRow_(lines[i])); i++; }
+      var thead = '<thead><tr>' + header.map(function(c) { return '<th>' + inline(c) + '</th>'; }).join('') + '</tr></thead>';
+      var tbody = '<tbody>' + rows.map(function(r) { return '<tr>' + r.map(function(c) { return '<td>' + inline(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody>';
+      out.push('<table class="md-table">' + thead + tbody + '</table>');
+      continue;
     }
 
     closeList();
