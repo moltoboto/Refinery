@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Refinery — CLEANED feed list (draft for Sift import), 2026-07-01.
+  Based on subscriptions.opml + taste-based cuts. Original left intact.
+
+  CUTS applied:
+   - News: Yahoo News + Fox News (Latest)  → source of the sports/celebrity noise
+   - Finance: Seeking Alpha, Motley Fool, CNBC Mad Money (opinion/pick spam, contradictory
+              buy/sell on the same stock); Yahoo Finance + Fox Business (high-volume overlap)
+   - YouTube folder (22 channels)           → videos, not reading; belong in YouTube, not Refinery
+  ADDS: Import AI, Latent Space (AI analysis, to match Nate/Stratechery taste)
+  PENDING (not yet applied here):
+   - [XX] folder renaming (backlog X1 — needs Tom's number assignments)
+   - Reddit: kept for now, but flaky (backlog R1 — decide integrate vs drop)
+   - Top-10 stocks: add per-ticker feeds here once Tom gives the 10 tickers (backlog F1)
+   - VERIFY liveness: Reuters discontinued public RSS ~2020 — confirm feeds.reuters.com still returns items
+-->
+<opml version="1.1">
+  <head>
+    <title>Refinery — cleaned</title>
+    <ownerEmail>moltoboto@gmail.com</ownerEmail>
+  </head>
+  <body>
+    <outline type="rss" xmlUrl="https://feeds.reuters.com/reuters/businessNews"/>   <!-- VERIFY liveness -->
+    <outline type="rss" xmlUrl="https://feeds.reuters.com/reuters/technologyNews"/> <!-- VERIFY liveness -->
+    <outline type="rss" xmlUrl="https://www.cnbc.com/id/100727362/device/rss/rss.html"/>
+    <outline type="rss" xmlUrl="https://natesnewsletter.substack.com/feed"/>
+
+    <outline title="AI" text="AI">
+      <outline type="rss" xmlUrl="https://aws.amazon.com/blogs/machine-learning/feed/"/>
+      <outline type="rss" xmlUrl="https://blog.google/innovation-and-ai/technology/ai/rss/"/>
+      <outline type="rss" xmlUrl="https://news.mit.edu/rss/topic/artificial-intelligence2"/>
+      <outline type="rss" xmlUrl="https://www.microsoft.com/en-us/research/feed/"/>
+      <outline type="rss" xmlUrl="http://feeds.feedburner.com/nvidiablog"/>
+      <outline type="rss" xmlUrl="https://www.deeplearning.ai/the-batch/feed/"/>
+      <outline type="rss" xmlUrl="https://huggingface.co/blog/feed.xml"/>
+      <outline type="rss" xmlUrl="https://simonwillison.net/atom/everything/"/>
+      <outline type="rss" xmlUrl="https://venturebeat.com/category/ai/feed/"/>
+      <outline type="rss" xmlUrl="https://importai.substack.com/feed"/>   <!-- ADDED: Import AI (Jack Clark) -->
+      <outline type="rss" xmlUrl="https://www.latent.space/feed"/>        <!-- ADDED: Latent Space -->
+    </outline>
+
+    <outline title="Essential Watches" text="Essential Watches">
+      <outline type="rss" xmlUrl="https://www.hodinkee.com/feed"/>
+      <outline type="rss" xmlUrl="https://www.acollectedman.com/blogs/journal.atom"/>
+      <outline type="rss" xmlUrl="https://www.bobswatches.com/rolex-blog/feed"/>
+      <outline type="rss" xmlUrl="https://deployant.com/feed/"/>
+      <outline type="rss" xmlUrl="https://www.fratellowatches.com/feed/"/>
+      <outline type="rss" xmlUrl="https://monochrome-watches.com/feed/"/>
+      <outline type="rss" xmlUrl="https://revolutionwatch.com/feed/"/>
+      <outline type="rss" xmlUrl="https://watchesbysjx.com/feed"/>
+      <outline type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCpIdSH75bNfHIsryKCTzTWw"/>
+      <outline type="rss" xmlUrl="http://feed.podbean.com/watchboxstudios/feed.xml"/>
+      <outline type="rss" xmlUrl="https://timeandtidewatches.com/feed/"/>
+      <outline type="rss" xmlUrl="http://www.watchtime.com/feed/rss"/>
+      <outline type="rss" xmlUrl="http://wornandwound.com/feed/"/>
+      <outline type="rss" xmlUrl="http://feeds.feedburner.com/Ablogtowatch"/>
+    </outline>
+
+    <outline title="Finance" text="Finance">
+      <!-- Kept only the broad, reliable market feed. SA/Fool/Mad Money/Yahoo Finance/Fox Business cut.
+           Targeted per-ticker feeds for your top-10 holdings go here (backlog F1). -->
+      <outline type="rss" xmlUrl="http://feeds.marketwatch.com/marketwatch/topstories/"/>
+    </outline>
+
+    <outline title="Learning &amp; Skills" text="Learning &amp; Skills">
+      <outline type="rss" xmlUrl="https://dailystoic.com/feed/"/>
+      <outline type="rss" xmlUrl="https://stratechery.com/feed/"/>
+    </outline>
+
+    <outline title="News" text="News">
+      <outline type="rss" xmlUrl="http://feeds.bbci.co.uk/news/technology/rss.xml"/>
+      <outline type="rss" xmlUrl="https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"/>
+      <!-- Yahoo News + Fox News (Latest) removed: source of sports/celebrity noise -->
+    </outline>
+
+    <outline title="Reddit" text="Reddit">
+      <!-- FLAKY: Reddit blocks RSS from server IPs — most items won't arrive. Backlog R1: integrate vs drop. -->
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/artificial/.rss"/>
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/ChatGPT/.rss"/>
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/PromptEngineering/.rss"/>
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/notebooklm/.rss"/>
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/LocalLLaMA/.rss"/>
+      <outline type="rss" xmlUrl="https://www.reddit.com/r/MachineLearning/.rss"/>
+    </outline>
+
+    <outline title="Tech" text="Tech">
+      <outline type="rss" xmlUrl="https://news.ycombinator.com/rss"/>
+      <outline type="rss" xmlUrl="http://feeds.arstechnica.com/arstechnica/index"/>
+      <outline type="rss" xmlUrl="https://www.engadget.com/rss-full.xml"/>
+      <outline type="rss" xmlUrl="http://feeds.macrumors.com/MacRumors-Front"/>
+      <outline type="rss" xmlUrl="https://techcrunch.com/feed/"/>
+      <outline type="rss" xmlUrl="https://www.theverge.com/rss/index.xml"/>
+    </outline>
+
+    <!-- YouTube folder (22 channels) removed entirely — videos, not reading. -->
+    <!-- My Stocks (top-10 tickers) — TO ADD once tickers are provided (backlog F1). -->
+  </body>
+</opml>
