@@ -17,6 +17,18 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-07-01 - Claude Code (Infra: removed ExpanDrive (#3) + built rclone Wisdomware→Drive sync (#4/W2))
+- Request: Tom's #3 (remove ExpanDrive) + #4 (install rclone) + build the vault→Drive sync.
+- #3 ExpanDrive removed: app + App Support + Caches + Preferences + Group Container + Desktop reset-backup → Trash. Left for Tom (macOS-protected / his accounts): Finder-trash `~/Library/Containers/com.expandrive.ExpanDrive.FileProvider`, revoke the ExpanDrive Google grants (moltoboto + tc11228), empty Trash.
+- #4 rclone: `brew install rclone` (v1.74.3); `gdrive` remote authorized to **moltoboto** (verified via `rclone lsd` — Drive top level = Refinery/OpenClaw/Watches/.codex). Token in rclone.conf; temp token files scrubbed.
+- **W2 sync BUILT + TESTED** — proves rclone writes to Drive via API (the -2005 ExpanDrive couldn't):
+  - `sync-wisdomware.sh` (repo root): `rclone copy` vault → Drive folder `1eO6n6…` (= Refinery's DRIVE_FOLDER_ID). ADDITIVE (never deletes → Drive-side deletes stick); default `--max-age 2d` (recent files only, so old deletes aren't re-copied); `--all` = full backfill; `--dry` = dry run. Filter: `*.md`/`*.html` only, skips dot-folders + `_trash` + everything else. Test run transferred 7 recently-modified md files, exit 0.
+  - launchd `~/Library/LaunchAgents/com.refinery.wisdomware-sync.plist` — nightly **17:00**, PATH includes /opt/homebrew/bin (rclone). Loaded.
+  - Shell aliases (`~/.zshrc`): `refinery-sync` (recurring) + `refinery-sync-all` (backfill).
+  - bash 3.2 gotcha fixed: `set -eo pipefail` (not `-u` — empty-array expansion errors under nounset on macOS bash 3.2).
+- Cleanup flags found in the Drive folder (not blocking): a duplicate **`[01] Inbox `** (trailing space) folder beside `[01] Inbox`; and `[03] AI/copilot/**` prompt-snippet `.md`s would show as tiny "reading" items (recurring sync skips them as old; only `--all` would pull them).
+- Follow-up: Tom's remaining list — #5–7 Sift chain, #8 "Clear Executive Summary" (clarify), #9 dedup.
+
 ### 2026-07-01 - Claude Code (Viewer v2.59 — Artifacts list loads ALL items, not just the newest 50)
 - Request: Tom's issue #1 — the Artifacts tab showed the correct total *count* but only *listed* 50 items, so whole folders were missing.
 - Files: Viewer/index.html (`ARTIFACT_LIMIT` 50→1000 + version strings), Viewer/Code.js (`getInitialArticles` + `getViewerBootstrap` artifactLimit defaults 50→1000, version line + display strings).
