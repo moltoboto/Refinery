@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refinery V2.57</title>
+<title>Refinery V2.59</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -1002,7 +1002,7 @@ kbd {
 <div class="loader" id="loader">
   <div class="loader-logo">
     <div class="loader-logo-icon"></div>
-    Refinery V2.57
+    Refinery V2.59
   </div>
   <div class="loader-track"><div class="loader-bar"></div></div>
   <div class="loader-msg" id="loaderMsg">Loading your knowledge base</div>
@@ -1018,7 +1018,7 @@ kbd {
   <header>
     <div class="logo">
       <div class="logo-icon"></div>
-      Refinery V2.57
+      Refinery V2.59
     </div>
     <div class="search-box">
       <span class="search-icon"></span>
@@ -1118,7 +1118,7 @@ kbd {
 <script>
 const WORKING_SET_SIZE = 1250;
 const MORE_PAGE_SIZE = 250;
-const ARTIFACT_LIMIT = 50;
+const ARTIFACT_LIMIT = 1000; // v2.59 — was 50; only the 50 newest artifacts loaded while the count showed all, so whole folders were missing. Load all (collectArtifacts_ still caps at 3000).
 
 let ARTICLES = [];
 let ARTIFACTS = [];

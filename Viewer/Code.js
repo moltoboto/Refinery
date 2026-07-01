@@ -1,4 +1,4 @@
-// REFINERY - Google Apps Script Backend - Viewer v2.57
+// REFINERY - Google Apps Script Backend - Viewer v2.59
 
 const CONFIG = {
   SHEET_ID: '1oJhKgjsp3HnNgyFdD3HON1mIHmlc00NCkDfo7R1QLss',
@@ -23,7 +23,7 @@ function authorizeExternal() {
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('index')
-    .setTitle('Refinery V2.57')
+    .setTitle('Refinery V2.59')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -102,13 +102,13 @@ function getArticles() {
 }
 
 function getInitialArticles() {
-  return getViewerBootstrap(250, 50);
+  return getViewerBootstrap(250, 1000); // v2.59 — load all artifacts, not just 50
 }
 
 function getViewerBootstrap(limit, artifactLimit) {
   try {
     limit = normalizePositiveInt_(limit, 1250);
-    artifactLimit = normalizePositiveInt_(artifactLimit, 50);
+    artifactLimit = normalizePositiveInt_(artifactLimit, 1000); // v2.59 — was 50
 
     var keptArticles = [];
     var unreadMain = [];

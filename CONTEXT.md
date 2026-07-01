@@ -11,7 +11,7 @@ Newsletters and RSS feeds flow in through the Ingestion app -> Supabase -> displ
 - `BACKLOG.md` - operational queue of unscheduled work, held items, and horizon ideas
 
 ## Current Version
-Ingestion: v2.58 | Viewer: v2.57
+Ingestion: v2.58 | Viewer: v2.59
 
 ## Tech Stack
 - **Runtime:** Google Apps Script (V8), JavaScript ES5 style
@@ -136,6 +136,7 @@ Items that used to live in this section are now tracked there. Don't duplicate �
 ## Change Log
 | Version | Date | Tool | Changes |
 |---------|------|------|---------|
+| Viewer v2.59 | 2026-07-01 | Claude Code | **Artifacts list loads ALL items** (was capped at the 50 newest while the count showed all → whole folders hidden). `ARTIFACT_LIMIT` 50→1000 + `getViewerBootstrap`/`getInitialArticles` defaults. `getArtifacts` already recurses (v2.57, 3000 cap). Grouped-list view unchanged (not a separate tree). 2.58 skipped (Ingestion holds it). NOT browser-tested. |
 | Ingestion v2.58 | 2026-06-30 | Claude Code | **Mail artifacts now land in a `[01] Inbox` subfolder** (unsorted bucket) instead of the artifacts root. `saveCompleteEmailArtifact_` resolves/creates `[01] Inbox` via `getOrCreateInboxFolder_` and writes there; pairs with the Viewer v2.57 folder tree. Defensive fallback to root on any folder error (ingestion can't break). Maintenance fns still scan root only. NOT run-tested — verifies next nightly ingest. |
 | Viewer v2.57 | 2026-06-30 | Claude Code | **Artifacts folder tree.** `getArtifacts` now recurses subfolders (`collectArtifacts_`, depth≤8, ≤3000 files, skips dot-folders) and tags each file with `folderPath`; previously only root-level files showed (Inbox/ + topic folders were invisible). The Artifacts list groups into collapsible folder sections (`toggleArtifactFolder` + `.artifact-folder` CSS); renders flat when all files are at root. Pairs with email→Inbox routing + the Wisdomware sync. NOT browser-tested. |
 | Viewer v2.56 | 2026-06-30 | Claude Code | **Markdown front-matter + tables.** `markdownToHtml_` now (1) strips a leading YAML front-matter block (Obsidian clippings) that previously rendered as a stray `<hr>` + raw `title:/source:/tags:` text, and (2) renders Markdown tables (`\| h \| h \|` + `\|---\|` separator → `<table class="md-table">`). Fixes the two files the user flagged (`2026_Why_Most_Enterprise_AI_Programs_Fail` = front matter; `2026_Playwright_MCP` = front matter + tables). **Verified** by running the live converter against both real files (node VM). |

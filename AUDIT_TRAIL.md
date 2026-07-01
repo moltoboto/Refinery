@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-07-01 - Claude Code (Viewer v2.59 — Artifacts list loads ALL items, not just the newest 50)
+- Request: Tom's issue #1 — the Artifacts tab showed the correct total *count* but only *listed* 50 items, so whole folders were missing.
+- Files: Viewer/index.html (`ARTIFACT_LIMIT` 50→1000 + version strings), Viewer/Code.js (`getInitialArticles` + `getViewerBootstrap` artifactLimit defaults 50→1000, version line + display strings).
+- Actions: raised the artifact load cap everywhere (client `ARTIFACT_LIMIT` + both server defaults) from 50 → 1000. `getArtifacts` already recurses subfolders (v2.57, hard cap 3000), so the grouped folder list now loads all artifacts up to 1000 — matching the count. **Still the grouped-list view** (collapsible folder headers), NOT a separate folder-tree navigator — confirmed with Tom before doing.
+- Version note: Viewer jumps 2.57 → **2.59** (2.58 is held by Ingestion; skipped to keep numbers unambiguous).
+- Validation: `node --check` on Code.js + extracted index.html inline script. clasp push DONE — `/dev` serves v2.59. NOT browser-tested. Watch initial load time with the full set (a few hundred files = a few extra Drive metadata reads; acceptable).
+- Deployment: USER redeploy `/exec` for iPad.
+- Follow-up (Tom's list): #2 keep/mark-read in Artifacts (W3 — backend keep exists, UI missing); #9 dedup (D1); #3/#4 remove ExpanDrive + install rclone; Sift chain #5–7; #8 "Clear Executive Summary" (needs clarification).
+
 ### 2026-06-30 - Claude Code (ExpanDrive/Wisdomware-sync session — NO code change; decisions + backlog)
 - Request: mount Google Drive via ExpanDrive (moltoboto) so the Wisdomware vault can reach the Drive folder Refinery reads; troubleshoot; document.
 - Files touched: BACKLOG.md (new item W3: mark-read in Artifacts). No Viewer/Ingestion code.
