@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * REFINERY INGESTION APP
- * Version: 2.57
+ * Version: 2.58
  * ============================================================
  * Phase 1: The Old Reader (TOR) RSS ingestion
  * Phase 3: Gmail two-tier ingestion
@@ -1054,12 +1054,31 @@ function saveCompleteInboxEmailArtifact_(msg, source, subject, date, htmlBody, p
   return saveCompleteEmailArtifact_(msg, source, subject, date, htmlBody, plainBody, 'email');
 }
 
+// v2.58 — get (or create) the "[01] Inbox" subfolder under the artifacts root, so
+// mail lands in the unsorted bucket the Viewer's folder tree (v2.57) reads.
+function getOrCreateInboxFolder_(parentId) {
+  var parent = DriveApp.getFolderById(parentId);
+  var existing = parent.getFoldersByName('[01] Inbox');
+  if (existing.hasNext()) return existing.next();
+  return parent.createFolder('[01] Inbox');
+}
+
 function saveCompleteEmailArtifact_(msg, source, subject, date, htmlBody, plainBody, kind, replaceExisting) {
   try {
-    var folderId = CONFIG.GMAIL.COMPLETE_NEWSLETTER_FOLDER_ID;
-    if (!folderId) return { ok:false, error:'missing newsletter artifact folder id' };
+    var rootId = CONFIG.GMAIL.COMPLETE_NEWSLETTER_FOLDER_ID;
+    if (!rootId) return { ok:false, error:'missing newsletter artifact folder id' };
 
-    var folder = DriveApp.getFolderById(folderId);
+    // v2.58 — land mail in the "[01] Inbox" subfolder (the unsorted bucket), not the
+    // artifacts root. Defensive: if the subfolder can't be resolved/created, fall back
+    // to the root folder so ingestion never breaks over this.
+    var folder, folderId;
+    try {
+      folder = getOrCreateInboxFolder_(rootId);
+      folderId = folder.getId();
+    } catch (inboxErr) {
+      folder = DriveApp.getFolderById(rootId);
+      folderId = rootId;
+    }
     var artifactKind = String(kind || 'email').toLowerCase() === 'newsletter' ? 'newsletter' : 'email';
     var baseTitle = buildArtifactTitle_(artifactKind, source, subject, date, msg.getId());
     if (replaceExisting) removeExistingArtifactFiles_(folder, baseTitle);

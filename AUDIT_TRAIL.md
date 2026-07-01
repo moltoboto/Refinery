@@ -17,6 +17,15 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-30 - Claude Code (Ingestion v2.58 — mail artifacts land in "[01] Inbox" subfolder)
+- Request: "make email pull move to [01] Inbox".
+- Files: Ingestion/Code.js (`saveCompleteEmailArtifact_` + new `getOrCreateInboxFolder_`; version line).
+- Actions: `saveCompleteEmailArtifact_` (used by BOTH the newsletter and inbox-email tiers) now writes the `.html` artifact into a **`[01] Inbox`** subfolder of the artifacts root (`COMPLETE_NEWSLETTER_FOLDER_ID` = `1eO6n6…` = the same folder the Viewer reads) instead of the root. `getOrCreateInboxFolder_` finds/creates `[01] Inbox`. Pairs with Viewer v2.57's recursion, so mail now shows under an `[01] Inbox` group in the tree.
+- Safety: any failure resolving/creating the subfolder **falls back to the root folder** (current behaviour), so ingestion can't break over this; and a total save failure was already non-fatal (caller logs + continues; the Supabase `content_html` row still saves).
+- Validation: `node --check` OK. clasp push Ingestion DONE (push-only; triggers pick it up next run). NOT run-tested — verifies on the next nightly ingest (or a manual `runDailyIngestion`).
+- Note: maintenance fns (`rebuildEmailArtifacts`/`fixArtifactDatesFromGmail`/`saveAllEmailsAsArtifacts`) still scan root only — out of scope, not changed. Existing root-level artifacts stay put.
+- Follow-up: after the next run, confirm new mail appears under `[01] Inbox` in the Artifacts tree.
+
 ### 2026-06-30 - Claude Code (Viewer v2.57 — Artifacts folder tree: subfolder recursion + collapsible groups)
 - Request: "add the tree" — surface Drive subfolders (Inbox + topic folders) in the Artifacts tab; today only root-level files show.
 - Files: Viewer/Code.js (`getArtifacts` → recursive `collectArtifacts_`; `buildArtifactRecord_` gains `folderPath`), Viewer/index.html (`artifactCardsHtml` groups by folder + `toggleArtifactFolder` + `.artifact-folder` CSS), version strings.
