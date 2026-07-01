@@ -692,7 +692,10 @@ function markdownToHtml_(md) {
     var cb = line.match(/^ CODE(\d+) $/);
     if (cb) { closeList(); out.push('<pre class="md-code"><code>' + codeBlocks[+cb[1]] + '</code></pre>'); i++; continue; }
 
-    if (/^\s*$/.test(line)) { closeList(); i++; continue; }
+    // v2.60 — do NOT close lists on a blank line: markdown "loose lists" put a blank
+    // line between items, and closing here made each item its own <ol> (all rendering
+    // "1."). Lists now close only when a real block (heading/para/hr/quote/table) starts.
+    if (/^\s*$/.test(line)) { i++; continue; }
 
     if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { closeList(); out.push('<hr>'); i++; continue; }
 

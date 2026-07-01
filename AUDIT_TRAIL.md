@@ -17,6 +17,16 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-07-01 - Claude Code (Checkpoint — v2.60 in-flight, exec-summary format, /dev URL; NOT a ship)
+- Memory checkpoint (context ~75%, pre-summarization). Committing the in-flight markdown numbering fix so the working tree is clean.
+- **v2.60 (partial, this commit = numbering only; header cleanup + version bump still TODO):**
+  - **Markdown loose-list numbering fix — DONE + verified.** `markdownToHtml_` no longer calls `closeList()` on blank lines — loose lists (blank line between items) were each becoming a single-item `<ol>`, so every item rendered "1.". Verified vs the real `2026_Agent_Memory_Systems.md`: 2 `<ol>`s, 9 `<li>`, first list 1→4. NOT yet clasp-pushed (bundle with header cleanup as v2.60).
+  - **Artifact-header cleanup — TODO** (per Tom's screenshot): `renderArtifactShell` remove eyebrow (`SOURCE·DATE`) + meta (`type·size`), one-line serif title (**keep Lora**), kill the blank space above content; scope = all artifacts.
+- **Exec-summary format proposed** (awaiting Tom's confirm → then build a reusable skill): MD, 4 sections — Bottom Line / Core Message / Key Takeaways (numbered, bold lead) / Why It Matters. Converted `2026_Agent_Memory_Systems.md` as the example.
+- **`/dev` URL** recommended as the permanent link: never changes, always-latest (no redeploy after clasp push), no "created by Apps Script user" banner (that's `/exec`-only, unremovable on a personal account). Requires moltoboto login.
+- Sync confirmed LIVE (rclone nightly 17:00 + `refinery-sync`). Feeds: `subscriptions-cleaned.opml` draft; **Sift migration dropped** — re-import cleaned list to TOR; pending Tom's 10 tickers / Reddit call / `[XX]` numbers / Reuters liveness.
+- Full braindump + Open Brain updated (2026-07-01 1126).
+
 ### 2026-07-01 - Claude Code (Infra: removed ExpanDrive (#3) + built rclone Wisdomware→Drive sync (#4/W2))
 - Request: Tom's #3 (remove ExpanDrive) + #4 (install rclone) + build the vault→Drive sync.
 - #3 ExpanDrive removed: app + App Support + Caches + Preferences + Group Container + Desktop reset-backup → Trash. Left for Tom (macOS-protected / his accounts): Finder-trash `~/Library/Containers/com.expandrive.ExpanDrive.FileProvider`, revoke the ExpanDrive Google grants (moltoboto + tc11228), empty Trash.
