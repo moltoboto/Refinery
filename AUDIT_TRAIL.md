@@ -17,6 +17,17 @@ This file is the running session-level audit trail for Refinery work.
 
 ## Entries
 
+### 2026-06-30 - Claude Code (ExpanDrive/Wisdomware-sync session — NO code change; decisions + backlog)
+- Request: mount Google Drive via ExpanDrive (moltoboto) so the Wisdomware vault can reach the Drive folder Refinery reads; troubleshoot; document.
+- Files touched: BACKLOG.md (new item W3: mark-read in Artifacts). No Viewer/Ingestion code.
+- Actions / decisions:
+  - ExpanDrive connected as `moltoboto@gmail.com` (verified) after an earlier wrong-account (`tc11228`) setup; full reversible reset done (config/cache/Group Container → `~/Desktop/ExpanDrive_reset_backup`). Mount = File Provider Location at `~/Library/CloudStorage/ExpanDrive/` (NOT a disk — expected). Reading Drive works.
+  - **Bulk write via rsync FAILED** — File Provider error `-2005` (cannotSynchronize) on every create, retries stopped, folder red-badged. NOT a permission issue (moltoboto, `read-only:0`). Cause: rsync temp-file+rename+xattr incompatible with File Provider `createItem`.
+  - **DECISION:** ExpanDrive is for READING Drive only → **remove it entirely tomorrow.** Bulk vault→Drive push to use **rclone** (direct API) or drag-drop. Sync = one-way mirror, **vault = source of truth**; clear the reading queue via **mark-read, not delete** (a mirror re-copies destination-only deletes); permanent purges at the vault.
+  - Interim: staged filtered md/html at `~/Desktop/Wisdomware_for_Drive/` (181 md + 3 html) for Tom to move + read tonight.
+- Validation: n/a (no code).
+- Follow-up (tomorrow): remove ExpanDrive; build the vault→Drive rclone one-way mirror; implement **W3 mark-read in Artifacts**. Tom testing Ingestion v2.58 (mail→`[01] Inbox`) tonight.
+
 ### 2026-06-30 - Claude Code (Ingestion v2.58 — mail artifacts land in "[01] Inbox" subfolder)
 - Request: "make email pull move to [01] Inbox".
 - Files: Ingestion/Code.js (`saveCompleteEmailArtifact_` + new `getOrCreateInboxFolder_`; version line).
