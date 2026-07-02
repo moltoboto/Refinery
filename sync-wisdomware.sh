@@ -47,6 +47,7 @@ rclone copy "$VAULT" "gdrive:" \
   --filter "- **/.*/**" \
   --filter "- .*/**" \
   --filter "- _trash/**" \
+  --filter "- *Open Artifacts/**" \
   --filter "+ *.md" \
   --filter "+ *.html" \
   --filter "- *" \
